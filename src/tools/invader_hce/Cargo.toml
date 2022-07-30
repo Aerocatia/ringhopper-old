@@ -1,0 +1,12 @@
+[package]
+name = "invader_hce"
+version = "0.1.0"
+autobins = false
+
+[dependencies]
+invader = { path = "../../invader" }
+
+[[bin]]
+name = "invader"
+path = "src/main.rs"
+doc = false

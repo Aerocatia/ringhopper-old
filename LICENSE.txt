@@ -1,0 +1,10 @@
+Copyright (C) Snowy 2022
+
+Invader is licensed under version 3 of the GNU General Public License. See
+gpl-3.0.txt for more information.
+
+Invader is NOT licensed under any later version of the GNU GPL or any other
+license EXCEPT at the discretion of Snowy (https://github.com/SnowyMouse) OR
+Vaporeon (https://github.com/Vaporeon).
+
+For any questions, send either of us an e-mail.

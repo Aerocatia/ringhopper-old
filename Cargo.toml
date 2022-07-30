@@ -1,0 +1,2 @@
+[workspace]
+members = [ "src/invader", "src/tools/invader_hce" ]
