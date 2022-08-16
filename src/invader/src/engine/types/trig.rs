@@ -34,13 +34,10 @@ impl Point2D {
     pub fn distance_from_point_squared(&self, point: &Point2D) -> f32 {
         let x = self.x - point.x;
         let y = self.y - point.y;
-        
+
         x*x + y*y
     }
 }
-
-
-
 
 /// Vector used for referencing a point in 3D space.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
@@ -74,7 +71,7 @@ impl Point3D {
         let x = self.x - point.x;
         let y = self.y - point.y;
         let z = self.z - point.z;
-        
+
         x*x + y*y + z*z
     }
 }
@@ -513,7 +510,7 @@ macro_rules! plane_fns {
 
             // Next, find the difference between the front and back points and normalize, then add to point_b to get the intersection
             let vector = <$vector>::from(back_point.difference_from_vector(&front_point)).normalize();
-            
+
             Some(<$point>::from(back_point.add_components(&vector.scale(back_distance).into_floats())))
         }
 

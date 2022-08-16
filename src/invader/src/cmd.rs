@@ -33,7 +33,7 @@ fn print_usage(path: &str, lookup: &str, engine: &dyn engine::EngineModuleFn) {
 }
 
 /// This is the main function for drivers to call, returning an exit code.
-/// 
+///
 /// The exit code is 0 if successful and nonzero if a failure occurs.
 pub fn main_fn<E: EngineModuleFn>(engine: &E) -> ExitCode {
     let args: Vec<String> = std::env::args().collect();

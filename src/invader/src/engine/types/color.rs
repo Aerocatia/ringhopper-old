@@ -76,7 +76,7 @@ macro_rules! parse_16_bit {
                     shift <<= color_channel_bits;
 
                     let max = (1 << color_channel_bits) - 1;
-                    shift |= ((color_input as u16) * (max) + (256 / 2)) / 255; 
+                    shift |= ((color_input as u16) * (max) + (256 / 2)) / 255;
                 }
             };
 

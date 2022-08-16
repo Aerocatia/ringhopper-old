@@ -137,6 +137,6 @@ impl Verb {
 
 impl std::fmt::Display for Verb {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-        fmt.write_str(self.get_name()) 
+        fmt.write_str(self.get_name())
     }
 }

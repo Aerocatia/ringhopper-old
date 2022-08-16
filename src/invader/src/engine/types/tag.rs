@@ -46,23 +46,23 @@ pub trait TagBlockFn: Any {
     fn field_at_index_mut(&mut self, index: usize) -> FieldReference<&mut dyn Any>;
 
     /// Get the array at the field at the given index. Panics if it is out of bounds or is not an array.
-    fn array_at_index(&self, index: usize) -> &dyn ArrayFn;
+    fn array_at_index(&self, index: usize) -> &dyn BlockArrayFn;
 
     /// Get the mutable array at the field at the given index. Panics if it is out of bounds or is not an array.
-    fn array_at_index_mut(&mut self, index: usize) -> &mut dyn ArrayFn;
+    fn array_at_index_mut(&mut self, index: usize) -> &mut dyn BlockArrayFn;
 
     /// Return `true` if the field at the given index is an array. Panics if it is out of bounds.
     fn field_at_index_is_array(&self, index: usize) -> bool;
 }
 
-/// Array which can hold multiple blocks.
+/// BlockArray which can hold multiple blocks.
 #[derive(Default)]
-pub struct Array<T: TagBlockFn> {
+pub struct BlockArray<T: TagBlockFn> {
     pub blocks: Vec<T>
 }
 
-/// Interface for accessing blocks from an [Array] type.
-pub trait ArrayFn {
+/// Interface for accessing blocks from an [BlockArray] type of an unknown block type.
+pub trait BlockArrayFn {
     /// Get the length of the array.
     fn len(&self) -> usize;
 
@@ -73,7 +73,7 @@ pub trait ArrayFn {
     fn block_at_index_mut(&mut self, index: usize) -> &mut dyn TagBlockFn;
 }
 
-impl<T: TagBlockFn> ArrayFn for Array<T> {
+impl<T: TagBlockFn> BlockArrayFn for BlockArray<T> {
     fn len(&self) -> usize {
         self.blocks.len()
     }
@@ -85,34 +85,34 @@ impl<T: TagBlockFn> ArrayFn for Array<T> {
     }
 }
 
-impl<T: TagBlockFn> Index<usize> for Array<T> {
+impl<T: TagBlockFn> Index<usize> for BlockArray<T> {
     type Output = T;
     fn index(&self, index: usize) -> &Self::Output {
         &self.blocks[index]
     }
 }
 
-impl<T: TagBlockFn> IndexMut<usize> for Array<T> {
+impl<T: TagBlockFn> IndexMut<usize> for BlockArray<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.blocks[index]
     }
 }
 
-impl Index<usize> for &dyn ArrayFn {
+impl Index<usize> for &dyn BlockArrayFn {
     type Output = dyn TagBlockFn;
     fn index(&self, index: usize) -> &Self::Output {
         self.block_at_index(index)
     }
 }
 
-impl Index<usize> for &mut dyn ArrayFn {
+impl Index<usize> for &mut dyn BlockArrayFn {
     type Output = dyn TagBlockFn;
     fn index(&self, index: usize) -> &Self::Output {
         self.block_at_index(index)
     }
 }
 
-impl IndexMut<usize> for &mut dyn ArrayFn {
+impl IndexMut<usize> for &mut dyn BlockArrayFn {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.block_at_index_mut(index)
     }

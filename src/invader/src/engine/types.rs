@@ -9,11 +9,14 @@ pub use self::color::*;
 mod tag;
 pub use self::tag::*;
 
+/// A block of data that doesn't have any fields directly attributed to it.
+pub type Data = Vec<u8>;
+
 /// String with a maximum character length of 31 characters plus a null terminator.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct String32 {
-    bytes: [u8; 32],
-    length: usize
+    pub(crate) bytes: [u8; 32],
+    pub(crate) length: usize
 }
 
 impl String32 {
@@ -45,7 +48,7 @@ impl String32 {
             for i in &mut bytes_copy[length..] {
                 *i = 0
             }
-            Ok(String32 { bytes: bytes_copy, length: length })
+            Ok(String32 { bytes: bytes_copy, length })
         }
     }
 }
@@ -63,8 +66,10 @@ pub struct Point2DInt {
 /// Rectangle with two Point2DInts defining the bounds of the rectangle.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct Rectangle {
-    pub point1: Point2DInt,
-    pub point2: Point2DInt
+    pub top: i16,
+    pub left: i16,
+    pub bottom: i16,
+    pub right: i16
 }
 
 /// Tag reference that describes a tag.
@@ -98,16 +103,6 @@ impl<T: TagGroupFn> TagReference<T> {
     /// Set the path without an extension.
     ///
     /// If the path is invalid for a `TagReference`, an [Err] is returned.
-    ///
-    /// # Example code:
-    ///
-    /// ```rust
-    /// use invader::TagReference;
-    ///
-    /// let mut reference = TagReference::<invader::hce::TagGroup>::from_path_with_extension("weapons\\assault rifle\\assault rifle.weapon").unwrap();
-    ///
-    /// reference.set_path_without_extension("weapons\\pistol\\pistol");
-    /// ```
     pub fn set_path_without_extension(&mut self, path: &str) -> Result<(), &'static str> {
         let mut new_path = path.to_owned();
 
@@ -161,7 +156,7 @@ impl<T: TagGroupFn> TagReference<T> {
     ///
     /// If the path is invalid for a `TagReference`, an [Err] is returned.
     pub fn from_path_and_group(path: &str, group: T) -> Result<TagReference<T>, &'static str> {
-        let mut reference = TagReference { path: String::default(), group: group };
+        let mut reference = TagReference { path: String::default(), group };
         reference.set_path_without_extension(path)?;
         Ok(reference)
     }

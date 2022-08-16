@@ -10,7 +10,10 @@ use super::Verb;
 use VerbFn;
 use super::EngineModuleFn;
 
-/// [EngineModuleFn] interface for Halo: Combat Evolved
+/// Maximum array length for arrays in Halo: CE.
+pub const MAX_ARRAY_LENGTH: usize = i32::MAX as usize;
+
+/// [EngineModuleFn] interface for Halo: Combat Evolved.
 #[derive(Default)]
 pub struct HaloCE {}
 
