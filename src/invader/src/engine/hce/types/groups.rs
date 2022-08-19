@@ -1,5 +1,5 @@
 /// Tag groups define types of tags.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum TagGroup {
     /// Special group for when there is an absence of a group
     None,

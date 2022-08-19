@@ -1,6 +1,5 @@
-use crate::{Vector3D, ColorARGBInt, ColorRGBInt, String32};
-
 use super::TagSerialize;
+use crate::*;
 
 const BYTES_NEGATIVE: [u8;4] = [0xBF, 0x80, 0x00, 0x00];
 const BYTES_POSITIVE: [u8;4] = [0x3F, 0x80, 0x00, 0x00];
@@ -130,6 +129,134 @@ fn test_serialize_string32_from_into_hce() {
     let mut v = Vec::new();
     v.resize(bytes.len(), 0);
     data.into_tag(&mut v, 0, bytes.len()).unwrap();
+
+    // Verify it's the same
+    assert_eq!(bytes, v[..]);
+}
+
+#[test]
+fn test_serialize_data_array() {
+    // Byte array which corresponds to 11 bytes in a sequence of 1-11
+    let bytes = [
+                            0x00, 0x00, 0x00, 0x0B,
+                            0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00,
+                            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B
+              ];
+
+    // Parse it
+    let mut parse_offset = 0x14;
+    let data = Data::from_tag(&bytes[..], 0, 0x14, &mut parse_offset).unwrap();
+    assert_eq!(bytes.len(), parse_offset);
+
+    // Ensure the data is the same
+    assert_eq!(bytes[0x14..], data);
+
+    // Now convert it back into bytes and see what happens
+    let mut v = Vec::new();
+    v.resize(0x14, 0x00);
+    data.into_tag(&mut v, 0, 0x14).unwrap();
+
+    // Verify it's the same
+    assert_eq!(bytes, v[..]);
+}
+
+#[test]
+fn test_serialize_tag_reference() {
+    // Byte array which corresponds to a reference to weapons\pistol\pistol.weapon
+    let bytes = [
+                            0x77, 0x65, 0x61, 0x70, // fourcc for weapon
+                            0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x15, // length of reference not including null terminator
+
+                            // weapons\pistol\pistol[null]
+                            0x77, 0x65, 0x61, 0x70, 0x6F, 0x6E, 0x73, 0x5C, 0x70, 0x69, 0x73, 0x74, 0x6F, 0x6C, 0x5C, 0x70, 0x69, 0x73, 0x74, 0x6F, 0x6C, 0x00
+
+              ];
+
+    // Parse it
+    let mut parse_offset = 0x10;
+    let data = hce::TagReference::from_tag(&bytes[..], 0, 0x10, &mut parse_offset).unwrap();
+    assert_eq!(bytes.len(), parse_offset);
+
+    // Is it correct?
+    assert_eq!("weapons\\pistol\\pistol", data.get_path_without_extension());
+    assert_eq!(hce::TagGroup::Weapon, data.group);
+
+    // Now convert it back into bytes and see what happens
+    let mut v = Vec::new();
+    v.resize(0x10, 0x00);
+    data.into_tag(&mut v, 0, 0x10).unwrap();
+
+    // Verify it's the same
+    assert_eq!(bytes, v[..]);
+}
+
+#[test]
+fn test_block_array() {
+    use std::any::Any;
+
+    #[derive(Default)]
+    struct TestStruct {
+        pub some_int: u32
+    }
+
+    impl TagBlockFn for TestStruct {
+        fn field_count(&self) -> usize { unimplemented!() }
+        fn field_at_index(&self, _: usize) -> crate::FieldReference<&(dyn Any + 'static)> { unimplemented!() }
+        fn field_at_index_mut(&mut self, _: usize) -> crate::FieldReference<&mut (dyn Any + 'static)> { unimplemented!() }
+        fn array_at_index(&self, _: usize) -> &dyn crate::BlockArrayFn { unimplemented!() }
+        fn array_at_index_mut(&mut self, _: usize) -> &mut dyn crate::BlockArrayFn { unimplemented!() }
+        fn field_at_index_is_array(&self, _: usize) -> bool { unimplemented!() }
+    }
+
+    impl TagSerialize for TestStruct {
+        fn tag_size() -> usize {
+            u32::tag_size()
+        }
+        fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), &'static str> {
+            self.some_int.into_tag(data, at, struct_end)
+        }
+        fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, &'static str> {
+            Ok(TestStruct {
+                some_int: u32::from_tag(data, at, struct_end, cursor)?
+            })
+        }
+    }
+
+    // Byte array which corresponds to an array of five TestStructs which have data 2, 3, 5, 7, 11
+    let bytes = [
+                            0x00, 0x00, 0x00, 0x05, // five TestStructs
+                            0x00, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00,
+
+                            0x00, 0x00, 0x00, 0x02,
+                            0x00, 0x00, 0x00, 0x03,
+                            0x00, 0x00, 0x00, 0x05,
+                            0x00, 0x00, 0x00, 0x07,
+                            0x00, 0x00, 0x00, 0x0B
+              ];
+
+    // Parse it
+    let mut parse_offset = 0x0C;
+    let data = BlockArray::<TestStruct>::from_tag(&bytes[..], 0, 0x0C, &mut parse_offset).unwrap();
+    assert_eq!(bytes.len(), parse_offset);
+    assert_eq!(5, data.blocks.len());
+
+    // Are the values what we expect?
+    assert_eq!(2, data.blocks[0].some_int);
+    assert_eq!(3, data.blocks[1].some_int);
+    assert_eq!(5, data.blocks[2].some_int);
+    assert_eq!(7, data.blocks[3].some_int);
+    assert_eq!(11, data.blocks[4].some_int);
+
+    // Now convert it back into bytes and see what happens
+    let mut v = Vec::new();
+    v.resize(0xC, 0x00);
+    data.into_tag(&mut v, 0, 0xC).unwrap();
 
     // Verify it's the same
     assert_eq!(bytes, v[..]);
