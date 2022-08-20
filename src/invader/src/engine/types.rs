@@ -11,6 +11,8 @@ pub use self::tag::*;
 
 use crate::{ErrorMessage, ErrorMessageResult};
 
+use strings::get_compiled_string;
+
 /// A block of data that doesn't have any fields directly attributed to it.
 pub type Data = Vec<u8>;
 
@@ -39,10 +41,10 @@ impl String32 {
         }
 
         if length >= bytes.len() {
-            Err(ErrorMessage::StaticString("String data is not null terminated."))
+            Err(ErrorMessage::StaticString(get_compiled_string!("engine.types.error_string_not_null_terminated")))
         }
         else if !std::str::from_utf8(&bytes[0..length]).is_ok() {
-            Err(ErrorMessage::StaticString("String data is not valid UTF-8!"))
+            Err(ErrorMessage::StaticString(get_compiled_string!("engine.types.error_string_not_valid_utf8")))
         }
         else {
             // Clean everything after the string
@@ -64,7 +66,7 @@ impl String32 {
         let len = bytes.len();
         let limit = input_bytes.len() - 1;
         if len > limit {
-            return Err(ErrorMessage::AllocatedString(format!("String data exceeds {limit} bytes. {len} > {limit}")))
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_string_exceeds_limit"), limit=limit, len=len)))
         }
 
         // Copy!
@@ -138,7 +140,7 @@ impl<T: TagGroupFn> TagReference<T> {
 
         // Paths must be ASCII
         if !new_path.is_ascii() {
-            return Err(ErrorMessage::AllocatedString(format!("Path \"{new_path}\" is non-ASCII.")))
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_not_ascii"), new_path=new_path)))
         }
 
         // Replace native path separators with Windows path separators
@@ -154,7 +156,7 @@ impl<T: TagGroupFn> TagReference<T> {
         // Check for forbidden characters
         let restricted_characters = ['<', '>', ':', '"', '/', '|', '?', '*'];
         if let Some(n) = new_path.find(&restricted_characters[..]) {
-            return Err(ErrorMessage::AllocatedString(format!("Path \"{new_path}\" contains restricted character '{}'.", new_path.as_bytes()[n])))
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_has_restricted_character"), new_path=new_path, character=new_path.as_bytes()[n])))
         }
 
         // Make it lowercase
@@ -172,13 +174,13 @@ impl<T: TagGroupFn> TagReference<T> {
     pub fn from_path_with_extension(path: &str) -> ErrorMessageResult<TagReference<T>> {
         let pos = match path.rfind('.') {
             Some(n) => n,
-            None => return Err(ErrorMessage::AllocatedString(format!("Path \"{path}\" does not have a file extension.")))
+            None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_missing_extension"), path=path)))
         };
 
         let potential_group = &path[pos+1..];
         let group = match T::from_str(potential_group) {
             Some(n) => n,
-            None => return Err(ErrorMessage::AllocatedString(format!("Extension \"{potential_group}\" does not correspond to a tag group.")))
+            None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_group_invalid"), potential_group=potential_group)))
         };
 
         TagReference::from_path_and_group(&path[..pos], group)

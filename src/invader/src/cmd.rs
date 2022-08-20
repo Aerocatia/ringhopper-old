@@ -4,17 +4,19 @@ use std::process::ExitCode;
 use crate::engine;
 use engine::EngineModuleFn;
 
+use strings::get_compiled_string;
+
 mod verb;
 pub use self::verb::*;
 
 fn print_usage(path: &str, lookup: &str, engine: &dyn engine::EngineModuleFn) {
-    eprintln!("Usage: {path} <verb> [arguments...]");
+    eprintln!(get_compiled_string!("command_usage.error"), path=path);
 
     if lookup.is_empty() {
-        eprintln!("Available verbs:");
+        eprintln!(get_compiled_string!("command_usage.error_available_verbs"));
     }
     else {
-        eprintln!("No verbs matched \"{lookup}\"! Available verbs:")
+        eprintln!(get_compiled_string!("command_usage.error_no_verbs_matched"), lookup=lookup)
     }
 
     let mut verbs_listed = 0usize;
@@ -26,10 +28,10 @@ fn print_usage(path: &str, lookup: &str, engine: &dyn engine::EngineModuleFn) {
     }
 
     if verbs_listed == 0 {
-        eprintln!("    <no verbs are available for this tool>")
+        eprintln!("    {}", get_compiled_string!("command_usage.error_no_verbs_available"));
     }
 
-    eprintln!("Use {path} <verb> -h to view help information for a verb.");
+    eprintln!(get_compiled_string!("command_usage.error_get_help"), path=path);
 }
 
 /// This is the main function for drivers to call, returning an exit code.
@@ -54,7 +56,7 @@ pub fn main_fn<E: EngineModuleFn>(engine: &E) -> ExitCode {
             f(&args_ref[2..])
         }
         else {
-            eprintln!("Verb \"{}\" is not supported by this tool.", v.get_name());
+            eprintln!(get_compiled_string!("command_usage.error_verb_unsupported"), verb=v.get_name());
             ExitCode::from(2)
         }
     }

@@ -7,3 +7,4 @@ name = "invader"
 doc = true
 
 [dependencies]
+strings = { path = "../strings" }

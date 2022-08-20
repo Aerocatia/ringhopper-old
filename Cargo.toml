@@ -1,2 +1,2 @@
 [workspace]
-members = [ "src/invader", "src/tools/invader_hce" ]
+members = [ "src/invader", "src/tools/invader_hce", "src/strings" ]

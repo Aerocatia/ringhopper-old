@@ -1,3 +1,5 @@
+extern crate strings;
+
 mod engine;
 pub use engine::*;
 

@@ -1,3 +1,5 @@
+use strings::get_compiled_string;
+
 /// Verbs define different actions that can be called by the driver for an engine module.
 #[derive(Copy, Clone, PartialEq)]
 pub enum Verb {
@@ -52,38 +54,38 @@ impl VerbInfo {
 }
 
 pub(crate) static ALL_VERBS: [VerbInfo; 32] = [
-    VerbInfo::new(Verb::Archive, "archive", &["ar"], "Recursively archive tags."),
-    VerbInfo::new(Verb::Bitmap, "bitmap", &["bmp"], "Generate bitmap tags."),
-    VerbInfo::new(Verb::Bludgeon, "bludgeon", &["bl"], "Repair tags."),
-    VerbInfo::new(Verb::BSP, "bsp", &["bs"], "Generate structure_structure_bsp tags."),
-    VerbInfo::new(Verb::Build, "build", &["b", "build-cache-file"], "Generate cache files."),
-    VerbInfo::new(Verb::CameraTrack, "camera-track", &["cam"], "Generate camera_track tags."),
-    VerbInfo::new(Verb::Collection, "collection", &["tc"], "Generate tag_collection tags."),
-    VerbInfo::new(Verb::Collision, "collision", &["col"], "Generate model_collision_geometry tags."),
-    VerbInfo::new(Verb::Compare, "compare", &["cmp"], "Compare sets of tags."),
-    VerbInfo::new(Verb::Convert, "convert", &["cvt"], "Convert tags to other groups."),
-    VerbInfo::new(Verb::Dependency, "dependency", &["dep"], "Get dependencies for tags."),
-    VerbInfo::new(Verb::Edit, "edit", &["e"], "Edit tags."),
-    VerbInfo::new(Verb::Extract, "extract", &["x"], "Extract tags from cache files."),
-    VerbInfo::new(Verb::Font, "font", &["fnt"], "Generate font tags."),
-    VerbInfo::new(Verb::GBXModel, "gbxmodel", &["gbx"], "Generate gbxmodel tags."),
-    VerbInfo::new(Verb::HUDMessages, "hud-messages", &["hm"], "Generate hud_message_text tags."),
-    VerbInfo::new(Verb::Info, "info", &["i"], "Get information for cache files."),
-    VerbInfo::new(Verb::Lightmap, "lightmap", &["lm"], "Generate lightmaps."),
-    VerbInfo::new(Verb::Model, "model", &["mdl"], "Generate model tags."),
-    VerbInfo::new(Verb::Physics, "physics", &["ph"], "Generate physics tags."),
-    VerbInfo::new(Verb::Plate, "plate", &["pl"], "Generate color plates."),
-    VerbInfo::new(Verb::Recover, "recover", &["rec"], "Recover source data from tags."),
-    VerbInfo::new(Verb::Refactor, "refactor", &["ref"], "Move tags while preserving references."),
-    VerbInfo::new(Verb::Repair, "repair", &["r"], "Repair cache files."),
-    VerbInfo::new(Verb::Resource, "resource", &["res"], "Generate resource maps."),
-    VerbInfo::new(Verb::Scan, "scan", &["scn"], "Scan cache files for unknown data."),
-    VerbInfo::new(Verb::Script, "script", &["s"], "Compile scripts for scenario tags."),
-    VerbInfo::new(Verb::Sound, "sound", &["snd"], "Generate sound tags."),
-    VerbInfo::new(Verb::Strip, "strip",  &["st"], "Remove unused data from tags."),
-    VerbInfo::new(Verb::Strings, "strings", &["str"], "Generate string_list tags."),
-    VerbInfo::new(Verb::UnicodeStrings, "unicode-strings", &["uni"], "Generate unicode_string_list tags."),
-    VerbInfo::new(Verb::Version, "version", &["ver"], "Get invader's version.")
+    VerbInfo::new(Verb::Archive, "archive", &["ar"], get_compiled_string!("verb.archive.description")),
+    VerbInfo::new(Verb::Bitmap, "bitmap", &["bmp"], get_compiled_string!("verb.bitmap.description")),
+    VerbInfo::new(Verb::Bludgeon, "bludgeon", &["bl"], get_compiled_string!("verb.bludgeon.description")),
+    VerbInfo::new(Verb::BSP, "bsp", &["bs"], get_compiled_string!("verb.bsp.description")),
+    VerbInfo::new(Verb::Build, "build", &["b", "build-cache-file"], get_compiled_string!("verb.build.description")),
+    VerbInfo::new(Verb::CameraTrack, "camera-track", &["cam"], get_compiled_string!("verb.camera-track.description")),
+    VerbInfo::new(Verb::Collection, "collection", &["tc"], get_compiled_string!("verb.collection.description")),
+    VerbInfo::new(Verb::Collision, "collision", &["col"], get_compiled_string!("verb.collision.description")),
+    VerbInfo::new(Verb::Compare, "compare", &["cmp"], get_compiled_string!("verb.compare.description")),
+    VerbInfo::new(Verb::Convert, "convert", &["cvt"], get_compiled_string!("verb.convert.description")),
+    VerbInfo::new(Verb::Dependency, "dependency", &["dep"], get_compiled_string!("verb.dependency.description")),
+    VerbInfo::new(Verb::Edit, "edit", &["e"], get_compiled_string!("verb.edit.description")),
+    VerbInfo::new(Verb::Extract, "extract", &["x"], get_compiled_string!("verb.extract.description")),
+    VerbInfo::new(Verb::Font, "font", &["fnt"], get_compiled_string!("verb.font.description")),
+    VerbInfo::new(Verb::GBXModel, "gbxmodel", &["gbx"], get_compiled_string!("verb.gbxmodel.description")),
+    VerbInfo::new(Verb::HUDMessages, "hud-messages", &["hm"], get_compiled_string!("verb.hud-messages.description")),
+    VerbInfo::new(Verb::Info, "info", &["i"], get_compiled_string!("verb.info.description")),
+    VerbInfo::new(Verb::Lightmap, "lightmap", &["lm"], get_compiled_string!("verb.lightmap.description")),
+    VerbInfo::new(Verb::Model, "model", &["mdl"], get_compiled_string!("verb.model.description")),
+    VerbInfo::new(Verb::Physics, "physics", &["ph"], get_compiled_string!("verb.physics.description")),
+    VerbInfo::new(Verb::Plate, "plate", &["pl"], get_compiled_string!("verb.plate.description")),
+    VerbInfo::new(Verb::Recover, "recover", &["rec"], get_compiled_string!("verb.recover.description")),
+    VerbInfo::new(Verb::Refactor, "refactor", &["ref"], get_compiled_string!("verb.refactor.description")),
+    VerbInfo::new(Verb::Repair, "repair", &["r"], get_compiled_string!("verb.repair.description")),
+    VerbInfo::new(Verb::Resource, "resource", &["res"], get_compiled_string!("verb.resource.description")),
+    VerbInfo::new(Verb::Scan, "scan", &["scn"], get_compiled_string!("verb.scan.description")),
+    VerbInfo::new(Verb::Script, "script", &["s"], get_compiled_string!("verb.script.description")),
+    VerbInfo::new(Verb::Sound, "sound", &["snd"], get_compiled_string!("verb.sound.description")),
+    VerbInfo::new(Verb::Strip, "strip",  &["st"], get_compiled_string!("verb.strip.description")),
+    VerbInfo::new(Verb::Strings, "strings", &["str"], get_compiled_string!("verb.strings.description")),
+    VerbInfo::new(Verb::UnicodeStrings, "unicode-strings", &["uni"], get_compiled_string!("verb.unicode-strings.description")),
+    VerbInfo::new(Verb::Version, "version", &["ver"], get_compiled_string!("verb.version.description"))
 ];
 
 impl Verb {
