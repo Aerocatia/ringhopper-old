@@ -9,6 +9,8 @@ pub use self::color::*;
 mod tag;
 pub use self::tag::*;
 
+use crate::{ErrorMessage, ErrorMessageResult};
+
 /// A block of data that doesn't have any fields directly attributed to it.
 pub type Data = Vec<u8>;
 
@@ -26,30 +28,58 @@ impl String32 {
     }
 
     /// Convert 32 `u8` bytes into a `String32`. The input must be a valid, null terminated UTF-8 string.
-    pub fn from_bytes(bytes: &[u8; 32]) -> Result<String32, &'static str> {
+    pub fn from_bytes(bytes: [u8; 32]) -> ErrorMessageResult<String32> {
         let mut length: usize = 0;
 
         for b in bytes {
-            if *b == 0 {
+            if b == 0 {
                 break;
             }
             length += 1;
         }
 
-        if length == bytes.len() {
-            Err("string overflow")
+        if length >= bytes.len() {
+            Err(ErrorMessage::StaticString("String data is not null terminated."))
         }
         else if !std::str::from_utf8(&bytes[0..length]).is_ok() {
-            Err("string data is not a valid string")
+            Err(ErrorMessage::StaticString("String data is not valid UTF-8!"))
         }
         else {
             // Clean everything after the string
-            let mut bytes_copy = *bytes;
+            let mut bytes_copy = bytes;
             for i in &mut bytes_copy[length..] {
                 *i = 0
             }
             Ok(String32 { bytes: bytes_copy, length })
         }
+    }
+
+    /// Convert a slice of `u8` bytes into a `String32`.
+    ///
+    /// The input must be a valid UTF-8 string without any null termination, and it must be fewer than 32 bytes.
+    pub fn from_bytes_slice(bytes: &[u8]) -> ErrorMessageResult<String32> {
+        let mut input_bytes = [0u8; 32];
+
+        // Check the length.
+        let len = bytes.len();
+        let limit = input_bytes.len() - 1;
+        if len > limit {
+            return Err(ErrorMessage::AllocatedString(format!("String data exceeds {limit} bytes. {len} > {limit}")))
+        }
+
+        // Copy!
+        for b in 0..bytes.len() {
+            input_bytes[b] = bytes[b];
+        }
+
+        Self::from_bytes(input_bytes)
+    }
+
+    /// Convert a string into a `String32`.
+    ///
+    /// The input must be a valid UTF-8 string that is fewer than 32 bytes.
+    pub fn from_str(string: &str) -> ErrorMessageResult<String32> {
+        Self::from_bytes_slice(string.as_bytes())
     }
 }
 
@@ -103,12 +133,12 @@ impl<T: TagGroupFn> TagReference<T> {
     /// Set the path without an extension.
     ///
     /// If the path is invalid for a `TagReference`, an [Err] is returned.
-    pub fn set_path_without_extension(&mut self, path: &str) -> Result<(), &'static str> {
+    pub fn set_path_without_extension(&mut self, path: &str) -> ErrorMessageResult<()> {
         let mut new_path = path.to_owned();
 
         // Paths must be ASCII
         if !new_path.is_ascii() {
-            return Err("path is non-ASCII")
+            return Err(ErrorMessage::AllocatedString(format!("Path \"{new_path}\" is non-ASCII.")))
         }
 
         // Replace native path separators with Windows path separators
@@ -122,8 +152,9 @@ impl<T: TagGroupFn> TagReference<T> {
         }
 
         // Check for forbidden characters
-        if new_path.contains(&['<', '>', ':', '"', '/', '|', '?', '*']) {
-            return Err("path contains restricted characters")
+        let restricted_characters = ['<', '>', ':', '"', '/', '|', '?', '*'];
+        if let Some(n) = new_path.find(&restricted_characters[..]) {
+            return Err(ErrorMessage::AllocatedString(format!("Path \"{new_path}\" contains restricted character '{}'.", new_path.as_bytes()[n])))
         }
 
         // Make it lowercase
@@ -138,15 +169,16 @@ impl<T: TagGroupFn> TagReference<T> {
     /// Create a `TagReference` from a path containing an extension that corresponds to a tag group.
     ///
     /// If the path is invalid for a `TagReference` or the extension is invalid or nonexistent, an [Err] is returned.
-    pub fn from_path_with_extension(path: &str) -> Result<TagReference<T>, &'static str> {
+    pub fn from_path_with_extension(path: &str) -> ErrorMessageResult<TagReference<T>> {
         let pos = match path.rfind('.') {
             Some(n) => n,
-            None => return Err("path did not have a file extension")
+            None => return Err(ErrorMessage::AllocatedString(format!("Path \"{path}\" does not have a file extension.")))
         };
 
-        let group = match T::from_str(&path[pos+1..]) {
+        let potential_group = &path[pos+1..];
+        let group = match T::from_str(potential_group) {
             Some(n) => n,
-            None => return Err("extension does not correspond to a tag group")
+            None => return Err(ErrorMessage::AllocatedString(format!("Extension \"{potential_group}\" does not correspond to a tag group.")))
         };
 
         TagReference::from_path_and_group(&path[..pos], group)
@@ -155,7 +187,7 @@ impl<T: TagGroupFn> TagReference<T> {
     /// Create a `TagReference` from a path and group.
     ///
     /// If the path is invalid for a `TagReference`, an [Err] is returned.
-    pub fn from_path_and_group(path: &str, group: T) -> Result<TagReference<T>, &'static str> {
+    pub fn from_path_and_group(path: &str, group: T) -> ErrorMessageResult<TagReference<T>> {
         let mut reference = TagReference { path: String::default(), group };
         reference.set_path_without_extension(path)?;
         Ok(reference)

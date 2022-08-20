@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{hce::{TagGroup, TagReference}, TagGroupFn, Matrix};
+use crate::{hce::{TagGroup, TagReference}, TagGroupFn, Matrix, ErrorMessage, ErrorMessageResult};
+
+const ARCHITECTURE_LIMIT_EXCEEDED: &'static str = "Data is out of bounds. (Architecture size limit exceeded!)";
 
 /// Serialization implementation for tags in tag format.
 pub trait TagSerialize: Sized {
@@ -9,10 +11,10 @@ pub trait TagSerialize: Sized {
     fn tag_size() -> usize;
 
     /// Serialize the data into tag format, returning an error on failure (except for out-of-bounds and allocation errors which will panic).
-    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), &'static str>;
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()>;
 
     /// Deserialize the data from tag format, returning an error on failure (except for allocation errors which will panic).
-    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, &'static str>;
+    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self>;
 
     /// Get the size of the instance.
     fn instance_tag_size(&self) -> usize {
@@ -20,7 +22,7 @@ pub trait TagSerialize: Sized {
     }
 
     /// Deserialize into an instasnce.
-    fn instance_from_tag(&self, data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, &'static str> {
+    fn instance_from_tag(&self, data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
         Self::from_tag(data, at, struct_end, cursor)
     }
 }
@@ -31,18 +33,18 @@ macro_rules! sizeof {
     }
 }
 
-const fn fits(size: usize, at: usize, struct_end: usize, data_size: usize) -> Result<(), &'static str> {
+const fn fits(size: usize, at: usize, struct_end: usize, data_size: usize) -> ErrorMessageResult<()> {
     let end = match at.checked_add(size) {
         Some(n) => n,
-        None => return Err("out of bounds")
+        None => return Err(ErrorMessage::StaticString(ARCHITECTURE_LIMIT_EXCEEDED))
     };
 
     // If data is out of the struct bounds, then this is a programming error rather than bad tag data.
-    debug_assert!(end <= struct_end, "data is outside of struct");
+    debug_assert!(end <= struct_end, "Data is outside of the struct (this is a bug!)");
 
     // If we're outside of the data bounds, fail.
     if end > data_size {
-        Err("out of bounds")
+        Err(ErrorMessage::StaticString("Data is out of bounds."))
     }
     else {
         Ok(())
@@ -56,7 +58,7 @@ macro_rules! serialize_for_primitive {
                 sizeof!($t)
             }
 
-            fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), &'static str> {
+            fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
                 const SIZE: usize = sizeof!($t);
                 debug_assert!(fits(SIZE, at, struct_end, data.len()).is_ok());
                 let bytes = self.to_be_bytes();
@@ -64,7 +66,7 @@ macro_rules! serialize_for_primitive {
                 Ok(())
             }
 
-            fn from_tag(data: &[u8], at: usize, struct_end: usize, _: &mut usize) -> Result<Self, &'static str> {
+            fn from_tag(data: &[u8], at: usize, struct_end: usize, _: &mut usize) -> ErrorMessageResult<Self> {
                 use std::convert::TryInto;
 
                 const SIZE: usize = sizeof!($t);
@@ -134,7 +136,7 @@ macro_rules! serialize_for_struct {
                 add_sizeof_together!(instance, $($fields), +)
             }
 
-            fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), &'static str> {
+            fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
                 // Verify
                 let size: usize = self.instance_tag_size();
                 debug_assert!(fits(size, at, struct_end, data.len()).is_ok());
@@ -149,7 +151,7 @@ macro_rules! serialize_for_struct {
                 Ok(())
             }
 
-            fn from_tag(data: &[u8], at: usize, struct_end: usize, _: &mut usize) -> Result<Self, &'static str> {
+            fn from_tag(data: &[u8], at: usize, struct_end: usize, _: &mut usize) -> ErrorMessageResult<Self> {
                 let mut instance = Self::default();
 
                 // Verify
@@ -192,10 +194,10 @@ impl TagSerialize for crate::ColorARGBInt {
     fn tag_size() -> usize {
         u32::tag_size()
     }
-    fn into_tag(&self, data: &mut Vec<u8>, at: usize, offset: usize) -> Result<(), &'static str> {
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, offset: usize) -> ErrorMessageResult<()> {
         self.to_a8r8g8b8().into_tag(data, at, offset)
     }
-    fn from_tag(data: &[u8], at: usize, offset: usize, cursor: &mut usize) -> Result<Self, &'static str> {
+    fn from_tag(data: &[u8], at: usize, offset: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
         Ok(Self::from_a8r8g8b8(u32::from_tag(data, at, offset, cursor)?))
     }
 }
@@ -204,10 +206,10 @@ impl TagSerialize for crate::ColorRGBInt {
     fn tag_size() -> usize {
         u32::tag_size()
     }
-    fn into_tag(&self, data: &mut Vec<u8>, at: usize, offset: usize) -> Result<(), &'static str> {
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, offset: usize) -> ErrorMessageResult<()> {
         crate::ColorARGBInt::from(*self).to_a8r8g8b8().into_tag(data, at, offset)
     }
-    fn from_tag(data: &[u8], at: usize, offset: usize, cursor: &mut usize) -> Result<Self, &'static str> {
+    fn from_tag(data: &[u8], at: usize, offset: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
         let argb = crate::ColorARGBInt::from_a8r8g8b8(u32::from_tag(data, at, offset, cursor)?);
         Ok(Self { r: argb.r, g: argb.g, b: argb.b })
     }
@@ -218,19 +220,19 @@ impl TagSerialize for crate::String32 {
     fn tag_size() -> usize {
         32
     }
-    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize)  -> Result<(), &'static str> {
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize)  -> ErrorMessageResult<()> {
         const SIZE: usize = 32;
         debug_assert!(fits(SIZE, at, struct_end, data.len()).is_ok());
         data[at..at + SIZE].copy_from_slice(&self.bytes[..]);
         Ok(())
     }
-    fn from_tag(data: &[u8], at: usize, struct_end: usize, _: &mut usize) -> Result<Self, &'static str> {
+    fn from_tag(data: &[u8], at: usize, struct_end: usize, _: &mut usize) -> ErrorMessageResult<Self> {
         const SIZE: usize = 32;
         use std::convert::TryInto;
 
         fits(SIZE, at, struct_end, data.len())?;
         let bytes: [u8; SIZE] = data[at..at + SIZE].try_into().unwrap();
-        Self::from_bytes(&bytes)
+        Self::from_bytes(bytes)
     }
 }
 
@@ -241,7 +243,7 @@ impl TagSerialize for crate::Matrix {
     fn tag_size() -> usize {
         MATRIX_STRUCT_SIZE
     }
-    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize)  -> Result<(), &'static str> {
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize)  -> ErrorMessageResult<()> {
         debug_assert!(fits(MATRIX_STRUCT_SIZE, at, struct_end, data.len()).is_ok());
 
         // Go through each vector
@@ -251,7 +253,7 @@ impl TagSerialize for crate::Matrix {
 
         Ok(())
     }
-    fn from_tag(data: &[u8], at: usize, mut struct_end: usize, _: &mut usize) -> Result<Self, &'static str> {
+    fn from_tag(data: &[u8], at: usize, mut struct_end: usize, _: &mut usize) -> ErrorMessageResult<Self> {
         // Does the base struct fit?
         fits(MATRIX_STRUCT_SIZE, at, struct_end, data.len())?;
 
@@ -268,33 +270,47 @@ impl TagSerialize for crate::Matrix {
     }
 }
 
+macro_rules! data_pointer_into_tag_assertions {
+    ($at:tt, $struct_end:tt, $data:tt, $sizeof:expr) => {
+        // catch programming errors
+        debug_assert!(fits($sizeof, $at, $struct_end, $data.len()).is_ok());
+        debug_assert_eq!($data[$at..$at+$sizeof], [0u8; $sizeof], "Data not zeroed out at offset 0x{:08X}. This is a bug!", $at);
+    }
+}
+
+macro_rules! data_pointer_from_tag_assertions {
+    ($at:tt, $struct_end:tt, $data:tt, $sizeof:expr, $cursor:tt) => {
+        // Our cursor needs to point outside of the struct. If not, that's a programmer error.
+        debug_assert!(*$cursor >= $struct_end, "Data cursor is inside the struct instead of outside. This is a bug!");
+
+        // Does the base struct fit?
+        fits($sizeof, $at, $struct_end, $data.len())?;
+    }
+}
+
+
 const DATA_STRUCT_SIZE: usize = sizeof!(u32) * 5;
 
 impl TagSerialize for crate::Data {
     fn tag_size() -> usize {
         DATA_STRUCT_SIZE
     }
-    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize)  -> Result<(), &'static str> {
-        // catch programming errors
-        debug_assert!(fits(DATA_STRUCT_SIZE, at, struct_end, data.len()).is_ok());
-        debug_assert_eq!(data[at..at+DATA_STRUCT_SIZE], [0u8; DATA_STRUCT_SIZE], "data not zeroed out at offset 0x{:08X}", at);
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize)  -> ErrorMessageResult<()> {
+        data_pointer_into_tag_assertions!(at, struct_end, data, DATA_STRUCT_SIZE);
 
         // internally this is stored as a 32-bit signed integer
-        if self.len() > crate::hce::MAX_ARRAY_LENGTH {
-            Err("data exceeds 2147483647 bytes")
+        let size = self.len();
+        let limit = crate::hce::MAX_ARRAY_LENGTH;
+        if size > limit {
+            return Err(ErrorMessage::AllocatedString(format!("Data exceeds the maximum number of bytes and cannot be written to a tag ({size} > {limit})")));
         }
-        else {
-            // append the data and write the length
-            data.extend(self);
-            (self.len() as u32).into_tag(data, at + 0x0, struct_end)
-        }
-    }
-    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, &'static str> {
-        // Our cursor needs to point outside of the struct. If not, that's a programmer error.
-        debug_assert!(*cursor >= struct_end, "data cursor is inside the struct instead of outside");
 
-        // Does the base struct fit?
-        fits(DATA_STRUCT_SIZE, at, struct_end, data.len())?;
+        // append the data and write the length
+        data.extend(self);
+        (self.len() as u32).into_tag(data, at + 0x0, struct_end)
+    }
+    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
+        data_pointer_from_tag_assertions!(at, struct_end, data, DATA_STRUCT_SIZE, cursor);
 
         // Does this array fit?
         let length = u32::from_tag(data, at + 0x0, struct_end, cursor)? as usize;
@@ -314,10 +330,8 @@ impl TagSerialize for TagReference {
     fn tag_size() -> usize {
         TAG_REFERENCE_STRUCT_SIZE
     }
-    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), &'static str> {
-        // catch programming errors
-        debug_assert!(fits(TAG_REFERENCE_STRUCT_SIZE, at, struct_end, data.len()).is_ok());
-        debug_assert_eq!(data[at..at+TAG_REFERENCE_STRUCT_SIZE], [0u8; TAG_REFERENCE_STRUCT_SIZE], "data not zeroed out at offset 0x{:08X}", at);
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
+        data_pointer_into_tag_assertions!(at, struct_end, data, TAG_REFERENCE_STRUCT_SIZE);
 
         // current path
         let path = self.get_path_without_extension();
@@ -327,36 +341,34 @@ impl TagSerialize for TagReference {
         }
         else {
             // internally this is stored as a 32-bit signed integer
-            if path.len() > crate::hce::MAX_ARRAY_LENGTH {
-                Err("data exceeds 2147483647 bytes")
+            let size = path.len();
+            let limit = crate::hce::MAX_ARRAY_LENGTH;
+            if size > limit {
+                return Err(ErrorMessage::AllocatedString(format!("Path exceeds the maximum number of characters and cannot be written to a tag ({size} > {limit}).")));
             }
-            else {
-                data.extend_from_slice(path.as_bytes());
-                data.push(0); // null terminator
-                (self.group.to_fourcc()).into_tag(data, at + 0x0, struct_end)?;
-                (path.len() as u32).into_tag(data, at + 0xC, struct_end)
-            }
+
+            data.extend_from_slice(path.as_bytes());
+            data.push(0); // null terminator
+            (self.group.to_fourcc()).into_tag(data, at + 0x0, struct_end)?;
+            (path.len() as u32).into_tag(data, at + 0xC, struct_end)
         }
     }
-    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, &'static str> {
-        // Our cursor needs to point outside of the struct. If not, that's a programmer error.
-        debug_assert!(*cursor >= struct_end, "data cursor is inside the struct instead of outside");
-
-        // Does the base struct fit?
-        fits(TAG_REFERENCE_STRUCT_SIZE, at, struct_end, data.len())?;
+    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
+        data_pointer_from_tag_assertions!(at, struct_end, data, TAG_REFERENCE_STRUCT_SIZE, cursor);
 
         // Does this array fit?
         let length = u32::from_tag(data, at + 0xC, struct_end, cursor)?;
 
         if length > 0 {
-            let group = match TagGroup::from_fourcc(u32::from_tag(data, at + 0x0, struct_end, cursor)?) {
+            let fourcc = u32::from_tag(data, at + 0x0, struct_end, cursor)?;
+            let group = match TagGroup::from_fourcc(fourcc) {
                 Some(n) => n,
-                None => return Err("invalid group fourcc")
+                None => return Err(ErrorMessage::AllocatedString(format!("0x{fourcc:08X} does not correspond to a valid FourCC.")))
             };
 
             let real_length = match (length as usize).checked_add(1) {
                 Some(n) => n,
-                None => return Err("out of bounds")
+                None => return Err(ErrorMessage::StaticString(ARCHITECTURE_LIMIT_EXCEEDED))
             };
 
             fits(real_length, *cursor, data.len(), data.len())?;
@@ -370,7 +382,7 @@ impl TagSerialize for TagReference {
                 TagReference::from_path_and_group(n, group)
             }
             else {
-                Err("invalid path")
+                Err(ErrorMessage::StaticString("Path does not correspond to a valid UTF-8 path."))
             }
         }
         else {
@@ -387,51 +399,44 @@ impl<T: crate::TagBlockFn + TagSerialize + Default> TagSerialize for crate::Bloc
     fn tag_size() -> usize {
         BLOCK_ARRAY_STRUCT_SIZE
     }
-    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), &'static str> {
-        // catch programming errors
-        debug_assert!(fits(BLOCK_ARRAY_STRUCT_SIZE, at, struct_end, data.len()).is_ok());
-        debug_assert_eq!(data[at..at+BLOCK_ARRAY_STRUCT_SIZE], [0u8; BLOCK_ARRAY_STRUCT_SIZE], "data not zeroed out at offset 0x{:08X}", at);
-
-        let count = self.blocks.len();
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
+        data_pointer_into_tag_assertions!(at, struct_end, data, BLOCK_ARRAY_STRUCT_SIZE);
 
         // internally this is stored as a 32-bit signed integer
-        if count > crate::hce::MAX_ARRAY_LENGTH {
-            Err("data exceeds 2147483647 entries")
+        let size = self.blocks.len();
+        let limit = crate::hce::MAX_ARRAY_LENGTH;
+        if size > limit {
+            return Err(ErrorMessage::AllocatedString(format!("Array exceeds the maximum number of entries and cannot be written to a tag ({size} > {limit}).")));
         }
-        else {
-            // Get the total size
-            let element_size = T::tag_size();
-            let total_size = match element_size.checked_mul(count) {
-                Some(n) => n,
-                None => return Err("usize overflow")
-            };
 
-            // Get the location we will be putting our new data into
-            let mut current_offset = data.len();
-            let new_data_size = match current_offset.checked_add(total_size) {
-                Some(n) => n,
-                None => return Err("usize overflow")
-            };
-            data.resize(new_data_size, 0);
+        // Get the total size
+        let element_size = T::tag_size();
+        let total_size = match element_size.checked_mul(size) {
+            Some(n) => n,
+            None => return Err(ErrorMessage::StaticString(ARCHITECTURE_LIMIT_EXCEEDED))
+        };
 
-            // Go through each block and add them into the tag
-            for b in &self.blocks {
-                let next_offset = current_offset + element_size;
-                b.into_tag(data, current_offset, next_offset)?;
-                current_offset = next_offset;
-            }
+        // Get the location we will be putting our new data into
+        let mut current_offset = data.len();
+        let new_data_size = match current_offset.checked_add(total_size) {
+            Some(n) => n,
+            None => return Err(ErrorMessage::StaticString(ARCHITECTURE_LIMIT_EXCEEDED))
+        };
+        data.resize(new_data_size, 0);
 
-            // Write the new offset.
-            (count as u32).into_tag(data, at + 0x0, struct_end)
+        // Go through each block and add them into the tag
+        for b in &self.blocks {
+            let next_offset = current_offset + element_size;
+            b.into_tag(data, current_offset, next_offset)?;
+            current_offset = next_offset;
         }
+
+        // Write the new offset.
+        (size as u32).into_tag(data, at + 0x0, struct_end)
 
     }
-    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, &'static str> {
-        // Our cursor needs to point outside of the struct. If not, that's a programmer error.
-        debug_assert!(*cursor >= struct_end, "data cursor is inside the struct instead of outside");
-
-        // Does the base struct fit?
-        fits(BLOCK_ARRAY_STRUCT_SIZE, at, struct_end, data.len())?;
+    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
+        data_pointer_from_tag_assertions!(at, struct_end, data, BLOCK_ARRAY_STRUCT_SIZE, cursor);
 
         // Does this array fit?
         let count = u32::from_tag(data, at + 0x0, struct_end, cursor)? as usize;
@@ -439,7 +444,7 @@ impl<T: crate::TagBlockFn + TagSerialize + Default> TagSerialize for crate::Bloc
 
         let total_size = match tag_size.checked_mul(count) {
             Some(n) => n,
-            None => return Err("usize overflow")
+            None => return Err(ErrorMessage::StaticString(ARCHITECTURE_LIMIT_EXCEEDED))
         };
         fits(total_size, *cursor, data.len(), data.len())?;
 

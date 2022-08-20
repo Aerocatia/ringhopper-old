@@ -217,10 +217,10 @@ fn test_block_array() {
         fn tag_size() -> usize {
             u32::tag_size()
         }
-        fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), &'static str> {
+        fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
             self.some_int.into_tag(data, at, struct_end)
         }
-        fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, &'static str> {
+        fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
             Ok(TestStruct {
                 some_int: u32::from_tag(data, at, struct_end, cursor)?
             })
