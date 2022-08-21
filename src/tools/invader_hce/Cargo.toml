@@ -2,11 +2,17 @@
 name = "invader_hce"
 version = "0.1.0"
 autobins = false
+description = "The free Halo: Combat Evolved modding toolkit"
+license = "GPL-3.0-only"
+build = "build.rs"
 
 [dependencies]
 invader = { path = "../../invader" }
 
 [[bin]]
-name = "invader"
+name = "invader" # hack to make invader_hce be output as "invader" for exe reasons
 path = "src/main.rs"
 doc = false
+
+[build-dependencies]
+embed-resource = "1.7"
