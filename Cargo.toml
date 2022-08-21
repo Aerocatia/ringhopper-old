@@ -1,2 +1,7 @@
 [workspace]
 members = [ "src/invader", "src/tools/invader_hce", "src/strings" ]
+
+[profile.release]
+lto = true
+panic = "abort"
+strip = true
