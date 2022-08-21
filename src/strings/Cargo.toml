@@ -1,9 +1,10 @@
 [package]
 name = "strings"
 version = "0.1.0"
+description = "Strings used in Invader's text output"
+license = "GPL-3.0-only"
 
 [lib]
-name = "strings"
 doc = false
 proc-macro = true
 
