@@ -1,4 +1,4 @@
-use super::TagSerialize;
+use super::{TagSerialize, ParsedTagFile};
 use crate::*;
 
 const BYTES_NEGATIVE: [u8;4] = [0xBF, 0x80, 0x00, 0x00];
@@ -260,4 +260,94 @@ fn test_block_array() {
 
     // Verify it's the same
     assert_eq!(bytes, v[..]);
+}
+
+#[test]
+fn test_unicode_string_list() {
+    use std::any::Any;
+
+    let player_names_bytes = include_bytes!("unicode_string_list_test.unicode_string_list");
+
+    // Define our structs
+    #[derive(PartialEq)]
+    struct UnicodeStringList {
+        strings: BlockArray<UnicodeStringListString>
+    }
+
+    #[derive(Default, PartialEq)]
+    struct UnicodeStringListString {
+        string_data: Vec<u8>
+    }
+
+    impl TagBlockFn for UnicodeStringListString {
+        fn field_count(&self) -> usize { unimplemented!() }
+        fn field_at_index_mut(&mut self, _: usize) -> FieldReference<&mut (dyn Any + 'static)> { unimplemented!() }
+        fn array_at_index(&self, _: usize) -> &dyn BlockArrayFn { unimplemented!() }
+        fn array_at_index_mut(&mut self, _: usize) -> &mut dyn BlockArrayFn { unimplemented!() }
+        fn field_at_index_is_array(&self, _: usize) -> bool { unimplemented!() }
+        fn field_at_index(&self, _: usize) -> FieldReference<&(dyn Any + 'static)> { unimplemented!() }
+    }
+
+    impl TagSerialize for UnicodeStringList {
+        fn tag_size() -> usize {
+            BlockArray::<UnicodeStringListString>::tag_size()
+        }
+        fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), ErrorMessage> {
+            self.strings.into_tag(data, at, struct_end)
+        }
+        fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, ErrorMessage> {
+            Ok(UnicodeStringList { strings: BlockArray::<UnicodeStringListString>::from_tag(data, at, struct_end, cursor)? })
+        }
+    }
+
+    impl TagSerialize for UnicodeStringListString {
+        fn tag_size() -> usize {
+            Vec::<u8>::tag_size()
+        }
+        fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), ErrorMessage> {
+            self.string_data.into_tag(data, at, struct_end)
+        }
+        fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, ErrorMessage> {
+            Ok(UnicodeStringListString { string_data: Vec::<u8>::from_tag(data, at, struct_end, cursor)? })
+        }
+    }
+
+    // Load the tag
+    let tag : ParsedTagFile<UnicodeStringList> = ParsedTagFile::from_tag(player_names_bytes).unwrap();
+
+    // Go through each string
+    let mut strings = Vec::<String>::new();
+    for string in &tag.data.strings.blocks {
+        let string_data = &string.string_data;
+        let mut string_data_as_16 = Vec::<u16>::new();
+
+        // Go two bytes at a time
+        for s in (0..string_data.len()).step_by(2) {
+            use std::convert::TryInto;
+
+            let bytes: [u8; 2] = string_data[s..s+2].try_into().unwrap();
+            let data  = u16::from_le_bytes(bytes);
+            string_data_as_16.push(data);
+        }
+
+        // Pop the null terminator
+        string_data_as_16.pop().unwrap();
+
+        // Decode
+        strings.push(std::char::decode_utf16(string_data_as_16).map(|r| r.unwrap()).collect());
+    }
+
+    // Test the strings
+    assert_eq!(3, strings.len());
+    assert_eq!("Hello world!", strings[0]);
+    assert_eq!("This is a test!", strings[1]);
+    assert_eq!("Parsing an actual tag works~", strings[2]);
+
+    // Try remaking it and reparsing it. Check if it produces the same tag.
+    let new_file = ParsedTagFile::into_tag(&tag.data, h1::TagGroup::UnicodeStringList).unwrap();
+    let new_tag : ParsedTagFile<UnicodeStringList> = ParsedTagFile::from_tag(&new_file).unwrap();
+    assert!(new_tag.data == tag.data);
+
+    // Lastly, check to see if we produce the same binary data
+    assert_eq!(player_names_bytes, &new_file[..]);
 }

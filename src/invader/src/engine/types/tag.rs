@@ -61,6 +61,14 @@ pub struct BlockArray<T: TagBlockFn> {
     pub blocks: Vec<T>
 }
 
+use std::cmp::PartialEq;
+
+impl<T: TagBlockFn + PartialEq> PartialEq for BlockArray<T> {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.blocks == rhs.blocks
+    }
+}
+
 /// Interface for accessing blocks from an [BlockArray] type of an unknown block type.
 pub trait BlockArrayFn {
     /// Get the length of the array.

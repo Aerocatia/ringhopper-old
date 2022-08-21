@@ -7,14 +7,19 @@
     "engine.types.error_string_not_null_terminated": "String data is not null terminated.",
     "engine.types.error_string_not_valid_utf8": "String data is not valid UTF-8.",
 
+    "engine.h1.types.tag.header.error": "Error parsing the tag header: {reason}",
+    "engine.h1.types.tag.header.error_reason_blam_invalid": "Blam literal fourCC does not match (0x{blam:08X} expected, got 0x{other:08X} instead).",
+    "engine.h1.types.tag.header.error_reason_version_unsupported": "Version for {group} is unsupported ({version} expected, got {other} instead).",
+
     "engine.h1.types.serialize.error_architecture_limit_exceeded": "Data is out of bounds. (Architecture size limit exceeded!)",
     "engine.h1.types.serialize.error_array_limit_exceeded": "Array exceeds the maximum number of entries and cannot be written to a tag ({size} > {limit}).",
-    "engine.h1.types.serialize.error_byte_array_limit_exceeded": "Data exceeds the maximum number of bytes and cannot be written to a tag ({size} > {limit}).",
+    "engine.h1.types.serialize.error_byte_array_limit_exceeded": "Data exceeds the maximum number of bytes and cannot be written to a tag (0x{size:08X} > 0x{limit:08X}).",
     "engine.h1.types.serialize.error_data_cursor_inside_struct": "Data cursor is inside the struct instead of outside. This is a bug!",
     "engine.h1.types.serialize.error_data_not_zeroed_out": "Data not zeroed out at offset 0x{:08X}. This is a bug!",
     "engine.h1.types.serialize.error_fourcc_invalid": "0x{fourcc:08X} does not correspond to a valid FourCC.",
     "engine.h1.types.serialize.error_max_path_limit": "Path exceeds the maximum number of characters and cannot be written to a tag ({size} > {limit}).",
     "engine.h1.types.serialize.error_path_not_utf8": "Path is not valid UTF-8.",
+    "engine.h1.types.serialize.error_tag_leftover_data": "Tag contains leftover data and may be corrupt (0x{read:08X} / 0x{total:08X} bytes read).",
 
     "command_usage.error": "Usage: {path} <verb> [arguments...]",
     "command_usage.error_available_verbs": "Available verbs:",

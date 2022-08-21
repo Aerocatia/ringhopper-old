@@ -5,4 +5,7 @@ pub use self::groups::*;
 pub type TagReference = crate::TagReference<TagGroup>;
 
 mod serialize;
-pub use self::serialize::TagSerialize;
+pub use self::serialize::{TagSerialize, ParsedTagFile};
+
+mod tag;
+pub use self::tag::*;

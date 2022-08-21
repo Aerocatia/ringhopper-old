@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{h1::{TagGroup, TagReference}, TagGroupFn, Matrix, ErrorMessage, ErrorMessageResult};
-
+use crate::{h1::{TagGroup, TagReference, TagFileHeader}, TagGroupFn, Matrix, ErrorMessage, ErrorMessageResult};
 use strings::get_compiled_string;
 
 /// Serialization implementation for tags in tag format.
@@ -464,5 +463,107 @@ impl<T: crate::TagBlockFn + TagSerialize + Default> TagSerialize for crate::Bloc
         }
 
         Ok(block_array)
+    }
+}
+
+/// Size of the tag file header.
+const TAG_FILE_HEADER_LEN: usize = 0x40;
+
+impl TagSerialize for TagFileHeader {
+    fn tag_size() -> usize {
+        TAG_FILE_HEADER_LEN
+    }
+
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
+        data_pointer_into_tag_assertions!(at, struct_end, data, TAG_FILE_HEADER_LEN);
+
+        self.old_tag_id.into_tag(data, 0x00, struct_end)?;
+        self.old_tag_name.into_tag(data, 0x04, struct_end)?;
+        self.tag_group.to_fourcc().into_tag(data, 0x24, struct_end)?;
+        self.crc32.into_tag(data, 0x28, struct_end)?;
+        self.header_length.into_tag(data, 0x2C, struct_end)?;
+        self.tag_group_version.into_tag(data, 0x38, struct_end)?;
+        self.something_255.into_tag(data, 0x3A, struct_end)?;
+        self.blam_fourcc.into_tag(data, 0x3C, struct_end)?;
+
+        Ok(())
+    }
+
+    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
+        data_pointer_from_tag_assertions!(at, struct_end, data, TAG_FILE_HEADER_LEN, cursor);
+
+        let group_fourcc = u32::from_tag(data, 0x24, struct_end, cursor)?;
+        let group = match TagGroup::from_fourcc(group_fourcc) {
+            Some(n) => n,
+            None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.serialize.error_fourcc_invalid"), fourcc=group_fourcc)))
+        };
+
+        Ok(TagFileHeader {
+            old_tag_id: u32::from_tag(data, 0x00, struct_end, cursor)?,
+            old_tag_name: crate::String32::from_tag(data, 0x04, struct_end, cursor)?,
+            tag_group: group,
+            crc32: u32::from_tag(data, 0x28, struct_end, cursor)?,
+            header_length: u32::from_tag(data, 0x2C, struct_end, cursor)?,
+            tag_group_version: u16::from_tag(data, 0x38, struct_end, cursor)?,
+            something_255: u16::from_tag(data, 0x3A, struct_end, cursor)?,
+            blam_fourcc: u32::from_tag(data, 0x3C, struct_end, cursor)?,
+        })
+    }
+}
+
+/// Functionality for parsing and making tag file data.
+pub struct ParsedTagFile<T> {
+    /// Header that was read from the tag.
+    pub header: TagFileHeader,
+
+    /// Data that was read from the tag.
+    pub data: T
+}
+
+impl<T: TagSerialize> ParsedTagFile<T> {
+    /// Parse the tag from the given bytes.
+    pub fn from_tag(bytes: &[u8]) -> ErrorMessageResult<ParsedTagFile<T>> {
+        let base_struct_size = T::tag_size();
+        let mut cursor = TAG_FILE_HEADER_LEN + base_struct_size;
+        let header = TagFileHeader::from_tag(bytes, 0, TAG_FILE_HEADER_LEN, &mut cursor)?;
+        header.validate()?;
+
+        let final_data = ParsedTagFile {
+            header: header,
+            data: T::from_tag(bytes, TAG_FILE_HEADER_LEN, cursor, &mut cursor)?
+        };
+
+        if cursor != bytes.len() {
+            Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.serialize.error_tag_leftover_data"), read=cursor, total=bytes.len())))
+        }
+        else {
+            Ok(final_data)
+        }
+    }
+
+    /// Convert the tag data into the given bytes.
+    pub fn into_tag(data: &T, tag_group: TagGroup) -> ErrorMessageResult<Vec<u8>> {
+        let base_struct_size = T::tag_size();
+        let struct_end = TAG_FILE_HEADER_LEN + base_struct_size;
+
+        let mut final_data: Vec<u8> = Vec::new();
+        final_data.resize(struct_end, 0);
+        data.into_tag(&mut final_data, TAG_FILE_HEADER_LEN, struct_end)?;
+
+        let crc32 = crate::crc::crc32(&final_data[TAG_FILE_HEADER_LEN..]);
+
+        let header = TagFileHeader {
+            old_tag_id: 0,
+            old_tag_name: crate::String32::default(),
+            tag_group: tag_group,
+            tag_group_version: TagFileHeader::version_for_group(tag_group),
+            header_length: TAG_FILE_HEADER_LEN as u32,
+            something_255: 255,
+            blam_fourcc: super::BLAM_FOURCC,
+            crc32
+        };
+
+        header.into_tag(&mut final_data, 0, TAG_FILE_HEADER_LEN)?;
+        Ok(final_data)
     }
 }

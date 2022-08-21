@@ -121,7 +121,7 @@ pub struct Rectangle {
 /// If an invalid path is used, the string will not be written, and an [Err] will be returned with a message.
 ///
 /// Also, all characters will be made lowercase, and the native path separator will be replaced with a backslash (`\`).
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq)]
 pub struct TagReference<T: TagGroupFn> {
     pub group: T,
     path: String
