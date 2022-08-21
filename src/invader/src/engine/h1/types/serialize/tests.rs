@@ -5,7 +5,7 @@ const BYTES_NEGATIVE: [u8;4] = [0xBF, 0x80, 0x00, 0x00];
 const BYTES_POSITIVE: [u8;4] = [0x3F, 0x80, 0x00, 0x00];
 
 #[test]
-fn test_serialize_primitives_from_into_hce() {
+fn test_serialize_primitives_from_into_h1() {
     assert_eq!(0x3F, u8::from_tag(&BYTES_POSITIVE, 0, 4, &mut 0).unwrap());
     assert_eq!(0x3F80, u16::from_tag(&BYTES_POSITIVE, 0, 4, &mut 0).unwrap());
     assert_eq!(0x3F800000, u32::from_tag(&BYTES_POSITIVE, 0, 4, &mut 0).unwrap());
@@ -66,7 +66,7 @@ fn test_serialize_primitives_from_into_hce() {
 }
 
 #[test]
-fn test_serialize_macro_generated_vectors_from_into_hce() {
+fn test_serialize_macro_generated_vectors_from_into_h1() {
     // Hardcoded array of bytes that correspond to a vector of 1, 2, -16
     let bytes = [0x3F, 0x80, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0xC1, 0x80, 0x00, 0x00];
     assert_eq!(bytes.len(), Vector3D::tag_size());
@@ -87,7 +87,7 @@ fn test_serialize_macro_generated_vectors_from_into_hce() {
 }
 
 #[test]
-fn test_serialize_color_ints_from_into_hce() {
+fn test_serialize_color_ints_from_into_h1() {
     // Hardcoded array of bytes in ARGB order (big endian)
     let bytes = [0xFF, 0x10, 0x55, 0x88];
     assert_eq!(bytes.len(), ColorRGBInt::tag_size());
@@ -116,7 +116,7 @@ fn test_serialize_color_ints_from_into_hce() {
 }
 
 #[test]
-fn test_serialize_string32_from_into_hce() {
+fn test_serialize_string32_from_into_h1() {
     // 31 character string + null terminator
     let bytes = *b"This string is 31 characters!!!\x00";
     assert_eq!(bytes.len(), String32::tag_size());
@@ -179,12 +179,12 @@ fn test_serialize_tag_reference() {
 
     // Parse it
     let mut parse_offset = 0x10;
-    let data = hce::TagReference::from_tag(&bytes[..], 0, 0x10, &mut parse_offset).unwrap();
+    let data = h1::TagReference::from_tag(&bytes[..], 0, 0x10, &mut parse_offset).unwrap();
     assert_eq!(bytes.len(), parse_offset);
 
     // Is it correct?
     assert_eq!("weapons\\pistol\\pistol", data.get_path_without_extension());
-    assert_eq!(hce::TagGroup::Weapon, data.group);
+    assert_eq!(h1::TagGroup::Weapon, data.group);
 
     // Now convert it back into bytes and see what happens
     let mut v = Vec::new();

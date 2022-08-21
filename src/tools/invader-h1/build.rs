@@ -20,9 +20,9 @@ fn main() {
 
     let pkg = var("CARGO_PKG_NAME");
 
-    // hack to rename invader_hce.exe to invader.exe
+    // we rename invader_h1.exe to invader.exe
     let exe = match pkg.as_str() {
-        "invader_hce" => "invader".to_owned(),
+        "invader-h1" => "invader".to_owned(),
         n => n.to_owned()
     };
 

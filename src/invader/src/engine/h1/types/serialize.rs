@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{hce::{TagGroup, TagReference}, TagGroupFn, Matrix, ErrorMessage, ErrorMessageResult};
+use crate::{h1::{TagGroup, TagReference}, TagGroupFn, Matrix, ErrorMessage, ErrorMessageResult};
 
 use strings::get_compiled_string;
 
@@ -36,7 +36,7 @@ macro_rules! sizeof {
 const fn fits(size: usize, at: usize, struct_end: usize, data_size: usize) -> ErrorMessageResult<()> {
     let end = match at.checked_add(size) {
         Some(n) => n,
-        None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.hce.types.serialize.error_architecture_limit_exceeded")))
+        None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_architecture_limit_exceeded")))
     };
 
     // If data is out of the struct bounds, then this is a programming error rather than bad tag data.
@@ -274,14 +274,14 @@ macro_rules! data_pointer_into_tag_assertions {
     ($at:tt, $struct_end:tt, $data:tt, $sizeof:expr) => {
         // catch programming errors
         debug_assert!(fits($sizeof, $at, $struct_end, $data.len()).is_ok());
-        debug_assert_eq!($data[$at..$at+$sizeof], [0u8; $sizeof], get_compiled_string!("engine.hce.types.serialize.error_data_not_zeroed_out"), $at);
+        debug_assert_eq!($data[$at..$at+$sizeof], [0u8; $sizeof], get_compiled_string!("engine.h1.types.serialize.error_data_not_zeroed_out"), $at);
     }
 }
 
 macro_rules! data_pointer_from_tag_assertions {
     ($at:tt, $struct_end:tt, $data:tt, $sizeof:expr, $cursor:tt) => {
         // Our cursor needs to point outside of the struct. If not, that's a programmer error.
-        debug_assert!(*$cursor >= $struct_end, get_compiled_string!("engine.hce.types.serialize.error_data_cursor_inside_struct"));
+        debug_assert!(*$cursor >= $struct_end, get_compiled_string!("engine.h1.types.serialize.error_data_cursor_inside_struct"));
 
         // Does the base struct fit?
         fits($sizeof, $at, $struct_end, $data.len())?;
@@ -300,9 +300,9 @@ impl TagSerialize for crate::Data {
 
         // internally this is stored as a 32-bit signed integer
         let size = self.len();
-        let limit = crate::hce::MAX_ARRAY_LENGTH;
+        let limit = crate::h1::MAX_ARRAY_LENGTH;
         if size > limit {
-            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.hce.types.serialize.error_byte_array_limit_exceeded"), size=size, limit=limit)));
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.serialize.error_byte_array_limit_exceeded"), size=size, limit=limit)));
         }
 
         // append the data and write the length
@@ -342,9 +342,9 @@ impl TagSerialize for TagReference {
         else {
             // internally this is stored as a 32-bit signed integer
             let size = path.len();
-            let limit = crate::hce::MAX_ARRAY_LENGTH;
+            let limit = crate::h1::MAX_ARRAY_LENGTH;
             if size > limit {
-                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.hce.types.serialize.error_max_path_limit"), size=size, limit=limit)));
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.serialize.error_max_path_limit"), size=size, limit=limit)));
             }
 
             data.extend_from_slice(path.as_bytes());
@@ -363,12 +363,12 @@ impl TagSerialize for TagReference {
             let fourcc = u32::from_tag(data, at + 0x0, struct_end, cursor)?;
             let group = match TagGroup::from_fourcc(fourcc) {
                 Some(n) => n,
-                None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.hce.types.serialize.error_fourcc_invalid"), fourcc=fourcc)))
+                None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.serialize.error_fourcc_invalid"), fourcc=fourcc)))
             };
 
             let real_length = match (length as usize).checked_add(1) {
                 Some(n) => n,
-                None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.hce.types.serialize.error_architecture_limit_exceeded")))
+                None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_architecture_limit_exceeded")))
             };
 
             fits(real_length, *cursor, data.len(), data.len())?;
@@ -382,7 +382,7 @@ impl TagSerialize for TagReference {
                 TagReference::from_path_and_group(n, group)
             }
             else {
-                Err(ErrorMessage::StaticString(get_compiled_string!("engine.hce.types.serialize.error_path_not_utf8")))
+                Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_path_not_utf8")))
             }
         }
         else {
@@ -404,23 +404,23 @@ impl<T: crate::TagBlockFn + TagSerialize + Default> TagSerialize for crate::Bloc
 
         // internally this is stored as a 32-bit signed integer
         let size = self.blocks.len();
-        let limit = crate::hce::MAX_ARRAY_LENGTH;
+        let limit = crate::h1::MAX_ARRAY_LENGTH;
         if size > limit {
-            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.hce.types.serialize.error_array_limit_exceeded"), size=size, limit=limit)));
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.serialize.error_array_limit_exceeded"), size=size, limit=limit)));
         }
 
         // Get the total size
         let element_size = T::tag_size();
         let total_size = match element_size.checked_mul(size) {
             Some(n) => n,
-            None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.hce.types.serialize.error_architecture_limit_exceeded")))
+            None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_architecture_limit_exceeded")))
         };
 
         // Get the location we will be putting our new data into
         let mut current_offset = data.len();
         let new_data_size = match current_offset.checked_add(total_size) {
             Some(n) => n,
-            None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.hce.types.serialize.error_architecture_limit_exceeded")))
+            None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_architecture_limit_exceeded")))
         };
         data.resize(new_data_size, 0);
 
@@ -444,7 +444,7 @@ impl<T: crate::TagBlockFn + TagSerialize + Default> TagSerialize for crate::Bloc
 
         let total_size = match tag_size.checked_mul(count) {
             Some(n) => n,
-            None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.hce.types.serialize.error_architecture_limit_exceeded")))
+            None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_architecture_limit_exceeded")))
         };
         fits(total_size, *cursor, data.len(), data.len())?;
 

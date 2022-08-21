@@ -1,5 +1,5 @@
 [workspace]
-members = [ "src/invader", "src/tools/invader_hce", "src/strings" ]
+members = [ "src/invader", "src/tools/invader-h1", "src/strings" ]
 
 [profile.release]
 lto = true

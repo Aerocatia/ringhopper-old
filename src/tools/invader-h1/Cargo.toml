@@ -1,5 +1,5 @@
 [package]
-name = "invader_hce"
+name = "invader-h1"
 version = "0.1.0"
 autobins = false
 description = "The free Halo: Combat Evolved modding toolkit"
@@ -10,7 +10,7 @@ build = "build.rs"
 invader = { path = "../../invader" }
 
 [[bin]]
-name = "invader" # hack to make invader_hce be output as "invader" for exe reasons
+name = "invader"  # we build invader-h1 as invader
 path = "src/main.rs"
 doc = false
 
