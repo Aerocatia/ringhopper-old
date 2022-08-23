@@ -264,56 +264,10 @@ fn test_block_array() {
 
 #[test]
 fn test_unicode_string_list() {
-    use std::any::Any;
-
     let player_names_bytes = include_bytes!("unicode_string_list_test.unicode_string_list");
 
-    // Define our structs
-    #[derive(PartialEq)]
-    struct UnicodeStringList {
-        strings: BlockArray<UnicodeStringListString>
-    }
-
-    #[derive(Default, PartialEq)]
-    struct UnicodeStringListString {
-        string_data: Vec<u8>
-    }
-
-    impl TagBlockFn for UnicodeStringListString {
-        fn field_count(&self) -> usize { unimplemented!() }
-        fn field_at_index_mut(&mut self, _: usize) -> FieldReference<&mut (dyn Any + 'static)> { unimplemented!() }
-        fn array_at_index(&self, _: usize) -> &dyn BlockArrayFn { unimplemented!() }
-        fn array_at_index_mut(&mut self, _: usize) -> &mut dyn BlockArrayFn { unimplemented!() }
-        fn field_at_index_is_array(&self, _: usize) -> bool { unimplemented!() }
-        fn field_at_index(&self, _: usize) -> FieldReference<&(dyn Any + 'static)> { unimplemented!() }
-    }
-
-    impl TagSerialize for UnicodeStringList {
-        fn tag_size() -> usize {
-            BlockArray::<UnicodeStringListString>::tag_size()
-        }
-        fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), ErrorMessage> {
-            self.strings.into_tag(data, at, struct_end)
-        }
-        fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, ErrorMessage> {
-            Ok(UnicodeStringList { strings: BlockArray::<UnicodeStringListString>::from_tag(data, at, struct_end, cursor)? })
-        }
-    }
-
-    impl TagSerialize for UnicodeStringListString {
-        fn tag_size() -> usize {
-            Vec::<u8>::tag_size()
-        }
-        fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), ErrorMessage> {
-            self.string_data.into_tag(data, at, struct_end)
-        }
-        fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, ErrorMessage> {
-            Ok(UnicodeStringListString { string_data: Vec::<u8>::from_tag(data, at, struct_end, cursor)? })
-        }
-    }
-
     // Load the tag
-    let tag : ParsedTagFile<UnicodeStringList> = ParsedTagFile::from_tag(player_names_bytes).unwrap();
+    let tag : ParsedTagFile<crate::h1::UnicodeStringList> = ParsedTagFile::from_tag(player_names_bytes).unwrap();
 
     // Go through each string
     let mut strings = Vec::<String>::new();
@@ -345,7 +299,7 @@ fn test_unicode_string_list() {
 
     // Try remaking it and reparsing it. Check if it produces the same tag.
     let new_file = ParsedTagFile::into_tag(&tag.data, h1::TagGroup::UnicodeStringList).unwrap();
-    let new_tag : ParsedTagFile<UnicodeStringList> = ParsedTagFile::from_tag(&new_file).unwrap();
+    let new_tag : ParsedTagFile<crate::h1::UnicodeStringList> = ParsedTagFile::from_tag(&new_file).unwrap();
     assert!(new_tag.data == tag.data);
 
     // Lastly, check to see if we produce the same binary data

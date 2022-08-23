@@ -6,6 +6,10 @@ pub use self::types::*;
 mod p8;
 pub use self::p8::*;
 
+mod verbs;
+mod unicode_string_list;
+pub use self::unicode_string_list::*;
+
 use super::Verb;
 use VerbFn;
 use super::EngineModuleFn;
@@ -20,6 +24,10 @@ pub struct HaloCE {}
 impl EngineModuleFn for HaloCE {
     fn get_verb_function(&self, verb: Verb) -> Option<VerbFn> {
         match verb {
+            Verb::UnicodeStrings => {
+                Some(self::verbs::string::string_verb)
+            }
+
             _ => None
         }
     }
