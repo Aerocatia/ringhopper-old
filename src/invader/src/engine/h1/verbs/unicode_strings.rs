@@ -1,56 +1,24 @@
 use engine::ExitCode;
 use std::{path::Path, io::Read};
-
 use crate::h1::unicode_string_list::{UnicodeStringList, UnicodeStringListString};
+use crate::cmd::args::*;
+use crate::terminal::*;
+use strings::get_compiled_string;
 
-pub fn string_verb(args: &[&str]) -> ExitCode {
-    let mut tags = Path::new("tags");
-    let mut data = Path::new("data");
+pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: &str) -> ExitCode {
+    let parsed_args = try_parse_arguments!(args, &[], &["tag"], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags());
 
-    // basic argument parser (todo: write a decent one)
-    let mut args_vec = args.to_owned();
-    'arg_loop: loop {
-        for i in 0..args_vec.len() {
-            if args_vec[i] == "--tags" || args_vec[i] == "-t" {
-                tags = Path::new(args_vec[i + 1]);
-                args_vec.remove(i + 1);
-                args_vec.remove(i);
-                continue 'arg_loop;
-            }
-            if args_vec[i] == "--data" || args_vec[i] == "-d" {
-                data = Path::new(args_vec[i + 1]);
-                args_vec.remove(i + 1);
-                args_vec.remove(i);
-                continue 'arg_loop;
-            }
-        }
-        break;
-    }
-
-    if args_vec.len() != 1 {
-        println!("Usage: string [-t <tags>] [-d <data>] <path>");
-        return ExitCode::FAILURE;
-    }
-
-    let internal_path = args_vec[0].to_owned();
+    let tags = Path::new(&parsed_args.named.get("tags").unwrap()[0]);
+    let data = Path::new(&parsed_args.named.get("data").unwrap()[0]);
+    let internal_path = &parsed_args.extra[0];
     let internal_path_path = Path::new(&internal_path).to_owned();
-
-    if !tags.exists() {
-        eprintln!("{} does not exist!", tags.to_str().unwrap());
-        return ExitCode::FAILURE;
-    }
-    if !data.exists() {
-        eprintln!("{} does not exist!", data.to_str().unwrap());
-        return ExitCode::FAILURE;
-    }
-
     let data_path = data.join(internal_path_path.clone()).with_extension("txt");
     let tag_path = tags.join(internal_path_path.clone()).with_extension("unicode_string_list");
 
     let mut data_file = match std::fs::File::open(data_path.to_owned()) {
         Ok(n) => n,
         Err(error) => {
-            eprintln!("Error opening file: {error}");
+            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_opening_file_read"), error=error, file=data_path.display());
             return ExitCode::FAILURE;
         }
     };
@@ -59,21 +27,21 @@ pub fn string_verb(args: &[&str]) -> ExitCode {
     match data_file.read_to_end(&mut file_data) {
         Ok(_) => (),
         Err(error) => {
-            eprintln!("Error reading file: {error}");
+            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_reading_file"), error=error, file=data_path.display());
             return ExitCode::FAILURE;
         }
     }
     drop(data_file);
 
     if file_data[0] == 0xFE || file_data[0] == 0xFF {
-        eprintln!("UTF-16 input is not yet supported!");
+        eprintln_error_pre!("UTF-16 input is not yet supported!");
         return ExitCode::FAILURE;
     }
 
     let string = match String::from_utf8(file_data) {
         Ok(n) => n,
         Err(error) => {
-            eprintln!("Error parsing file: {error}");
+            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display());
             return ExitCode::FAILURE;
         }
     };
@@ -98,14 +66,14 @@ pub fn string_verb(args: &[&str]) -> ExitCode {
         current_string += l;
     }
     if !current_string.is_empty() {
-        eprintln!("A '###END-STRING###' is missing!");
+        eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_missing_end_string"));
         return ExitCode::FAILURE;
     }
 
     match std::fs::create_dir_all(tags.parent().unwrap()) {
         Ok(_) => (),
         Err(error) => {
-            eprintln!("Failed to create directories: {error}");
+            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_creating_directories"), error=error, dirs=tags.parent().unwrap().display());
             return ExitCode::FAILURE;
         }
     }
@@ -134,7 +102,7 @@ pub fn string_verb(args: &[&str]) -> ExitCode {
     let mut tag_file = match std::fs::File::create(tag_path.to_owned()) {
         Ok(n) => n,
         Err(error) => {
-            eprintln!("Error opening final tag: {}", error);
+            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_opening_file_write"), error=error, file=tag_path.display());
             return ExitCode::FAILURE;
         }
     };
@@ -143,11 +111,11 @@ pub fn string_verb(args: &[&str]) -> ExitCode {
 
     match tag_file.write_all(&file) {
         Ok(_) => {
-            println!("Wrote {}", tag_path.to_str().unwrap());
+            println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=tag_path.display());
             ExitCode::SUCCESS
         },
         Err(e) => {
-            println!("Couldn't write final tag data: {e}");
+            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_writing_file"), error=e, file=tag_path.display());
             ExitCode::FAILURE
         }
     }

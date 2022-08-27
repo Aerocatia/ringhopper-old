@@ -8,7 +8,7 @@ mod types;
 pub use self::types::*;
 
 /// Execute the verb with the given arguments, returning the exit code.
-pub type VerbFn = fn (&[&str]) -> ExitCode;
+pub type VerbFn = fn (verb: &Verb, args: &[&str], executable: &str) -> ExitCode;
 
 /// Engine modules define engines supported by the driver.
 #[allow(unused)]

@@ -10,3 +10,4 @@ doc = true
 
 [dependencies]
 strings = { path = "../strings" }
+termion = "1.5.6"

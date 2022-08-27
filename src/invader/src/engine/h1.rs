@@ -25,7 +25,7 @@ impl EngineModuleFn for HaloCE {
     fn get_verb_function(&self, verb: Verb) -> Option<VerbFn> {
         match verb {
             Verb::UnicodeStrings => {
-                Some(self::verbs::string::string_verb)
+                Some(self::verbs::unicode_strings::unicode_strings_verb)
             }
 
             _ => None

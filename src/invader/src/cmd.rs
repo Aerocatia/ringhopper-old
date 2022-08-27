@@ -3,21 +3,25 @@
 use std::process::ExitCode;
 use crate::engine;
 use engine::EngineModuleFn;
+use terminal::*;
 
 use strings::get_compiled_string;
 
 mod verb;
 pub use self::verb::*;
 
+#[macro_use]
+pub mod args;
+
 fn print_usage(path: &str, lookup: &str, engine: &dyn engine::EngineModuleFn) {
     eprintln!(get_compiled_string!("command_usage.error"), path=path);
+    eprintln!();
 
-    if lookup.is_empty() {
-        eprintln!(get_compiled_string!("command_usage.error_available_verbs"));
+    if !lookup.is_empty() {
+        eprintln_error_pre!(get_compiled_string!("command_usage.error_no_verbs_matched"), lookup=lookup)
     }
-    else {
-        eprintln!(get_compiled_string!("command_usage.error_no_verbs_matched"), lookup=lookup)
-    }
+
+    eprintln!(get_compiled_string!("command_usage.error_available_verbs"));
 
     let mut verbs_listed = 0usize;
     for v in &verb::ALL_VERBS {
@@ -28,9 +32,10 @@ fn print_usage(path: &str, lookup: &str, engine: &dyn engine::EngineModuleFn) {
     }
 
     if verbs_listed == 0 {
-        eprintln!("    {}", get_compiled_string!("command_usage.error_no_verbs_available"));
+        eprintln_warn!("    {}", get_compiled_string!("command_usage.error_no_verbs_available"));
     }
 
+    eprintln!();
     eprintln!(get_compiled_string!("command_usage.error_get_help"), path=path);
 }
 
@@ -53,10 +58,10 @@ pub fn main_fn<E: EngineModuleFn>(engine: &E) -> ExitCode {
     // Try to match an argument then!
     else if let Some(v) = verb::Verb::from_input(args_ref[1]) {
         if let Some(f) = engine.get_verb_function(v) {
-            f(&args_ref[2..])
+            f(&v, &args_ref[2..], &format!("{} {}", args_ref[0], v.get_name()))
         }
         else {
-            eprintln!(get_compiled_string!("command_usage.error_verb_unsupported"), verb=v.get_name());
+            eprintln_error_pre!(get_compiled_string!("command_usage.error_verb_unsupported"), verb=v.get_name());
             ExitCode::from(2)
         }
     }
