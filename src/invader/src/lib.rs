@@ -17,3 +17,6 @@ pub mod crc;
 
 #[macro_use]
 pub mod terminal;
+
+/// The current Invader version, including a git commit count/hash if available.
+pub const INVADER_VERSION: &'static str = env!("invader_version");
