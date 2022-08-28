@@ -63,9 +63,6 @@ IDI_ICON1 ICON DISCARDABLE \"icon/{pkg}.ico\"
         embed_resource::compile(windows_rc_path);
     }
 
-    // Store version
-    println!("cargo:rustc-env=invader_version={} {}", pkg, version);
-
     // We only need to change if Cargo.toml was modified, since that's where the version is stored
     println!("cargo:rerun-if-changed=Cargo.toml");
 }

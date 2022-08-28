@@ -14,6 +14,8 @@ pub use self::verb::*;
 pub mod args;
 
 fn print_usage(path: &str, lookup: &str, engine: &dyn engine::EngineModuleFn) {
+    eprintln!("{}", env!("invader_version"));
+
     eprintln!(get_compiled_string!("command_usage.error"), path=path);
     eprintln!();
 

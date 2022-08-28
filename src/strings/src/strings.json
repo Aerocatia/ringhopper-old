@@ -1,4 +1,6 @@
 {
+    "format_invader_version": "{project} {version}.r{commit_count}.{commit_hash})",
+
     "arguments.error_directory_missing": "Directory \"{dir}\" does not exist.",
     "arguments.error_directory_not_directory": "Path \"{dir}\" does not point to a valid directory.",
     "arguments.error_use_help": "Use --help to get the usage.",

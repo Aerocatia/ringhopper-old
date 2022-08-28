@@ -17,5 +17,3 @@ pub mod crc;
 
 #[macro_use]
 pub mod terminal;
-
-
