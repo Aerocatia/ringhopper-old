@@ -270,100 +270,28 @@ impl ParsedArguments {
                 a.short.partial_cmp(&b.short).unwrap()
             });
 
-            let left_margin = 2;
             let argument_width = 29;
             let right_margin = 1;
-            let left_side = argument_width + left_margin + right_margin;
-
-            let terminal_width = match get_terminal_width(OutputType::Stdout) {
-                n if n > left_side + 1 => n,
-                _ => left_side + 1
-            };
-
-            let print_margin = |amt: usize| {
-                for _ in 0..amt {
-                    print!(" ");
-                }
-            };
+            let left_side = argument_width + right_margin;
 
             for a in arguments_sorted {
                 // Print the short and long
-                print_margin(left_margin);
-                let mut current_position = left_margin;
-                print!("-{}, --{}", a.short, a.long);
-                current_position += (1 + 1 + 1) + 1 + (2 + a.long.len());
+                print!("  -{}, --{}", a.short, a.long);
+                let mut current_position = 2 + (1 + 1 + 1) + 1 + (2 + a.long.len());
 
                 // Any argument?
                 if let Some(n) = a.parameter {
-                    print_margin(1);
-                    current_position += 1;
-                    print!("<{}>", n);
-                    current_position += 1 + n.len() + 1;
+                    print!(" <{}>", n);
+                    current_position += 1 + (1 + n.len() + 1);
                 }
 
                 // Did we overflow?
-                if current_position < (left_side - right_margin) {
-                    print_margin(left_side - current_position);
-                }
-                else {
-                    debug_assert!(false, "Left side for --{} overflowed!", a.long);
-                }
-                current_position = left_side;
+                debug_assert!(current_position < (left_side - right_margin), "Left side for --{} overflowed!", a.long);
 
-                // Now go word through the description and print it
-                let mut desc_position = 0;
-                while desc_position < a.description.len() {
-                    // Is it whitespace? If so, print it unless we hit the end of the line
-                    if a.description.chars().nth(desc_position).unwrap() == ' ' {
-                        desc_position += 1;
-                        if current_position < terminal_width {
-                            current_position += 1;
-                            print!(" ");
-                        }
-                        continue;
-                    }
+                // Print it!
+                print_word_wrap(a.description, left_side, current_position, OutputType::Stdout);
 
-                    // If we hit the end of the terminal, we need to newline here.
-                    if current_position == terminal_width {
-                        println!();
-                        print_margin(left_side);
-                        current_position = left_side;
-                    }
-
-                    // Get the end of the word.
-                    let mut end = desc_position + 1;
-                    while end < a.description.len() && a.description.chars().nth(end).unwrap() != ' ' {
-                        end += 1;
-                    }
-                    let word_length = end - desc_position;
-
-                    // Is the line too big for the word?
-                    if current_position + word_length > terminal_width {
-                        // If we are at the end of the left side, print what we have.
-                        if current_position == left_side {
-                            let remainder = terminal_width - current_position;
-                            println!("{}", &a.description[desc_position..desc_position + remainder]);
-                            desc_position += remainder;
-                        }
-
-                        // Otherwise, newline
-                        else {
-                            println!();
-                        }
-
-                        // Reset
-                        print_margin(left_side);
-                        current_position = left_side;
-                    }
-
-                    // Otherwise, print the word
-                    else {
-                        print!("{}", &a.description[desc_position..desc_position + word_length]);
-                        current_position += word_length;
-                        desc_position += word_length;
-                    }
-                }
-
+                // Done
                 println!();
             }
 

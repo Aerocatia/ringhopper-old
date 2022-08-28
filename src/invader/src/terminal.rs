@@ -224,3 +224,91 @@ macro_rules! eprintln_error_pre {
 
 pub use eprintln_warn_pre;
 pub use eprintln_error_pre;
+
+use std::io::Write;
+
+/// Print the text to standard output with word wrapping and an optional left column.
+///
+/// `current_position` is the current X position of the cursor.
+pub fn print_word_wrap(string: &str, left_margin: usize, current_position: usize, otype: OutputType) {
+    fn do_print<T: Write>(string: &str, left_margin: usize, current_position: usize, otype: OutputType, stream: &mut T) {
+        let print_margin = |stream: &mut T, amt: usize| {
+            for _ in 0..amt {
+                write!(stream, " ").unwrap();
+            }
+        };
+
+        // Allow for 1 extra column of leeway if needed.
+        let terminal_width = match get_terminal_width(otype) {
+            n if n > left_margin + 1 => n,
+            _ => left_margin + 1
+        };
+
+        let mut current_position = current_position;
+
+        // Print whitespace if we are not quite at the margin yet.
+        if current_position < left_margin {
+            print_margin(stream, left_margin - current_position);
+            current_position = left_margin
+        }
+
+        // Now go word through the description and print it
+        let mut position = 0;
+        while position < string.len() {
+            // Is it whitespace? If so, print it unless we hit the end of the line
+            if string.chars().nth(position).unwrap() == ' ' {
+                position += 1;
+                if current_position < terminal_width {
+                    current_position += 1;
+                    write!(stream, " ").unwrap();
+                }
+                continue;
+            }
+
+            // If we hit the end of the terminal, we need to newline here.
+            if current_position == terminal_width {
+                writeln!(stream).unwrap();
+                print_margin(stream, left_margin);
+                current_position = left_margin;
+            }
+
+            // Get the end of the word.
+            let mut end = position + 1;
+            while end < string.len() && string.chars().nth(end).unwrap() != ' ' {
+                end += 1;
+            }
+            let word_length = end - position;
+
+            // Is the line too big for the word?
+            if current_position + word_length > terminal_width {
+                // If we are at the end of the left side, print what we have.
+                if current_position == left_margin {
+                    let remainder = terminal_width - current_position;
+                    writeln!(stream, "{}", &string[position..position + remainder]).unwrap();
+                    position += remainder;
+                }
+
+                // Otherwise, newline
+                else {
+                    writeln!(stream).unwrap();
+                }
+
+                // Reset
+                print_margin(stream, left_margin);
+                current_position = left_margin;
+            }
+
+            // Otherwise, print the word
+            else {
+                write!(stream, "{}", &string[position..position + word_length]).unwrap();
+                current_position += word_length;
+                position += word_length;
+            }
+        }
+    }
+
+    match otype {
+        OutputType::Stderr => do_print(string, left_margin, current_position, otype, &mut std::io::stderr()),
+        OutputType::Stdout => do_print(string, left_margin, current_position, otype, &mut std::io::stdout())
+    }
+}
