@@ -6,7 +6,7 @@ use crate::terminal::*;
 use strings::get_compiled_string;
 
 pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: &str) -> ExitCode {
-    let parsed_args = try_parse_arguments!(args, &[], &["tag"], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags());
+    let parsed_args = try_parse_arguments!(args, &[], &[get_compiled_string!("arguments.specifier.tag_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags());
 
     let tags = Path::new(&parsed_args.named.get("tags").unwrap()[0]);
     let data = Path::new(&parsed_args.named.get("data").unwrap()[0]);

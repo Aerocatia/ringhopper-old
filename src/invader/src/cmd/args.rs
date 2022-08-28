@@ -234,12 +234,12 @@ impl ParsedArguments {
                 extra_arguments={
                     match extra_arguments.len() {
                         0 => String::new(),
-                        1 => format!(" {}", extra_arguments[0]),
+                        1 => format!(" <{}>", extra_arguments[0]),
                         _ => {
                             let mut a = String::new();
 
                             for e in extra_arguments {
-                                a += &format!(" {}", e);
+                                a += &format!(" <{}>", e);
                             }
 
                             a

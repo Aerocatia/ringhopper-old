@@ -8,12 +8,16 @@
     "arguments.maps.description": "Specify a maps directory. Default: \"maps\"",
     "arguments.tags.description": "Specify a tags directory. Use multiple times to specify multiple tags directories. Default: \"tags\"",
 
+    "arguments.specifier.tag_without_group": "tag",
+    "arguments.specifier.tag_with_group": "tag.group",
+    "arguments.specifier.cache_file": "cache-file",
+
     "command_usage.error": "Usage: {path} <verb> [arguments...]",
     "command_usage.error_argument_only_usable_once": "Argument --{arg} can only be used once",
     "command_usage.error_argument_takes_a_parameter": "Argument --{arg} takes a parameter",
     "command_usage.error_argument_unexpected": "Unexpected argument {arg}",
     "command_usage.error_argument_unknown": "Unknown argument {prefix}{arg}",
-    "command_usage.error_arguments_missing": "Missing arguments:",
+    "command_usage.error_arguments_missing": "Arguments are missing. Needs:",
     "command_usage.error_available_verbs": "Available verbs:",
     "command_usage.error_get_help": "Use {path} <verb> --help to view help information for a verb.",
     "command_usage.error_no_verbs_available": "<no verbs are available for this tool>",
