@@ -1,5 +1,10 @@
 extern crate strings;
-extern crate termion;
+
+#[cfg(target_os = "linux")]
+extern crate libc;
+
+#[cfg(target_os = "windows")]
+extern crate windows;
 
 mod error;
 pub use error::*;

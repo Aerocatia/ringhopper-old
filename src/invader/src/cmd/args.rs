@@ -60,7 +60,7 @@ impl ArgumentConstraints {
 }
 
 
-/// Argument to search for in [parse_arguments].
+/// Argument to search for in [ParsedArguments::parse_arguments].
 #[derive(Default)]
 pub struct ParsedArguments {
     /// Named arguments
@@ -275,7 +275,7 @@ impl ParsedArguments {
             let right_margin = 1;
             let left_side = argument_width + left_margin + right_margin;
 
-            let terminal_width = match get_terminal_width() {
+            let terminal_width = match get_terminal_width(OutputType::Stdout) {
                 n if n > left_side + 1 => n,
                 _ => left_side + 1
             };

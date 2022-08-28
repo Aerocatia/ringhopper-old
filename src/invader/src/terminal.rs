@@ -1,8 +1,35 @@
-/// Get the terminal width. Return [usize::MAX] if no tty.
-pub fn get_terminal_width() -> usize {
-    match termion::terminal_size() {
-        Ok((w, _)) if w > 1 => w as usize,
-        _ => usize::MAX
+//! Terminal-specific functions.
+
+mod tty;
+pub use self::tty::*;
+
+/// Get the terminal width. Return [usize::MAX] if not a tty.
+pub fn get_terminal_width(otype: OutputType) -> usize {
+    match TTYMetadata::get_tty_metadata(otype) {
+        Some(n) => n.width,
+        None => usize::MAX
+    }
+}
+
+/// Get whether or not colors are enabled for the given output.
+pub fn get_colors_enabled(streamtype: OutputType) -> bool {
+    // Check environment variable
+    match std::env::var("INVADER_FORCE_COLORS") {
+        Ok(n) => {
+            if n == "1" {
+                return true
+            }
+            else if n == "0" {
+                return false
+            }
+        }
+        _ => ()
+    };
+
+    // Check the TTY
+    match TTYMetadata::get_tty_metadata(streamtype) {
+        Some(n) => n.color,
+        None => false
     }
 }
 
@@ -25,15 +52,15 @@ pub enum ErrorMode {
 /// Set the error color for the given stream.
 #[macro_export]
 macro_rules! set_error_mode_for_stream {
-    ($mode:expr, $stream:expr) => {{
+    ($mode:expr, $stream:expr, $streamtype:expr) => {{
         use std::io::Write;
 
-        if termion::is_tty($stream) {
+        if get_colors_enabled($streamtype) {
             match $mode {
-                ErrorMode::Normal => write!($stream, "{}", termion::color::Fg(termion::color::Reset)),
-                ErrorMode::Success => write!($stream, "{}", termion::color::Fg(termion::color::LightGreen)),
-                ErrorMode::Warn => write!($stream, "{}", termion::color::Fg(termion::color::LightYellow)),
-                ErrorMode::Error => write!($stream, "{}", termion::color::Fg(termion::color::LightRed))
+                ErrorMode::Normal => write!($stream, "\x1B[m"),
+                ErrorMode::Success => write!($stream, "\x1B[32m"),
+                ErrorMode::Warn => write!($stream, "\x1B[1;33m"),
+                ErrorMode::Error => write!($stream, "\x1B[1;31m")
             }.unwrap();
 
             $stream.flush().unwrap();
@@ -45,9 +72,8 @@ macro_rules! set_error_mode_for_stream {
 #[macro_export]
 macro_rules! println_color {
     ($mode:expr, $($fmt:tt)*) => {{
-        set_error_mode_for_stream!($mode, &mut std::io::stdout());
-        println!($($fmt)*);
-        set_error_mode_for_stream!(ErrorMode::Normal, &mut std::io::stdout());
+        print_color!($mode, $($fmt)*);
+        println!();
     }}
 }
 
@@ -55,9 +81,8 @@ macro_rules! println_color {
 #[macro_export]
 macro_rules! eprintln_color {
     ($mode:expr, $($fmt:tt)*) => {{
-        set_error_mode_for_stream!($mode, &mut std::io::stderr());
-        eprintln!($($fmt)*);
-        set_error_mode_for_stream!(ErrorMode::Normal, &mut std::io::stderr());
+        eprint_color!($mode, $($fmt)*);
+        eprintln!();
     }}
 }
 
@@ -65,9 +90,9 @@ macro_rules! eprintln_color {
 #[macro_export]
 macro_rules! print_color {
     ($mode:expr, $($fmt:tt)*) => {{
-        set_error_mode_for_stream!($mode, &mut std::io::stdout());
+        set_error_mode_for_stream!($mode, &mut std::io::stdout(), OutputType::Stdout);
         print!($($fmt)*);
-        set_error_mode_for_stream!(ErrorMode::Normal, &mut std::io::stdout());
+        set_error_mode_for_stream!(ErrorMode::Normal, &mut std::io::stdout(), OutputType::Stdout);
     }}
 }
 
@@ -75,9 +100,9 @@ macro_rules! print_color {
 #[macro_export]
 macro_rules! eprint_color {
     ($mode:expr, $($fmt:tt)*) => {{
-        set_error_mode_for_stream!($mode, &mut std::io::stderr());
+        set_error_mode_for_stream!($mode, &mut std::io::stderr(), OutputType::Stderr);
         eprint!($($fmt)*);
-        set_error_mode_for_stream!(ErrorMode::Normal, &mut std::io::stderr());
+        set_error_mode_for_stream!(ErrorMode::Normal, &mut std::io::stderr(), OutputType::Stderr);
     }}
 }
 
