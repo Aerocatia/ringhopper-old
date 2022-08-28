@@ -1,6 +1,3 @@
-use FieldReference;
-use std::any::Any;
-use BlockArrayFn;
 use h1::TagSerialize;
 use ErrorMessage;
 use TagBlockFn;
@@ -22,11 +19,8 @@ pub struct UnicodeStringListString {
 
 impl TagBlockFn for UnicodeStringListString {
     fn field_count(&self) -> usize { todo!() }
-    fn field_at_index_mut(&mut self, _: usize) -> FieldReference<&mut (dyn Any + 'static)> { todo!() }
-    fn array_at_index(&self, _: usize) -> &dyn BlockArrayFn { todo!() }
-    fn array_at_index_mut(&mut self, _: usize) -> &mut dyn BlockArrayFn { todo!() }
-    fn field_at_index_is_array(&self, _: usize) -> bool { todo!() }
-    fn field_at_index(&self, _: usize) -> FieldReference<&(dyn Any + 'static)> { todo!() }
+    fn field_at_index(&self, _: usize) -> crate::TagField { todo!() }
+    fn field_at_index_mut(&mut self, _: usize) -> crate::TagField { todo!() }
 }
 
 impl TagSerialize for UnicodeStringList {

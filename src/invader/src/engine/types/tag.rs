@@ -22,6 +22,21 @@ pub trait TagGroupFn where Self: Sized {
     fn none() -> Self;
 }
 
+/// Tag field of some kind
+pub enum TagField<'a> {
+    /// Value
+    Value(FieldReference<&'a dyn Any>),
+
+    /// Value (mutable)
+    MutableValue(FieldReference<&'a mut dyn Any>),
+
+    /// Block array
+    Array(&'a dyn BlockArrayFn),
+
+    /// Mutable block array
+    MutableArray(&'a mut dyn BlockArrayFn)
+}
+
 /// Reference to a value in a tag.
 pub struct FieldReference<T> {
     /// Field being accessed.
@@ -39,20 +54,11 @@ pub trait TagBlockFn: Any {
     /// Get the number of fields.
     fn field_count(&self) -> usize;
 
-    /// Get the data of the field at the given index. Panics if it is out of bounds.
-    fn field_at_index(&self, index: usize) -> FieldReference<&dyn Any>;
+    /// Get the field at the given index. Panics if it is out of bounds.
+    fn field_at_index(&self, index: usize) -> TagField;
 
-    /// Get the mutable data of the field at the given index. Panics if it is out of bounds.
-    fn field_at_index_mut(&mut self, index: usize) -> FieldReference<&mut dyn Any>;
-
-    /// Get the array at the field at the given index. Panics if it is out of bounds or is not an array.
-    fn array_at_index(&self, index: usize) -> &dyn BlockArrayFn;
-
-    /// Get the mutable array at the field at the given index. Panics if it is out of bounds or is not an array.
-    fn array_at_index_mut(&mut self, index: usize) -> &mut dyn BlockArrayFn;
-
-    /// Return `true` if the field at the given index is an array. Panics if it is out of bounds.
-    fn field_at_index_is_array(&self, index: usize) -> bool;
+    /// Get the mutable field at the given index. Panics if it is out of bounds.
+    fn field_at_index_mut(&mut self, index: usize) -> TagField;
 }
 
 /// BlockArray which can hold multiple blocks.

@@ -197,8 +197,6 @@ fn test_serialize_tag_reference() {
 
 #[test]
 fn test_block_array() {
-    use std::any::Any;
-
     #[derive(Default)]
     struct TestStruct {
         pub some_int: u32
@@ -206,11 +204,8 @@ fn test_block_array() {
 
     impl TagBlockFn for TestStruct {
         fn field_count(&self) -> usize { unimplemented!() }
-        fn field_at_index(&self, _: usize) -> crate::FieldReference<&(dyn Any + 'static)> { unimplemented!() }
-        fn field_at_index_mut(&mut self, _: usize) -> crate::FieldReference<&mut (dyn Any + 'static)> { unimplemented!() }
-        fn array_at_index(&self, _: usize) -> &dyn crate::BlockArrayFn { unimplemented!() }
-        fn array_at_index_mut(&mut self, _: usize) -> &mut dyn crate::BlockArrayFn { unimplemented!() }
-        fn field_at_index_is_array(&self, _: usize) -> bool { unimplemented!() }
+        fn field_at_index(&self, _: usize) -> crate::TagField { unimplemented!() }
+        fn field_at_index_mut(&mut self, _: usize) -> crate::TagField { todo!() }
     }
 
     impl TagSerialize for TestStruct {
