@@ -90,11 +90,12 @@ pub struct Argument {
 }
 
 /// Arguments present in all commands
-const STANDARD_ARGUMENTS: [Argument; 4] = [
+const STANDARD_ARGUMENTS: [Argument; 5] = [
     Argument { long: "data", short: 'd', description: get_compiled_string!("arguments.data.description"), parameter: Some("dir"), multiple: false },
     Argument { long: "help", short: 'h', description: get_compiled_string!("arguments.help.description"), parameter: None, multiple: false },
     Argument { long: "maps", short: 'm', description: get_compiled_string!("arguments.maps.description"), parameter: Some("dir"), multiple: false },
-    Argument { long: "tags", short: 't', description: get_compiled_string!("arguments.tags.description"), parameter: Some("dir"), multiple: true }
+    Argument { long: "tags", short: 't', description: get_compiled_string!("arguments.tags.description_multi"), parameter: Some("dir"), multiple: true },
+    Argument { long: "tags", short: 't', description: get_compiled_string!("arguments.tags.description_single"), parameter: Some("dir"), multiple: false }
 ];
 
 impl ParsedArguments {
@@ -255,8 +256,8 @@ impl ParsedArguments {
                 if i.long == "data" && !constraints.needs_data {
                     continue;
                 }
-                if i.long == "tags" && !constraints.needs_tags {
-                    continue;
+                if i.long == "tags" && (!constraints.needs_tags || constraints.multiple_tags_directories != i.multiple) {
+                    continue
                 }
                 if i.long == "maps" && !constraints.needs_maps {
                     continue;

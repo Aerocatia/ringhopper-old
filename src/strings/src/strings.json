@@ -8,7 +8,8 @@
     "arguments.data.description": "Specify a data directory. Default: \"data\"",
     "arguments.help.description": "View all allowed arguments.",
     "arguments.maps.description": "Specify a maps directory. Default: \"maps\"",
-    "arguments.tags.description": "Specify a tags directory. Use multiple times to specify multiple tags directories. Default: \"tags\"",
+    "arguments.tags.description_multi": "Specify a tags directory. Use multiple times to specify multiple tags directories. Default: \"tags\"",
+    "arguments.tags.description_single": "Specify a tags directory. Default: \"tags\"",
 
     "arguments.specifier.tag_without_group": "tag",
     "arguments.specifier.tag_with_group": "tag.group",

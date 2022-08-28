@@ -208,8 +208,8 @@ pub use eprint_error;
 #[macro_export]
 macro_rules! eprintln_warn_pre {
     ($($fmt:tt)*) => {{
-        eprint_error!(get_compiled_string!("terminal.warning_prefix"));
-        eprintln_error!($($fmt)*);
+        eprint_warn!(get_compiled_string!("terminal.warning_prefix"));
+        eprintln_warn!($($fmt)*);
     }}
 }
 
