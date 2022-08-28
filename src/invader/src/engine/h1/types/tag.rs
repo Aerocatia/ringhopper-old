@@ -1,4 +1,5 @@
-use crate::{String32, ErrorMessageResult, ErrorMessage};
+use crate::types::{String32};
+use crate::{ErrorMessageResult, ErrorMessage};
 use super::TagGroup;
 
 use strings::get_compiled_string;

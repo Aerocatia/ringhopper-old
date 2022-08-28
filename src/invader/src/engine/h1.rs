@@ -1,7 +1,6 @@
 //! Halo: Combat Evolved specific functionality for Invader.
 
-mod types;
-pub use self::types::*;
+pub mod types;
 
 mod p8;
 pub use self::p8::*;

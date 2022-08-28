@@ -20,8 +20,6 @@ impl From<ColorRGB> for ColorRGBInt {
     }
 }
 
-
-
 /// Color with 8-bit channels and an alpha component as well as functions for encoding in different formats.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct ColorARGBInt {

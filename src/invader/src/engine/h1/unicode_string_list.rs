@@ -1,7 +1,7 @@
-use h1::TagSerialize;
-use ErrorMessage;
-use TagBlockFn;
-use crate::BlockArray;
+use crate::h1::types::TagSerialize;
+use crate::ErrorMessage;
+use crate::types::BlockArray;
+use crate::types::tag::{TagBlockFn, TagField};
 
 /// Unicode string list struct.
 #[derive(PartialEq, Default)]
@@ -19,8 +19,8 @@ pub struct UnicodeStringListString {
 
 impl TagBlockFn for UnicodeStringListString {
     fn field_count(&self) -> usize { todo!() }
-    fn field_at_index(&self, _: usize) -> crate::TagField { todo!() }
-    fn field_at_index_mut(&mut self, _: usize) -> crate::TagField { todo!() }
+    fn field_at_index(&self, _: usize) -> TagField { todo!() }
+    fn field_at_index_mut(&mut self, _: usize) -> TagField{ todo!() }
 }
 
 impl TagSerialize for UnicodeStringList {

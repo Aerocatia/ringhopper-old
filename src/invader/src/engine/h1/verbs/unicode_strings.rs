@@ -1,6 +1,7 @@
 use engine::ExitCode;
 use std::{path::Path, io::Read};
 use crate::h1::unicode_string_list::{UnicodeStringList, UnicodeStringListString};
+use crate::h1::types::{ParsedTagFile, TagGroup};
 use crate::cmd::args::*;
 use crate::terminal::*;
 use strings::get_compiled_string;
@@ -91,7 +92,7 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
         list.strings.blocks.push(UnicodeStringListString { string_data: v_8 })
     }
 
-    let file = match crate::h1::ParsedTagFile::into_tag(&list, crate::h1::TagGroup::UnicodeStringList) {
+    let file = match ParsedTagFile::into_tag(&list, TagGroup::UnicodeStringList) {
         Ok(n) => n,
         Err(e) => {
             eprintln!("{}", e);

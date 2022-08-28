@@ -1,4 +1,4 @@
-use crate::*;
+use crate::types::*;
 
 #[test]
 fn test_distance_from_plane() {

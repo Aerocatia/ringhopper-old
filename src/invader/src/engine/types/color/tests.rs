@@ -1,4 +1,4 @@
-use crate::{ColorARGBInt, ColorRGBInt, ColorARGB, ColorRGB};
+use crate::types::{ColorARGBInt, ColorRGBInt, ColorARGB, ColorRGB};
 
 #[test]
 fn test_16_bit_colors_are_equal() {

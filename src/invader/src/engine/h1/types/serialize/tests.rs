@@ -1,5 +1,7 @@
 use super::{TagSerialize, ParsedTagFile};
 use crate::*;
+use crate::types::*;
+use crate::types::tag::*;
 
 const BYTES_NEGATIVE: [u8;4] = [0xBF, 0x80, 0x00, 0x00];
 const BYTES_POSITIVE: [u8;4] = [0x3F, 0x80, 0x00, 0x00];
@@ -179,12 +181,12 @@ fn test_serialize_tag_reference() {
 
     // Parse it
     let mut parse_offset = 0x10;
-    let data = h1::TagReference::from_tag(&bytes[..], 0, 0x10, &mut parse_offset).unwrap();
+    let data = h1::types::TagReference::from_tag(&bytes[..], 0, 0x10, &mut parse_offset).unwrap();
     assert_eq!(bytes.len(), parse_offset);
 
     // Is it correct?
     assert_eq!("weapons\\pistol\\pistol", data.get_path_without_extension());
-    assert_eq!(h1::TagGroup::Weapon, data.group);
+    assert_eq!(h1::types::TagGroup::Weapon, data.group);
 
     // Now convert it back into bytes and see what happens
     let mut v = Vec::new();
@@ -204,8 +206,8 @@ fn test_block_array() {
 
     impl TagBlockFn for TestStruct {
         fn field_count(&self) -> usize { unimplemented!() }
-        fn field_at_index(&self, _: usize) -> crate::TagField { unimplemented!() }
-        fn field_at_index_mut(&mut self, _: usize) -> crate::TagField { todo!() }
+        fn field_at_index(&self, _: usize) -> TagField { unimplemented!() }
+        fn field_at_index_mut(&mut self, _: usize) -> TagField { unimplemented!() }
     }
 
     impl TagSerialize for TestStruct {
@@ -293,7 +295,7 @@ fn test_unicode_string_list() {
     assert_eq!("Parsing an actual tag works~", strings[2]);
 
     // Try remaking it and reparsing it. Check if it produces the same tag.
-    let new_file = ParsedTagFile::into_tag(&tag.data, h1::TagGroup::UnicodeStringList).unwrap();
+    let new_file = ParsedTagFile::into_tag(&tag.data, h1::types::TagGroup::UnicodeStringList).unwrap();
     let new_tag : ParsedTagFile<crate::h1::UnicodeStringList> = ParsedTagFile::from_tag(&new_file).unwrap();
     assert!(new_tag.data == tag.data);
 

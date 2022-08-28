@@ -192,18 +192,6 @@ macro_rules! eprint_warn {
     }}
 }
 
-pub use println_error;
-pub use println_warn;
-pub use println_success;
-pub use eprintln_warn;
-pub use eprintln_error;
-
-pub use print_error;
-pub use print_warn;
-pub use print_success;
-pub use eprint_warn;
-pub use eprint_error;
-
 /// Print a line to stderr with warning coloring prefixed with "Warning: ".
 #[macro_export]
 macro_rules! eprintln_warn_pre {
@@ -312,3 +300,14 @@ pub fn print_word_wrap(string: &str, left_margin: usize, current_position: usize
         OutputType::Stdout => do_print(string, left_margin, current_position, otype, &mut std::io::stdout())
     }
 }
+
+pub use println_error;
+pub use println_warn;
+pub use println_success;
+pub use eprintln_warn;
+pub use eprintln_error;
+pub use print_error;
+pub use print_warn;
+pub use print_success;
+pub use eprint_warn;
+pub use eprint_error;

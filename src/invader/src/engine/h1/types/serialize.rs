@@ -1,7 +1,11 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{h1::{TagGroup, TagReference, TagFileHeader}, TagGroupFn, Matrix, ErrorMessage, ErrorMessageResult};
+use crate::{ErrorMessage, ErrorMessageResult};
+use crate::types::*;
+use crate::types::tag::TagGroupFn;
+use crate::h1::types::{TagGroup, TagReference, TagFileHeader};
+
 use strings::get_compiled_string;
 
 /// Serialization implementation for tags in tag format.
@@ -172,24 +176,24 @@ macro_rules! serialize_for_struct {
 }
 
 // For these, we just need to specify the order
-serialize_for_struct!(crate::ColorAHSV, a, h, s, v);
-serialize_for_struct!(crate::ColorARGB, a, r, g, b);
-serialize_for_struct!(crate::ColorHSV, h, s, v);
-serialize_for_struct!(crate::ColorRGB, r, g, b);
-serialize_for_struct!(crate::Euler2D, y, p);
-serialize_for_struct!(crate::Euler3D, y, p, r);
-serialize_for_struct!(crate::Plane2D, vector, d);
-serialize_for_struct!(crate::Plane3D, vector, d);
-serialize_for_struct!(crate::Point2D, x, y);
-serialize_for_struct!(crate::Point2DInt, x, y);
-serialize_for_struct!(crate::Point3D, x, y, z);
-serialize_for_struct!(crate::Quaternion, x, y, z, w);
-serialize_for_struct!(crate::Rectangle, top, left, bottom, right);
-serialize_for_struct!(crate::Vector2D, x, y);
-serialize_for_struct!(crate::Vector3D, x, y, z);
+serialize_for_struct!(ColorAHSV, a, h, s, v);
+serialize_for_struct!(ColorARGB, a, r, g, b);
+serialize_for_struct!(ColorHSV, h, s, v);
+serialize_for_struct!(ColorRGB, r, g, b);
+serialize_for_struct!(Euler2D, y, p);
+serialize_for_struct!(Euler3D, y, p, r);
+serialize_for_struct!(Plane2D, vector, d);
+serialize_for_struct!(Plane3D, vector, d);
+serialize_for_struct!(Point2D, x, y);
+serialize_for_struct!(Point2DInt, x, y);
+serialize_for_struct!(Point3D, x, y, z);
+serialize_for_struct!(Quaternion, x, y, z, w);
+serialize_for_struct!(Rectangle, top, left, bottom, right);
+serialize_for_struct!(Vector2D, x, y);
+serialize_for_struct!(Vector3D, x, y, z);
 
 // These convert to 32-bit integers, so we can serialize them as such
-impl TagSerialize for crate::ColorARGBInt {
+impl TagSerialize for ColorARGBInt {
     fn tag_size() -> usize {
         u32::tag_size()
     }
@@ -201,21 +205,21 @@ impl TagSerialize for crate::ColorARGBInt {
     }
 }
 
-impl TagSerialize for crate::ColorRGBInt {
+impl TagSerialize for ColorRGBInt {
     fn tag_size() -> usize {
         u32::tag_size()
     }
     fn into_tag(&self, data: &mut Vec<u8>, at: usize, offset: usize) -> ErrorMessageResult<()> {
-        crate::ColorARGBInt::from(*self).to_a8r8g8b8().into_tag(data, at, offset)
+        ColorARGBInt::from(*self).to_a8r8g8b8().into_tag(data, at, offset)
     }
     fn from_tag(data: &[u8], at: usize, offset: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
-        let argb = crate::ColorARGBInt::from_a8r8g8b8(u32::from_tag(data, at, offset, cursor)?);
+        let argb = ColorARGBInt::from_a8r8g8b8(u32::from_tag(data, at, offset, cursor)?);
         Ok(Self { r: argb.r, g: argb.g, b: argb.b })
     }
 }
 
 // This is a simple 32 byte array
-impl TagSerialize for crate::String32 {
+impl TagSerialize for String32 {
     fn tag_size() -> usize {
         32
     }
@@ -238,7 +242,7 @@ impl TagSerialize for crate::String32 {
 const VECTOR_STRUCT_SIZE: usize = sizeof!(f32) * 3;
 const MATRIX_STRUCT_SIZE: usize = VECTOR_STRUCT_SIZE * 3;
 
-impl TagSerialize for crate::Matrix {
+impl TagSerialize for Matrix {
     fn tag_size() -> usize {
         MATRIX_STRUCT_SIZE
     }
@@ -260,9 +264,9 @@ impl TagSerialize for crate::Matrix {
         Ok(
             Matrix {
                 vectors: [
-                    crate::Vector3D::from_tag(data, at + VECTOR_STRUCT_SIZE * 0, struct_end, &mut struct_end)?,
-                    crate::Vector3D::from_tag(data, at + VECTOR_STRUCT_SIZE * 1, struct_end, &mut struct_end)?,
-                    crate::Vector3D::from_tag(data, at + VECTOR_STRUCT_SIZE * 2, struct_end, &mut struct_end)?
+                    Vector3D::from_tag(data, at + VECTOR_STRUCT_SIZE * 0, struct_end, &mut struct_end)?,
+                    Vector3D::from_tag(data, at + VECTOR_STRUCT_SIZE * 1, struct_end, &mut struct_end)?,
+                    Vector3D::from_tag(data, at + VECTOR_STRUCT_SIZE * 2, struct_end, &mut struct_end)?
                 ]
             }
         )
@@ -290,7 +294,7 @@ macro_rules! data_pointer_from_tag_assertions {
 
 const DATA_STRUCT_SIZE: usize = sizeof!(u32) * 5;
 
-impl TagSerialize for crate::Data {
+impl TagSerialize for Data {
     fn tag_size() -> usize {
         DATA_STRUCT_SIZE
     }
@@ -394,7 +398,7 @@ impl TagSerialize for TagReference {
 
 const BLOCK_ARRAY_STRUCT_SIZE: usize = sizeof!(u32) * 3;
 
-impl<T: crate::TagBlockFn + TagSerialize + Default> TagSerialize for crate::BlockArray<T> {
+impl<T: tag::TagBlockFn + TagSerialize + Default> TagSerialize for BlockArray<T> {
     fn tag_size() -> usize {
         BLOCK_ARRAY_STRUCT_SIZE
     }
@@ -500,7 +504,7 @@ impl TagSerialize for TagFileHeader {
 
         Ok(TagFileHeader {
             old_tag_id: u32::from_tag(data, 0x00, struct_end, cursor)?,
-            old_tag_name: crate::String32::from_tag(data, 0x04, struct_end, cursor)?,
+            old_tag_name: String32::from_tag(data, 0x04, struct_end, cursor)?,
             tag_group: group,
             crc32: u32::from_tag(data, 0x28, struct_end, cursor)?,
             header_length: u32::from_tag(data, 0x2C, struct_end, cursor)?,
@@ -554,7 +558,7 @@ impl<T: TagSerialize> ParsedTagFile<T> {
 
         let header = TagFileHeader {
             old_tag_id: 0,
-            old_tag_name: crate::String32::default(),
+            old_tag_name: String32::default(),
             tag_group: tag_group,
             tag_group_version: TagFileHeader::version_for_group(tag_group),
             header_length: TAG_FILE_HEADER_LEN as u32,

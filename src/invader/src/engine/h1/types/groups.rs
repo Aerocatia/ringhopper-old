@@ -92,12 +92,12 @@ pub enum TagGroup {
 use std::fmt;
 impl fmt::Display for TagGroup {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        use crate::types::tag::TagGroupFn;
         f.write_str(self.as_str())
     }
 }
 
-use crate::TagGroupFn;
-impl TagGroupFn for TagGroup {
+impl crate::types::tag::TagGroupFn for TagGroup {
     /// Get the name of the tag group used in tag extensions.
     fn as_str(&self) -> &'static str {
         match *self {

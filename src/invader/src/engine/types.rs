@@ -1,13 +1,17 @@
+//! Types of fields used in tag struct blocks.
+
+use std::cmp::PartialEq;
+use std::ops::{Index, IndexMut};
 use std::fmt;
+
+pub mod tag;
+use self::tag::*;
 
 mod trig;
 pub use self::trig::*;
 
 mod color;
 pub use self::color::*;
-
-mod tag;
-pub use self::tag::*;
 
 use crate::{ErrorMessage, ErrorMessageResult};
 
@@ -208,5 +212,42 @@ impl<T: TagGroupFn + fmt::Display> fmt::Display for TagReference<T> {
         f.write_str(".")?;
 
         self.group.fmt(f)
+    }
+}
+
+/// Block array which can hold multiple blocks.
+#[derive(Default)]
+pub struct BlockArray<T: TagBlockFn> {
+    pub blocks: Vec<T>
+}
+
+impl<T: TagBlockFn + PartialEq> PartialEq for BlockArray<T> {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.blocks == rhs.blocks
+    }
+}
+
+impl<T: TagBlockFn> BlockArrayFn for BlockArray<T> {
+    fn len(&self) -> usize {
+        self.blocks.len()
+    }
+    fn block_at_index(&self, index: usize) -> &dyn TagBlockFn {
+        &self.blocks[index]
+    }
+    fn block_at_index_mut(&mut self, index: usize) -> &mut dyn TagBlockFn {
+        &mut self.blocks[index]
+    }
+}
+
+impl<T: TagBlockFn> Index<usize> for BlockArray<T> {
+    type Output = T;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.blocks[index]
+    }
+}
+
+impl<T: TagBlockFn> IndexMut<usize> for BlockArray<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.blocks[index]
     }
 }

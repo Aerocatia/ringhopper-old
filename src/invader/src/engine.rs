@@ -4,8 +4,7 @@ pub mod h1;
 use std::process::ExitCode;
 use crate::cmd::Verb;
 
-mod types;
-pub use self::types::*;
+pub mod types;
 
 /// Execute the verb with the given arguments, returning the exit code.
 pub type VerbFn = fn (verb: &Verb, args: &[&str], executable: &str) -> ExitCode;
