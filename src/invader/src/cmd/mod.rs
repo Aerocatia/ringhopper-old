@@ -1,8 +1,8 @@
-//! Command-line driver for Invader.
+//! Command-line interface functionality for Invader.
 
 use std::process::ExitCode;
-use crate::engine;
-use engine::EngineModuleFn;
+use crate::engines;
+use engines::EngineModuleFn;
 use terminal::*;
 
 use strings::get_compiled_string;
@@ -11,9 +11,10 @@ mod verb;
 pub use self::verb::*;
 
 #[macro_use]
-pub mod args;
+mod args;
+pub use self::args::*;
 
-fn print_usage(path: &str, lookup: &str, engine: &dyn engine::EngineModuleFn) {
+fn print_usage(path: &str, lookup: &str, engine: &dyn engines::EngineModuleFn) {
     eprintln!("{}", crate::INVADER_VERSION);
 
     eprintln!(get_compiled_string!("command_usage.error"), path=path);

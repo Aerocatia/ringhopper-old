@@ -110,7 +110,7 @@ impl FieldReference<&mut dyn Any> {
         attempt_downcast!(Vector2D, Vector2D);
         attempt_downcast!(Vector3D, Vector3D);
 
-        attempt_downcast!(crate::h1::types::TagReference, H1TagReference);
+        attempt_downcast!(crate::engines::h1::TagReference, H1TagReference);
 
         unreachable!()
     }
@@ -155,7 +155,7 @@ impl FieldReference<&dyn Any> {
         attempt_downcast!(Vector2D, Vector2D);
         attempt_downcast!(Vector3D, Vector3D);
 
-        attempt_downcast!(crate::h1::types::TagReference, H1TagReference);
+        attempt_downcast!(crate::engines::h1::TagReference, H1TagReference);
 
         unreachable!()
     }
@@ -224,7 +224,7 @@ pub enum ValueReference<'a> {
     Vector2D(&'a Vector2D),
     Vector3D(&'a Vector3D),
 
-    H1TagReference(&'a crate::h1::types::TagReference)
+    H1TagReference(&'a crate::engines::h1::TagReference)
 }
 
 /// Typed mutable reference to some value.
@@ -257,5 +257,5 @@ pub enum ValueReferenceMut<'a> {
     Vector2D(&'a mut Vector2D),
     Vector3D(&'a mut Vector3D),
 
-    H1TagReference(&'a mut crate::h1::types::TagReference)
+    H1TagReference(&'a mut crate::engines::h1::TagReference)
 }

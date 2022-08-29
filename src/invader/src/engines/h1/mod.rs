@@ -1,16 +1,20 @@
 //! Halo: Combat Evolved specific functionality for Invader.
 
-pub mod types;
+mod types;
+pub use self::types::*;
 
 mod p8;
 pub use self::p8::*;
+
+mod tag_loading;
+pub use self::tag_loading::*;
 
 mod verbs;
 mod unicode_string_list;
 pub use self::unicode_string_list::*;
 
 use super::Verb;
-use VerbFn;
+use crate::engines::VerbFn;
 use super::EngineModuleFn;
 
 /// Maximum array length for arrays in Halo: CE.

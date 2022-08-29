@@ -1,4 +1,4 @@
-//! Types of fields used in tag struct blocks.
+//! Types of fields used in tag structs.
 
 use std::cmp::PartialEq;
 use std::ops::{Index, IndexMut};

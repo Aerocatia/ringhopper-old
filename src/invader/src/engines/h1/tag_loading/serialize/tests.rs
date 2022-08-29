@@ -181,12 +181,12 @@ fn test_serialize_tag_reference() {
 
     // Parse it
     let mut parse_offset = 0x10;
-    let data = h1::types::TagReference::from_tag(&bytes[..], 0, 0x10, &mut parse_offset).unwrap();
+    let data = engines::h1::types::TagReference::from_tag(&bytes[..], 0, 0x10, &mut parse_offset).unwrap();
     assert_eq!(bytes.len(), parse_offset);
 
     // Is it correct?
     assert_eq!("weapons\\pistol\\pistol", data.get_path_without_extension());
-    assert_eq!(h1::types::TagGroup::Weapon, data.group);
+    assert_eq!(engines::h1::types::TagGroup::Weapon, data.group);
 
     // Now convert it back into bytes and see what happens
     let mut v = Vec::new();
@@ -264,7 +264,7 @@ fn test_unicode_string_list() {
     let player_names_bytes = include_bytes!("unicode_string_list_test.unicode_string_list");
 
     // Load the tag
-    let tag : ParsedTagFile<crate::h1::UnicodeStringList> = ParsedTagFile::from_tag(player_names_bytes).unwrap();
+    let tag : ParsedTagFile<engines::h1::UnicodeStringList> = ParsedTagFile::from_tag(player_names_bytes).unwrap();
 
     // Go through each string
     let mut strings = Vec::<String>::new();
@@ -295,8 +295,8 @@ fn test_unicode_string_list() {
     assert_eq!("Parsing an actual tag works~", strings[2]);
 
     // Try remaking it and reparsing it. Check if it produces the same tag.
-    let new_file = ParsedTagFile::into_tag(&tag.data, h1::types::TagGroup::UnicodeStringList).unwrap();
-    let new_tag : ParsedTagFile<crate::h1::UnicodeStringList> = ParsedTagFile::from_tag(&new_file).unwrap();
+    let new_file = ParsedTagFile::into_tag(&tag.data, engines::h1::types::TagGroup::UnicodeStringList).unwrap();
+    let new_tag : ParsedTagFile<engines::h1::UnicodeStringList> = ParsedTagFile::from_tag(&new_file).unwrap();
     assert!(new_tag.data == tag.data);
 
     // Lastly, check to see if we produce the same binary data
