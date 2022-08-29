@@ -215,19 +215,19 @@ impl<T: TagGroupFn + fmt::Display> fmt::Display for TagReference<T> {
     }
 }
 
-/// Block array which can hold multiple blocks.
+/// Container which can hold multiple elements of tag blocks.
 #[derive(Default)]
-pub struct BlockArray<T: TagBlockFn> {
+pub struct Reflexive<T: TagBlockFn> {
     pub blocks: Vec<T>
 }
 
-impl<T: TagBlockFn + PartialEq> PartialEq for BlockArray<T> {
+impl<T: TagBlockFn + PartialEq> PartialEq for Reflexive<T> {
     fn eq(&self, rhs: &Self) -> bool {
         self.blocks == rhs.blocks
     }
 }
 
-impl<T: TagBlockFn> BlockArrayFn for BlockArray<T> {
+impl<T: TagBlockFn> ReflexiveFn for Reflexive<T> {
     fn len(&self) -> usize {
         self.blocks.len()
     }
@@ -239,14 +239,14 @@ impl<T: TagBlockFn> BlockArrayFn for BlockArray<T> {
     }
 }
 
-impl<T: TagBlockFn> Index<usize> for BlockArray<T> {
+impl<T: TagBlockFn> Index<usize> for Reflexive<T> {
     type Output = T;
     fn index(&self, index: usize) -> &Self::Output {
         &self.blocks[index]
     }
 }
 
-impl<T: TagBlockFn> IndexMut<usize> for BlockArray<T> {
+impl<T: TagBlockFn> IndexMut<usize> for Reflexive<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.blocks[index]
     }

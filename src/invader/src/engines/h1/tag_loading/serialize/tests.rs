@@ -239,7 +239,7 @@ fn test_block_array() {
 
     // Parse it
     let mut parse_offset = 0x0C;
-    let data = BlockArray::<TestStruct>::from_tag(&bytes[..], 0, 0x0C, &mut parse_offset).unwrap();
+    let data = Reflexive::<TestStruct>::from_tag(&bytes[..], 0, 0x0C, &mut parse_offset).unwrap();
     assert_eq!(bytes.len(), parse_offset);
     assert_eq!(5, data.blocks.len());
 

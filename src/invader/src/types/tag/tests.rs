@@ -3,7 +3,7 @@ use crate::types::tag::*;
 #[derive(Default)]
 struct MyTagBlock {
     pub some_field: Vector3D,
-    pub another_field: BlockArray<MyTagBlock>,
+    pub another_field: Reflexive<MyTagBlock>,
     pub useless_field: u32
 }
 
@@ -45,20 +45,20 @@ impl TagBlockFn for MyTagBlock {
 fn test_access() {
     let mut block = MyTagBlock {
         some_field: Vector3D { x: 0.0, y: 1.0, z: 2.0 },
-        another_field: BlockArray {
+        another_field: Reflexive {
             blocks: vec! [
                 MyTagBlock {
                     some_field: Vector3D { x: 3.0, y: 4.0, z: 5.0 },
-                    another_field: BlockArray::default(),
+                    another_field: Reflexive::default(),
                     useless_field: 1234
                 },
                 MyTagBlock {
                     some_field: Vector3D { x: 6.0, y: 7.0, z: 8.0 },
-                    another_field: BlockArray {
+                    another_field: Reflexive {
                         blocks: vec![
                             MyTagBlock {
                                 some_field: Vector3D { x: 9.0, y: 10.0, z: 11.0 },
-                                another_field: BlockArray::default(),
+                                another_field: Reflexive::default(),
                                 useless_field: 555
                             }
                         ]

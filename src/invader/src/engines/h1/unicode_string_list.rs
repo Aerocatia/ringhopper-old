@@ -1,13 +1,13 @@
 use crate::engines::h1::TagSerialize;
 use crate::ErrorMessage;
-use crate::types::BlockArray;
+use crate::types::Reflexive;
 use crate::types::tag::{TagBlockFn, TagField};
 
 /// Unicode string list struct.
 #[derive(PartialEq, Default)]
 pub struct UnicodeStringList {
     /// List of string blocks.
-    pub strings: BlockArray<UnicodeStringListString>
+    pub strings: Reflexive<UnicodeStringListString>
 }
 
 /// Unicode string list string.
@@ -25,13 +25,13 @@ impl TagBlockFn for UnicodeStringListString {
 
 impl TagSerialize for UnicodeStringList {
     fn tag_size() -> usize {
-        BlockArray::<UnicodeStringListString>::tag_size()
+        Reflexive::<UnicodeStringListString>::tag_size()
     }
     fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> Result<(), ErrorMessage> {
         self.strings.into_tag(data, at, struct_end)
     }
     fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> Result<Self, ErrorMessage> {
-        Ok(UnicodeStringList { strings: BlockArray::<UnicodeStringListString>::from_tag(data, at, struct_end, cursor)? })
+        Ok(UnicodeStringList { strings: Reflexive::<UnicodeStringListString>::from_tag(data, at, struct_end, cursor)? })
     }
 }
 

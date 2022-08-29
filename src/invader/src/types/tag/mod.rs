@@ -8,8 +8,8 @@ use crate::types::*;
 #[cfg(test)]
 mod tests;
 
-/// General interface for accessing blocks from an [BlockArray] type of an unknown block type.
-pub trait BlockArrayFn {
+/// General interface for accessing blocks from an [Reflexive] type of an unknown block type.
+pub trait ReflexiveFn {
     /// Get the length of the array.
     fn len(&self) -> usize;
 
@@ -47,10 +47,10 @@ pub enum TagFieldValue<'a> {
     MutableValue(FieldReference<&'a mut dyn Any>),
 
     /// Block array
-    Array(&'a dyn BlockArrayFn),
+    Array(&'a dyn ReflexiveFn),
 
     /// Mutable block array
-    MutableArray(&'a mut dyn BlockArrayFn)
+    MutableArray(&'a mut dyn ReflexiveFn)
 }
 
 /// Reference to a value in a tag.
@@ -173,21 +173,21 @@ pub trait TagBlockFn: Any {
     fn field_at_index_mut(&mut self, index: usize) -> TagField;
 }
 
-impl Index<usize> for &dyn BlockArrayFn {
+impl Index<usize> for &dyn ReflexiveFn {
     type Output = dyn TagBlockFn;
     fn index(&self, index: usize) -> &Self::Output {
         self.block_at_index(index)
     }
 }
 
-impl Index<usize> for &mut dyn BlockArrayFn {
+impl Index<usize> for &mut dyn ReflexiveFn {
     type Output = dyn TagBlockFn;
     fn index(&self, index: usize) -> &Self::Output {
         self.block_at_index(index)
     }
 }
 
-impl IndexMut<usize> for &mut dyn BlockArrayFn {
+impl IndexMut<usize> for &mut dyn ReflexiveFn {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.block_at_index_mut(index)
     }

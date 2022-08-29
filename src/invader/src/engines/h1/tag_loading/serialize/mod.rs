@@ -493,7 +493,7 @@ impl TagSerialize for TagReference {
 
 const BLOCK_ARRAY_STRUCT_SIZE: usize = sizeof!(u32) * 3;
 
-impl<T: tag::TagBlockFn + TagSerialize + Default> TagSerialize for BlockArray<T> {
+impl<T: tag::TagBlockFn + TagSerialize + Default> TagSerialize for Reflexive<T> {
     fn tag_size() -> usize {
         BLOCK_ARRAY_STRUCT_SIZE
     }
