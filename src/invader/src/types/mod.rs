@@ -102,10 +102,58 @@ pub struct Point2DInt {
 /// Rectangle with two Point2DInts defining the bounds of the rectangle.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct Rectangle {
+    /// Position of the top edge of the rectangle.
     pub top: i16,
+
+    /// Position of the left edge of the rectangle.
     pub left: i16,
+
+    /// Position of the bottom edge of the rectangle.
     pub bottom: i16,
+
+    /// Position of the right edge of the rectangle.
     pub right: i16
+}
+
+/// Value composed of both an upper and lower bound value.
+#[derive(Copy, Clone, Default, PartialEq, Debug)]
+pub struct Bounds<T> {
+    /// Lower bound value.
+    pub lower: T,
+
+    /// Upper bound value.
+    pub upper: T
+}
+
+impl<T: PartialOrd + Copy> Bounds<T> {
+    /// Check if the upper bound is greater than or equal to the lower bound.
+    pub fn is_normal(&self) -> bool {
+        self.upper >= self.lower
+    }
+
+    /// Return a bounds value, setting the lower bound to the upper bound if lower is greater than upper.
+    ///
+    /// Otherwise, return the value unmodified.
+    pub fn normalize_lower(self) -> Bounds<T> {
+        if self.lower > self.upper {
+            Bounds { lower: self.upper, upper: self.upper }
+        }
+        else {
+            self
+        }
+    }
+
+    /// Return a bounds value, setting the upper bound to the lower bound if upper is less than lower.
+    ///
+    /// Otherwise, return the value unmodified.
+    pub fn normalize_upper(self) -> Bounds<T> {
+        if self.upper < self.lower {
+            Bounds { lower: self.lower, upper: self.lower }
+        }
+        else {
+            self
+        }
+    }
 }
 
 /// Tag reference that describes a tag.

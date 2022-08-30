@@ -4,12 +4,13 @@ use crate::types::tag::*;
 struct MyTagBlock {
     pub some_field: Vector3D,
     pub another_field: Reflexive<MyTagBlock>,
-    pub useless_field: u32
+    pub useless_field: u32,
+    pub some_bounds: Bounds<i32>
 }
 
 impl TagBlockFn for MyTagBlock {
     fn field_count(&self) -> usize {
-        3
+        4
     }
 
     fn field_at_index(&self, index: usize) -> TagField {
@@ -21,6 +22,9 @@ impl TagBlockFn for MyTagBlock {
         }
         else if index == 2 {
             return TagField { field: TagFieldValue::Value(FieldReference { field: &self.useless_field}), name: "useless field", comment: "" }
+        }
+        else if index == 3 {
+            return TagField { field: TagFieldValue::Bounds(&self.some_bounds), name: "some bounds", comment: "" }
         }
 
         unreachable!()
@@ -36,6 +40,9 @@ impl TagBlockFn for MyTagBlock {
         else if index == 2 {
             return TagField { field: TagFieldValue::MutableValue(FieldReference { field: &mut self.useless_field}), name: "useless field", comment: "" }
         }
+        else if index == 3 {
+            return TagField { field: TagFieldValue::MutableBounds(&mut self.some_bounds), name: "some bounds", comment: "" }
+        }
 
         unreachable!()
     }
@@ -50,7 +57,8 @@ fn test_access() {
                 MyTagBlock {
                     some_field: Vector3D { x: 3.0, y: 4.0, z: 5.0 },
                     another_field: Reflexive::default(),
-                    useless_field: 1234
+                    useless_field: 1234,
+                    some_bounds: Bounds { lower: 2, upper: 5 }
                 },
                 MyTagBlock {
                     some_field: Vector3D { x: 6.0, y: 7.0, z: 8.0 },
@@ -59,15 +67,18 @@ fn test_access() {
                             MyTagBlock {
                                 some_field: Vector3D { x: 9.0, y: 10.0, z: 11.0 },
                                 another_field: Reflexive::default(),
-                                useless_field: 555
+                                useless_field: 555,
+                                some_bounds: Bounds { lower: 100, upper: 250 }
                             }
                         ]
                     },
-                    useless_field: 79341
+                    useless_field: 79341,
+                    some_bounds: Bounds { lower: 10, upper: 11 }
                 }
             ]
         },
-        useless_field: 53122
+        useless_field: 53122,
+        some_bounds: Bounds { lower: -1, upper: 1 }
     };
 
     // Try to access the vectors
@@ -139,14 +150,16 @@ fn test_access() {
     };
     assert_eq!(array_level_2_1.len(), 0);
 
+    let mut total_bounds = 0;
+
     // Recursively count the values of useless_fields there are AND divide the Z's by 2 again.
-    fn recursion(block: &mut dyn TagBlockFn) -> u32 {
+    fn recursion(block: &mut dyn TagBlockFn, total_bounds: &mut i32) -> u32 {
         let mut count = 0;
         for i in 0..block.field_count() {
             match block.field_at_index_mut(i).field {
                 TagFieldValue::MutableArray(mut array) => {
                     for i in 0..array.len() {
-                        count += recursion(&mut array[i])
+                        count += recursion(&mut array[i], total_bounds)
                     }
                 },
                 TagFieldValue::MutableValue(mut value) => {
@@ -155,16 +168,34 @@ fn test_access() {
                         ValueReferenceMut::UInt32(n) => count += *n,
                         _ => panic!()
                     }
+                },
+
+                // Change some of the bounds values here
+                TagFieldValue::MutableBounds(value) => {
+                    match value.get_lower_mut().get_value() {
+                        ValueReferenceMut::Int32(n) => *n += *total_bounds,
+                        _ => panic!()
+                    };
+                    match value.get_upper().get_value() {
+                        ValueReference::Int32(n) => *total_bounds += *n,
+                        _ => panic!()
+                    };
                 }
+
                 _ => unreachable!()
             };
         }
         count
     }
 
-    assert_eq!(134_252, recursion(&mut block));
+    assert_eq!(134_252, recursion(&mut block, &mut total_bounds));
     assert_eq!(Vector3D { x: 0.0, y: 1.0, z: 2.0 }, block.some_field);
     assert_eq!(Vector3D { x: 3.0, y: 4.0, z: 5.0 }, block.another_field[0].some_field);
     assert_eq!(Vector3D { x: 6.0, y: 7.0, z: 8.0 }, block.another_field[1].some_field);
     assert_eq!(Vector3D { x: 9.0, y: 10.0, z: 11.0 }, block.another_field[1].another_field[0].some_field);
+
+    assert_eq!(Bounds { lower: 265, upper: 1 }, block.some_bounds);
+    assert_eq!(Bounds { lower: 2, upper: 5 }, block.another_field[0].some_bounds);
+    assert_eq!(Bounds { lower: 265, upper: 11 }, block.another_field[1].some_bounds);
+    assert_eq!(Bounds { lower: 105, upper: 250 }, block.another_field[1].another_field[0].some_bounds);
 }

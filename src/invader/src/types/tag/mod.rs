@@ -50,7 +50,13 @@ pub enum TagFieldValue<'a> {
     Array(&'a dyn ReflexiveFn),
 
     /// Mutable block array
-    MutableArray(&'a mut dyn ReflexiveFn)
+    MutableArray(&'a mut dyn ReflexiveFn),
+
+    /// Bounds
+    Bounds(&'a dyn BoundsFn),
+
+    /// Bounds (mutable)
+    MutableBounds(&'a mut dyn BoundsFn),
 }
 
 /// Reference to a value in a tag.
@@ -158,6 +164,36 @@ impl FieldReference<&dyn Any> {
         attempt_downcast!(crate::engines::h1::TagReference, H1TagReference);
 
         unreachable!()
+    }
+}
+
+/// Trait for accessing Bounds fields.
+pub trait BoundsFn {
+    /// Get the lower bound for the bounds.
+    fn get_lower(&self) -> FieldReference<&dyn Any>;
+
+    /// Get the upper bound for the bounds.
+    fn get_upper(&self) -> FieldReference<&dyn Any>;
+
+    /// Get the lower bound for the bounds.
+    fn get_lower_mut(&mut self) -> FieldReference<&mut dyn Any>;
+
+    /// Get the upper bound for the bounds.
+    fn get_upper_mut(&mut self) -> FieldReference<&mut dyn Any>;
+}
+
+impl<T: Any> BoundsFn for Bounds<T> {
+    fn get_lower(&self) -> FieldReference<&dyn Any> {
+        FieldReference { field: &self.lower }
+    }
+    fn get_upper(&self) -> FieldReference<&dyn Any> {
+        FieldReference { field: &self.upper }
+    }
+    fn get_lower_mut(&mut self) -> FieldReference<&mut dyn Any> {
+        FieldReference { field: &mut self.lower }
+    }
+    fn get_upper_mut(&mut self) -> FieldReference<&mut dyn Any> {
+        FieldReference { field: &mut self.upper }
     }
 }
 

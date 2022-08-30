@@ -119,7 +119,7 @@ pub trait TagSerialize: Sized {
         Self::tag_size()
     }
 
-    /// Deserialize into an instasnce.
+    /// Deserialize into an instance.
     fn instance_from_tag(&self, data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
         Self::from_tag(data, at, struct_end, cursor)
     }
@@ -286,6 +286,28 @@ serialize_for_struct!(Quaternion, x, y, z, w);
 serialize_for_struct!(Rectangle, top, left, bottom, right);
 serialize_for_struct!(Vector2D, x, y);
 serialize_for_struct!(Vector3D, x, y, z);
+
+impl<T: TagSerialize> TagSerialize for Bounds<T> {
+    fn tag_size() -> usize {
+        T::tag_size() * 2
+    }
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
+        debug_assert!(fits(Self::tag_size(), at, struct_end, 0).is_ok());
+
+        self.lower.into_tag(data, at, struct_end)?;
+        self.upper.into_tag(data, at + T::tag_size(), struct_end)?;
+
+        Ok(())
+    }
+    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
+        fits(Self::tag_size(), at, struct_end, 0)?;
+
+        let lower = T::from_tag(data, at, struct_end, cursor)?;
+        let upper = T::from_tag(data, at + T::tag_size(), struct_end, cursor)?;
+
+        Ok(Self { lower, upper })
+    }
+}
 
 // These convert to 32-bit integers, so we can serialize them as such
 impl TagSerialize for ColorARGBInt {
