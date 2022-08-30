@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{ErrorMessage, ErrorMessageResult};
+use crate::error::*;
 use crate::types::*;
 use crate::types::tag::TagGroupFn;
 use crate::engines::h1::types::{TagGroup, TagReference};

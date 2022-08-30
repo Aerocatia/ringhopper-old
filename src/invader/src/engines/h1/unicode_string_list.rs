@@ -1,5 +1,5 @@
 use crate::engines::h1::TagSerialize;
-use crate::ErrorMessage;
+use crate::error::ErrorMessage;
 use crate::types::Reflexive;
 use crate::types::tag::{TagBlockFn, TagField};
 

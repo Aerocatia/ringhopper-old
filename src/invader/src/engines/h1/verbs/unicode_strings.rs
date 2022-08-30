@@ -1,10 +1,11 @@
 use engines::ExitCode;
-use std::{path::Path, io::Read};
+use std::path::Path;
 use crate::engines::h1::unicode_string_list::{UnicodeStringList, UnicodeStringListString};
 use crate::engines::h1::types::TagGroup;
-use crate::engines::h1::{ParsedTagFile};
+use crate::engines::h1::ParsedTagFile;
 use crate::cmd::*;
 use crate::terminal::*;
+use crate::file::*;
 use strings::get_compiled_string;
 
 pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: &str) -> ExitCode {
@@ -16,58 +17,92 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
     let internal_path_path = Path::new(&internal_path).to_owned();
     let data_path = data.join(internal_path_path.clone()).with_extension("txt");
     let tag_path = tags.join(internal_path_path.clone()).with_extension("unicode_string_list");
+    let file_data = resolve_error_message_result_or_exit!(read_file(&data_path));
 
-    let mut data_file = match std::fs::File::open(data_path.to_owned()) {
-        Ok(n) => n,
-        Err(error) => {
-            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_opening_file_read"), error=error, file=data_path.display());
-            return ExitCode::FAILURE;
-        }
-    };
-
-    let mut file_data = Vec::<u8>::new();
-    match data_file.read_to_end(&mut file_data) {
-        Ok(_) => (),
-        Err(error) => {
-            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_reading_file"), error=error, file=data_path.display());
-            return ExitCode::FAILURE;
-        }
-    }
-    drop(data_file);
-
-    if file_data[0] == 0xFE || file_data[0] == 0xFF {
-        eprintln_error_pre!("UTF-16 input is not yet supported!");
+    if file_data.len() < 2 {
+        eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error="cannot determine encoding of input", file=data_path.display());
         return ExitCode::FAILURE;
     }
 
-    let string = match String::from_utf8(file_data) {
-        Ok(n) => n,
-        Err(error) => {
-            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display());
+    // Check if UTF-16. If so, parse it as such.
+    let string = if (file_data[0] == 0xFE && file_data[1] == 0xFF) || (file_data[0] == 0xFF && file_data[1] == 0xFE) {
+        let mut string_data_as_16 = Vec::<u16>::new();
+
+        if file_data.len() % 2 != 0 {
+            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error="invalid UTF-16 input", file=data_path.display());
             return ExitCode::FAILURE;
+        }
+
+        // Get which function we need to use to read the bytes
+        let swap_fn = match file_data[0] {
+            0xFE => u16::from_be_bytes,
+            0xFF => u16::from_le_bytes,
+            _ => unreachable!()
+        };
+
+        // Go two bytes at a time
+        for s in (2..file_data.len()).step_by(2) {
+            use std::convert::TryInto;
+
+            let bytes: [u8; 2] = file_data[s..s+2].try_into().unwrap();
+            let data  = swap_fn(bytes);
+            string_data_as_16.push(data);
+        }
+
+        let mut error = None;
+
+        // Encode
+        let r = std::char::decode_utf16(string_data_as_16).map(|r| match r {
+            Ok(n) => n,
+            Err(e) => {
+                error = Some(e);
+                '?'
+            }
+        }).collect();
+
+        // Check if error
+        match error {
+            Some(e) => {
+                eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=e, file=data_path.display());
+            },
+            None => ()
+        }
+
+        r
+    }
+
+    // Otherwise, parse as UTF-8.
+    else {
+        match String::from_utf8(file_data) {
+            Ok(n) => n,
+            Err(error) => {
+                eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display());
+                return ExitCode::FAILURE;
+            }
         }
     };
 
-    let mut current_string = String::new();
+    // Go through it line-by-line and put together the string data as UTF-16 with CRLF line endings (except for the last line)
+    //
+    // TODO: Use intersperse when [std::iter::Intersperse] is stable (see https://github.com/rust-lang/rust/issues/79524)
+    let mut current_string = None;
     let mut strings = Vec::<String>::new();
-    for mut l in string.lines() {
-        if l.ends_with("\n") {
-            l = &l[0..l.len()-1];
-        }
-        if l.ends_with("\r") {
-            l = &l[0..l.len()-1];
-        }
+    for l in string.lines() {
         if l == "###END-STRING###" {
-            strings.push(current_string);
-            current_string = String::new();
+            strings.push(current_string.unwrap_or_default());
+            current_string = None;
             continue;
         }
-        if !current_string.is_empty() {
-            current_string += "\r\n";
+        if current_string.is_some() {
+            current_string = Some(current_string.unwrap() + "\r\n" + l);
         }
-        current_string += l;
+        else {
+            current_string = Some(l.to_owned())
+        }
     }
-    if !current_string.is_empty() {
+
+    // If we started a string without an ###END-STRING### to close it, this is an error.
+    if current_string.is_some() {
         eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_missing_end_string"));
         return ExitCode::FAILURE;
     }
@@ -93,7 +128,7 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
         list.strings.blocks.push(UnicodeStringListString { string_data: v_8 })
     }
 
-    let file = match ParsedTagFile::into_tag(&list, TagGroup::UnicodeStringList) {
+    let output_tag = match ParsedTagFile::into_tag(&list, TagGroup::UnicodeStringList) {
         Ok(n) => n,
         Err(e) => {
             eprintln!("{}", e);
@@ -101,24 +136,8 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
         }
     };
 
-    let mut tag_file = match std::fs::File::create(tag_path.to_owned()) {
-        Ok(n) => n,
-        Err(error) => {
-            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_opening_file_write"), error=error, file=tag_path.display());
-            return ExitCode::FAILURE;
-        }
-    };
+    resolve_error_message_result_or_exit!(write_file(&tag_path, &output_tag));
 
-    use std::io::Write;
-
-    match tag_file.write_all(&file) {
-        Ok(_) => {
-            println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=tag_path.display());
-            ExitCode::SUCCESS
-        },
-        Err(e) => {
-            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_writing_file"), error=e, file=tag_path.display());
-            ExitCode::FAILURE
-        }
-    }
+    println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=tag_path.display());
+    ExitCode::SUCCESS
 }

@@ -2,6 +2,7 @@ use super::{TagSerialize, ParsedTagFile};
 use crate::*;
 use crate::types::*;
 use crate::types::tag::*;
+use crate::error::*;
 
 const BYTES_NEGATIVE: [u8;4] = [0xBF, 0x80, 0x00, 0x00];
 const BYTES_POSITIVE: [u8;4] = [0x3F, 0x80, 0x00, 0x00];

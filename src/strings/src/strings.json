@@ -29,12 +29,8 @@
     "command_usage.warning_only_one_tags_dir_supported": "This verb takes only one tags directory - \"{dir}\" will be used.",
 
     "engine.h1.verbs.unicode-strings.error_creating_directories": "Error creating directories {dirs}: {error}",
-    "engine.h1.verbs.unicode-strings.error_opening_file_read": "Error opening file {file} for reading: {error}",
-    "engine.h1.verbs.unicode-strings.error_opening_file_write": "Error opening file {file} for writing: {error}",
-    "engine.h1.verbs.unicode-strings.error_missing_end_string": "Input is missing an ###END-STRINGS### line.",
+    "engine.h1.verbs.unicode-strings.error_missing_end_string": "A string is missing an ###END-STRING### line.",
     "engine.h1.verbs.unicode-strings.error_parsing_file": "Error parsing file {file}: {error}",
-    "engine.h1.verbs.unicode-strings.error_reading_file": "Error reading file {file}: {error}",
-    "engine.h1.verbs.unicode-strings.error_writing_file": "Error writing file {file}: {error}",
     "engine.h1.verbs.unicode-strings.saved_file": "Saved {file}",
 
     "engine.h1.types.tag.header.error": "Error parsing the tag header: {reason}",
@@ -58,6 +54,11 @@
     "engine.types.error_string_exceeds_limit": "String data exceeds {limit} bytes. {len} > {limit}",
     "engine.types.error_string_not_null_terminated": "String data is not null terminated.",
     "engine.types.error_string_not_valid_utf8": "String data is not valid UTF-8.",
+
+    "file.error_opening_file_read": "Error opening file {file} for reading: {error}",
+    "file.error_opening_file_write": "Error opening file {file} for writing: {error}",
+    "file.error_reading_file": "Error reading file {file}: {error}",
+    "file.error_writing_file": "Error writing file {file}: {error}",
 
     "terminal.warning_prefix": "Warning: ",
     "terminal.error_prefix": "Error: ",

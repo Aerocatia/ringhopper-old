@@ -13,7 +13,7 @@ pub use self::trig::*;
 mod color;
 pub use self::color::*;
 
-use crate::{ErrorMessage, ErrorMessageResult};
+use crate::error::*;
 
 use strings::get_compiled_string;
 

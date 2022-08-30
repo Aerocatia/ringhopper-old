@@ -19,7 +19,23 @@ impl Display for ErrorMessage {
     }
 }
 
+#[macro_export]
+macro_rules! resolve_error_message_result_or_exit {
+    ($e:expr) => {{
+        match $e {
+            Ok(n) => n,
+            Err(e) => {
+                eprintln_error_pre!("{}", e);
+                return std::process::ExitCode::FAILURE;
+            }
+        }
+    }}
+}
+pub use resolve_error_message_result_or_exit;
+
+
 /// Type definition of [Result] using [ErrorMessage] as the error type.
 ///
 /// This is the main return type for error reporting from within Invader's API.
 pub type ErrorMessageResult<T> = Result<T, ErrorMessage>;
+
