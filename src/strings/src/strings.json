@@ -54,6 +54,7 @@
     "engine.types.error_string_exceeds_limit": "String data exceeds {limit} bytes. {len} > {limit}",
     "engine.types.error_string_not_null_terminated": "String data is not null terminated.",
     "engine.types.error_string_not_valid_utf8": "String data is not valid UTF-8.",
+    "engine.types.error_string_unable_to_encode_into_1252": "String data cannot be encoded into Windows-1252: {error}",
 
     "file.error_opening_file_read": "Error opening file {file} for reading: {error}",
     "file.error_opening_file_write": "Error opening file {file} for writing: {error}",

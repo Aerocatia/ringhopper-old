@@ -33,6 +33,7 @@ fn print_usage(path: &str, lookup: &str, engine: &dyn engines::EngineModuleFn) {
             eprint!("    {: <15}  {: <3}  ", v.verb.get_name(), v.verb.get_shorthand());
             let pos = 4 + 15 + 2 + 3 + 2;
             print_word_wrap(v.verb.get_description(), pos, pos, OutputType::Stderr);
+            eprintln!();
         }
     }
 

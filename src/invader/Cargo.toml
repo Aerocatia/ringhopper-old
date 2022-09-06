@@ -10,6 +10,7 @@ doc = true
 
 [dependencies]
 strings = { path = "../strings" }
+encoding = "0.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"

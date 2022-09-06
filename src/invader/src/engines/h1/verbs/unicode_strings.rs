@@ -8,6 +8,11 @@ use crate::terminal::*;
 use crate::file::*;
 use strings::get_compiled_string;
 
+extern crate encoding;
+use self::encoding::{Encoding, EncoderTrap};
+use self::encoding::all::WINDOWS_1252;
+use std::ffi::CString;
+
 pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: &str) -> ExitCode {
     let parsed_args = try_parse_arguments!(args, &[], &[get_compiled_string!("arguments.specifier.tag_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags());
 
@@ -16,7 +21,6 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
     let internal_path = &parsed_args.extra[0];
     let internal_path_path = Path::new(&internal_path).to_owned();
     let data_path = data.join(internal_path_path.clone()).with_extension("txt");
-    let tag_path = tags.join(internal_path_path.clone()).with_extension("unicode_string_list");
     let file_data = resolve_error_message_result_or_exit!(read_file(&data_path));
 
     if file_data.len() < 2 {
@@ -24,8 +28,19 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
         return ExitCode::FAILURE;
     }
 
+    // If we're making regular 8-bit strings, parse as 1252
+    let string = if *verb == Verb::Strings {
+        match WINDOWS_1252.decode(&file_data, encoding::DecoderTrap::Strict) {
+            Ok(n) => n,
+            Err(error) => {
+                eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display());
+                return ExitCode::FAILURE;
+            }
+        }
+    }
+
     // Check if UTF-16. If so, parse it as such.
-    let string = if (file_data[0] == 0xFE && file_data[1] == 0xFF) || (file_data[0] == 0xFF && file_data[1] == 0xFE) {
+    else if (file_data[0] == 0xFE && file_data[1] == 0xFF) || (file_data[0] == 0xFF && file_data[1] == 0xFE) {
         let mut string_data_as_16 = Vec::<u16>::new();
 
         if file_data.len() % 2 != 0 {
@@ -34,7 +49,7 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
         }
 
         // Get which function we need to use to read the bytes
-        let swap_fn = match file_data[0] {
+        let read_fn = match file_data[0] {
             0xFE => u16::from_be_bytes,
             0xFF => u16::from_le_bytes,
             _ => unreachable!()
@@ -45,36 +60,24 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
             use std::convert::TryInto;
 
             let bytes: [u8; 2] = file_data[s..s+2].try_into().unwrap();
-            let data  = swap_fn(bytes);
+            let data  = read_fn(bytes);
             string_data_as_16.push(data);
         }
 
-        let mut error = None;
-
-        // Encode
-        let r = std::char::decode_utf16(string_data_as_16).map(|r| match r {
+        // Read the UTF-16 data.
+        match String::from_utf16(&string_data_as_16) {
             Ok(n) => n,
             Err(e) => {
-                error = Some(e);
-                '?'
-            }
-        }).collect();
-
-        // Check if error
-        match error {
-            Some(e) => {
                 eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=e, file=data_path.display());
-            },
-            None => ()
+                return ExitCode::FAILURE;
+            }
         }
-
-        r
     }
 
-    // Otherwise, parse as UTF-8.
+    // Otherwise, parse as UTF8.
     else {
-        match String::from_utf8(file_data) {
-            Ok(n) => n,
+        match std::str::from_utf8(&file_data) {
+            Ok(n) => n.to_owned(),
             Err(error) => {
                 eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display());
                 return ExitCode::FAILURE;
@@ -115,20 +118,48 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
         }
     }
 
+    let group_to_output;
     let mut list = UnicodeStringList::default();
-    for s in strings {
-        let mut v: Vec<u16> = s.encode_utf16().collect();
-        v.push(0); // null terminator
 
-        let mut v_8 = Vec::<u8>::new();
-        for b in v {
-            v_8.push((b & 0xFF) as u8);
-            v_8.push(((b >> 8) & 0xFF) as u8);
+    match *verb {
+        Verb::UnicodeStrings => {
+            group_to_output = TagGroup::UnicodeStringList;
+
+            // Convert into bytes (little endian UTF-16)
+            for s in strings {
+                let mut v: Vec<u16> = s.encode_utf16().collect();
+                v.push(0); // null terminator
+
+                let mut v_8 = Vec::<u8>::new();
+                for b in v {
+                    v_8.push((b & 0xFF) as u8);
+                    v_8.push(((b >> 8) & 0xFF) as u8);
+                }
+                list.strings.blocks.push(UnicodeStringListString { string_data: v_8 })
+            }
         }
-        list.strings.blocks.push(UnicodeStringListString { string_data: v_8 })
+        Verb::Strings => {
+            group_to_output = TagGroup::StringList;
+
+            // Convert into bytes (Windows 1252)
+            for s in strings {
+                list.strings.blocks.push(UnicodeStringListString {
+                    string_data: CString::new(
+                        match WINDOWS_1252.encode(&s, EncoderTrap::Strict) {
+                            Ok(n) => n,
+                            Err(e) => {
+                                eprintln_error_pre!(get_compiled_string!("engine.types.error_string_unable_to_encode_into_1252"), error=e);
+                                return ExitCode::FAILURE;
+                            }
+                        }
+                    ).unwrap().into_bytes_with_nul()
+                })
+            }
+        },
+        _ => unreachable!()
     }
 
-    let output_tag = match ParsedTagFile::into_tag(&list, TagGroup::UnicodeStringList) {
+    let output_tag = match ParsedTagFile::into_tag(&list, group_to_output) {
         Ok(n) => n,
         Err(e) => {
             eprintln!("{}", e);
@@ -136,6 +167,7 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
         }
     };
 
+    let tag_path = tags.join(internal_path_path.clone()).with_extension(group_to_output.to_string());
     resolve_error_message_result_or_exit!(write_file(&tag_path, &output_tag));
 
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=tag_path.display());
