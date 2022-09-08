@@ -1,3 +1,4 @@
+use engines::h1::definitions::UnicodeStringList;
 use super::{TagSerialize, ParsedTagFile};
 use crate::*;
 use crate::types::*;
@@ -265,12 +266,12 @@ fn test_unicode_string_list() {
     let player_names_bytes = include_bytes!("unicode_string_list_test.unicode_string_list");
 
     // Load the tag
-    let tag : ParsedTagFile<engines::h1::UnicodeStringList> = ParsedTagFile::from_tag(player_names_bytes).unwrap();
+    let tag : ParsedTagFile<UnicodeStringList> = ParsedTagFile::from_tag(player_names_bytes).unwrap();
 
     // Go through each string
     let mut strings = Vec::<String>::new();
     for string in &tag.data.strings.blocks {
-        let string_data = &string.string_data;
+        let string_data = &string.string;
         let mut string_data_as_16 = Vec::<u16>::new();
 
         // Go two bytes at a time
@@ -297,7 +298,7 @@ fn test_unicode_string_list() {
 
     // Try remaking it and reparsing it. Check if it produces the same tag.
     let new_file = ParsedTagFile::into_tag(&tag.data, engines::h1::types::TagGroup::UnicodeStringList).unwrap();
-    let new_tag : ParsedTagFile<engines::h1::UnicodeStringList> = ParsedTagFile::from_tag(&new_file).unwrap();
+    let new_tag : ParsedTagFile<UnicodeStringList> = ParsedTagFile::from_tag(&new_file).unwrap();
     assert!(new_tag.data == tag.data);
 
     // Lastly, check to see if we produce the same binary data

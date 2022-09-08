@@ -10,8 +10,8 @@ mod tag_loading;
 pub use self::tag_loading::*;
 
 mod verbs;
-mod unicode_string_list;
-pub use self::unicode_string_list::*;
+
+pub mod definitions;
 
 use super::Verb;
 use crate::engines::VerbFn;

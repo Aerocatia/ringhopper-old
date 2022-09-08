@@ -264,7 +264,7 @@ impl<T: TagGroupFn + fmt::Display> fmt::Display for TagReference<T> {
 }
 
 /// Container which can hold multiple elements of tag blocks.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Reflexive<T: TagBlockFn> {
     pub blocks: Vec<T>
 }

@@ -1,6 +1,6 @@
 use engines::ExitCode;
 use std::path::Path;
-use crate::engines::h1::unicode_string_list::{UnicodeStringList, UnicodeStringListString};
+use crate::engines::h1::definitions::{UnicodeStringList, UnicodeStringListString};
 use crate::engines::h1::types::TagGroup;
 use crate::engines::h1::ParsedTagFile;
 use crate::cmd::*;
@@ -135,7 +135,7 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
                     v_8.push((b & 0xFF) as u8);
                     v_8.push(((b >> 8) & 0xFF) as u8);
                 }
-                list.strings.blocks.push(UnicodeStringListString { string_data: v_8 })
+                list.strings.blocks.push(UnicodeStringListString { string: v_8 })
             }
         }
         Verb::Strings => {
@@ -144,7 +144,7 @@ pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: 
             // Convert into bytes (Windows 1252)
             for s in strings {
                 list.strings.blocks.push(UnicodeStringListString {
-                    string_data: CString::new(
+                    string: CString::new(
                         match WINDOWS_1252.encode(&s, EncoderTrap::Strict) {
                             Ok(n) => n,
                             Err(e) => {

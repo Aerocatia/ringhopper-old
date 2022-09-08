@@ -1,0 +1,13 @@
+[package]
+name = "h1_code_generator"
+version = "0.1.0"
+description = "Code generator"
+license = "GPL-3.0-only"
+
+[lib]
+doc = false
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0", features = ["full"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
