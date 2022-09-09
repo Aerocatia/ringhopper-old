@@ -20,7 +20,7 @@ pub fn load_json_def(input: TokenStream) -> TokenStream {
     };
 
     let path = match literal.lit {
-        Lit::Str(n) => Path::new(env!("CARGO_MANIFEST_DIR")).join("../json").join(Path::new(&n.value())),
+        Lit::Str(n) => Path::new(env!("CARGO_MANIFEST_DIR")).join("json").join(Path::new(&n.value())),
         _ => panic!("expected a string literal here")
     };
 
@@ -57,10 +57,23 @@ pub fn load_json_def(input: TokenStream) -> TokenStream {
             // Generate Rust code to define our struct and implementation
             let tag_size = object.get("size").unwrap().as_u64().unwrap();
             let mut all_fields_defined = String::new();
-            let mut from_tag_code = String::new();
-            let mut into_tag_code = String::new();
 
-            let mut field_count = 0usize;
+            // If we inherit anything, handle that too
+            let mut from_tag_code;
+            let mut into_tag_code;
+            match object.get("inherits") {
+                Some(n) => {
+                    let inherited_object = n.as_str().unwrap();
+                    all_fields_defined += &format!("pub base_struct: {inherited_object},");
+                    from_tag_code = format!("new_object.base_struct = {inherited_object}::from_tag(data, at, struct_end, cursor)?; let mut local_cursor = {inherited_object}::tag_size();");
+                    into_tag_code = format!("self.base_struct.into_tag(data, at, struct_end)?; let mut local_cursor = {inherited_object}::tag_size();");
+                },
+                None => {
+                    from_tag_code = format!("let mut local_cursor = 0usize;");
+                    into_tag_code = format!("let mut local_cursor = 0usize;");
+                }
+            }
+
             for f in object.get("fields").unwrap().as_array().unwrap() {
                 let field_type = f.get("type").unwrap().as_str().unwrap();
 
@@ -74,12 +87,10 @@ pub fn load_json_def(input: TokenStream) -> TokenStream {
 
                 // Otherwise, let's do this
                 let field_name = f.get("name").unwrap().as_str().unwrap();
-                let field_name_written = field_name.replace(" ", "_");
-                let field_name_written = if field_name_written == "type" {
-                    "_type".to_owned()
-                }
-                else {
-                    field_name_written
+                let field_name_written = field_name.replace(" ", "_").replace("'", "").replace(":", "").replace("(", "").replace(")", "");
+                let field_name_written = match field_name_written.as_str() {
+                    "type" | "loop" => format!("_{field_name_written}"),
+                    _ => field_name_written
                 };
 
                 let field_type_data_type = match field_type {
@@ -95,7 +106,7 @@ pub fn load_json_def(input: TokenStream) -> TokenStream {
                 };
 
                 // Here's the type
-                let field_type_written = if f.get("bounds").unwrap_or(&Value::Bool(false)).as_bool().unwrap() {
+                let field_type_data_type = if f.get("bounds").unwrap_or(&Value::Bool(false)).as_bool().unwrap() {
                     format!("Bounds<{field_type_data_type}>")
                 }
                 else {
@@ -103,26 +114,62 @@ pub fn load_json_def(input: TokenStream) -> TokenStream {
                 };
 
                 // Next, do we need to make it an array?
-                let field_type_written = match f.get("count") {
-                    Some(n) => format!("[{field_type_written}; {count}]", count=n.as_u64().unwrap()),
-                    None => field_type_written
+                let count = match f.get("count") {
+                    Some(n) => n.as_u64().unwrap(),
+                    None => 1
                 };
 
                 // To make sure Rust is happy, we put a '::' before any <'s
-                let field_type_written_expression = field_type_written.replace("<", "::<");
+                let field_type_written_expression = field_type_data_type.replace("<", "::<");
 
-                all_fields_defined += &format!("pub {field_name_written}: {field_type_written},");
+                // Array?
+                let field_type_struct = match count {
+                    1 => field_type_data_type,
+                    _ => format!("[{field_type_data_type}; {count}]")
+                };
 
-                // Now let's serialize it
-                into_tag_code += &format!("self.{field_name_written}.into_tag(data, at + local_cursor, struct_end)?;");
-                from_tag_code += &format!("new_object.{field_name_written} = {field_type_written_expression}::from_tag(data, at + local_cursor, struct_end, cursor)?;");
+                // Put it in the struct
+                all_fields_defined += &format!("pub {field_name_written}: {field_type_struct},");
 
-                // Increment the cursor
-                let cursor_increment = format!("local_cursor += {field_type_written_expression}::tag_size();");
-                from_tag_code += &cursor_increment;
-                into_tag_code += &cursor_increment;
+                // Is this swapped?
+                let swapped = match f.get("little_endian").unwrap_or(&Value::Bool(false)).as_bool().unwrap() {
+                    true => "_swapped",
+                    false => ""
+                };
 
-                field_count += 1;
+                // Is this cache only?
+                let cache_only = f.get("cache_only").unwrap_or(&Value::Bool(false)).as_bool().unwrap();
+
+                let mut write_serialization_code = |type_suffix: &str| {
+                    //from_tag_code += &format!("println!(\"...reading {field_name_written} - {field_type_struct}, AT: 0x{{at:08X}} + 0x{{local_cursor:08X}} / SE: 0x{{struct_end:08X}} / SZ: 0x{{size:08X}}\", at=at, local_cursor=local_cursor, struct_end=struct_end, size=data.len());");
+
+                    // If it is cache only, we read it from the tag but don't keep it
+                    if cache_only {
+                        from_tag_code += &format!("let _ = {field_type_written_expression}::from_tag{swapped}(data, at + local_cursor, struct_end, cursor)?;");
+                    }
+
+                    // Otherwise we serialize it normally
+                    else {
+                        into_tag_code += &format!("self.{field_name_written}{type_suffix}.into_tag{swapped}(data, at + local_cursor, struct_end)?;");
+                        from_tag_code += &format!("new_object.{field_name_written}{type_suffix} = {field_type_written_expression}::from_tag{swapped}(data, at + local_cursor, struct_end, cursor)?;");
+                    }
+
+                    let cursor_increment = format!("local_cursor += {field_type_written_expression}::tag_size();");
+                    from_tag_code += &cursor_increment;
+                    into_tag_code += &cursor_increment;
+                };
+
+                // One object, not an array
+                if count == 1 {
+                    write_serialization_code("");
+                }
+
+                // Array
+                else {
+                    for i in 0..count {
+                        write_serialization_code(&format!("[{i}]"));
+                    }
+                }
             }
 
             // Define the struct
@@ -131,29 +178,30 @@ pub fn load_json_def(input: TokenStream) -> TokenStream {
             // Define parsing it too
             stream.extend(format!("
             impl TagBlockFn for {object_name} {{
-                fn field_count(&self) -> usize {{ {field_count} }}
+                fn field_count(&self) -> usize {{ todo!() }}
                 fn field_at_index(&self, _: usize) -> TagField {{ todo!() }}
                 fn field_at_index_mut(&mut self, _: usize) -> TagField{{ todo!() }}
             }}").parse::<TokenStream>().unwrap());
 
             // Next serializing code
-            stream.extend(format!("
+            let parsing_code = format!("
             impl TagSerialize for {object_name} {{
                 fn tag_size() -> usize {{
                     {tag_size}
                 }}
                 fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {{
-                    let mut local_cursor = 0usize;
                     {into_tag_code}
+                    debug_assert_eq!({tag_size}, local_cursor);
                     Ok(())
                 }}
                 fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<{object_name}> {{
-                    let mut local_cursor = 0usize;
                     let mut new_object = {object_name}::default();
                     {from_tag_code}
+                    debug_assert_eq!({tag_size}, local_cursor);
                     Ok(new_object)
                 }}
-            }}").parse::<TokenStream>().unwrap());
+            }}");
+            stream.extend(parsing_code.parse::<TokenStream>().unwrap());
         }
     }
 

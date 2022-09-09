@@ -17,6 +17,9 @@ use crate::error::*;
 
 use strings::get_compiled_string;
 
+/// FourCC type (aliased to a 32-bit unsigned integer)
+pub type FourCC = u32;
+
 /// A block of data that doesn't have any fields directly attributed to it.
 pub type Data = Vec<u8>;
 

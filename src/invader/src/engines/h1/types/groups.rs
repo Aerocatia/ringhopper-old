@@ -1,3 +1,6 @@
+use crate::types::FourCC;
+use std::fmt;
+
 /// Tag groups define types of tags.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum TagGroup {
@@ -89,7 +92,6 @@ pub enum TagGroup {
     Wind
 }
 
-use std::fmt;
 impl fmt::Display for TagGroup {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         use crate::types::tag::TagGroupFn;
@@ -98,7 +100,6 @@ impl fmt::Display for TagGroup {
 }
 
 impl crate::types::tag::TagGroupFn for TagGroup {
-    /// Get the name of the tag group used in tag extensions.
     fn as_str(&self) -> &'static str {
         match *self {
             TagGroup::None => "<none>",
@@ -189,7 +190,6 @@ impl crate::types::tag::TagGroupFn for TagGroup {
         }
     }
 
-    /// Get a tag group from a string or `None` if the string is unrecognized.
     fn from_str(str: &str) -> Option<TagGroup> {
         match str {
             "actor" => Some(TagGroup::Actor),
@@ -279,8 +279,7 @@ impl crate::types::tag::TagGroupFn for TagGroup {
         }
     }
 
-    /// Get the FourCC signature of the tag group.
-    fn to_fourcc(&self) -> u32 {
+    fn to_fourcc(&self) -> FourCC {
         match *self {
             TagGroup::None => 0xFFFFFFFF,
 
@@ -370,8 +369,7 @@ impl crate::types::tag::TagGroupFn for TagGroup {
         }
     }
 
-    /// Get a tag group from the FourCC signature or `None` if the FourCC is unrecognized.
-    fn from_fourcc(fourcc: u32) -> Option<TagGroup> {
+    fn from_fourcc(fourcc: FourCC) -> Option<TagGroup> {
         match fourcc {
             0xFFFFFFFF => Some(TagGroup::None),
 

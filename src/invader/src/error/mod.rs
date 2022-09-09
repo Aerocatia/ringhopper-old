@@ -1,3 +1,5 @@
+//! Error-handling functions.
+
 use std::fmt::Display;
 
 /// A string used for error reporting.

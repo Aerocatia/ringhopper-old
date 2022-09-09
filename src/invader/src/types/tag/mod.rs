@@ -22,11 +22,11 @@ pub trait ReflexiveFn {
 
 /// General interface for tag group parsing.
 pub trait TagGroupFn where Self: Sized {
-    /// Get a tag group from the FourCC signature or `None` if the FourCC is unrecognized.
-    fn from_fourcc(fourcc: u32) -> Option<Self>;
+    /// Get a tag group from the [`FourCC`] signature or `None` if the FourCC is unrecognized.
+    fn from_fourcc(fourcc: FourCC) -> Option<Self>;
 
     /// Get the name of the tag group used in tag extensions.
-    fn to_fourcc(&self) -> u32;
+    fn to_fourcc(&self) -> FourCC;
 
     /// Get the name of the tag group used in tag extensions.
     fn as_str(&self) -> &'static str;

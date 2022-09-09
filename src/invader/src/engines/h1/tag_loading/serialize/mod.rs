@@ -102,8 +102,7 @@ impl TagFileHeader {
     }
 }
 
-
-/// Serialization implementation for tags in tag format.
+/// Serialization implementation for tags in tag format using the normal endian (big endian).
 pub trait TagSerialize: Sized {
     /// Get the size of the data
     fn tag_size() -> usize;
@@ -123,6 +122,15 @@ pub trait TagSerialize: Sized {
     fn instance_from_tag(&self, data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
         Self::from_tag(data, at, struct_end, cursor)
     }
+}
+
+/// Serialization implementation for tags in tag format using little endian.
+pub trait TagSerializeSwapped: TagSerialize {
+    /// Serialize the data into tag format in little endian, returning an error on failure (except for out-of-bounds and allocation errors which will panic).
+    fn into_tag_swapped(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()>;
+
+    /// Deserialize the data from tag format from little endian, returning an error on failure (except for allocation errors which will panic).
+    fn from_tag_swapped(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self>;
 }
 
 macro_rules! sizeof {
@@ -172,6 +180,26 @@ macro_rules! serialize_for_primitive {
 
                 let bytes: [u8; SIZE] = data[at..at + SIZE].try_into().unwrap();
                 Ok(<$t>::from_be_bytes(bytes))
+            }
+        }
+
+        impl TagSerializeSwapped for $t {
+            fn into_tag_swapped(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
+                const SIZE: usize = sizeof!($t);
+                debug_assert!(fits(SIZE, at, struct_end, data.len()).is_ok());
+                let bytes = self.to_le_bytes();
+                data[at..at + SIZE].copy_from_slice(&bytes[..]);
+                Ok(())
+            }
+
+            fn from_tag_swapped(data: &[u8], at: usize, struct_end: usize, _: &mut usize) -> ErrorMessageResult<Self> {
+                use std::convert::TryInto;
+
+                const SIZE: usize = sizeof!($t);
+                fits(SIZE, at, struct_end, data.len())?;
+
+                let bytes: [u8; SIZE] = data[at..at + SIZE].try_into().unwrap();
+                Ok(<$t>::from_le_bytes(bytes))
             }
         }
     };
@@ -292,7 +320,7 @@ impl<T: TagSerialize> TagSerialize for Bounds<T> {
         T::tag_size() * 2
     }
     fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
-        debug_assert!(fits(Self::tag_size(), at, struct_end, 0).is_ok());
+        debug_assert!(fits(Self::tag_size(), at, struct_end, data.len()).is_ok());
 
         self.lower.into_tag(data, at, struct_end)?;
         self.upper.into_tag(data, at + T::tag_size(), struct_end)?;
@@ -300,7 +328,7 @@ impl<T: TagSerialize> TagSerialize for Bounds<T> {
         Ok(())
     }
     fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
-        fits(Self::tag_size(), at, struct_end, 0)?;
+        fits(Self::tag_size(), at, struct_end, data.len())?;
 
         let lower = T::from_tag(data, at, struct_end, cursor)?;
         let upper = T::from_tag(data, at + T::tag_size(), struct_end, cursor)?;
@@ -456,6 +484,9 @@ impl TagSerialize for TagReference {
         // current path
         let path = self.get_path_without_extension();
 
+        // Write an empty ID
+        (0xFFFFFFFFu32).into_tag(data, at + 0xC, struct_end)?;
+
         if path.is_empty() {
             (self.group.to_fourcc()).into_tag(data, at + 0x0, struct_end)
         }
@@ -470,14 +501,14 @@ impl TagSerialize for TagReference {
             data.extend_from_slice(path.as_bytes());
             data.push(0); // null terminator
             (self.group.to_fourcc()).into_tag(data, at + 0x0, struct_end)?;
-            (path.len() as u32).into_tag(data, at + 0xC, struct_end)
+            (path.len() as u32).into_tag(data, at + 0x8, struct_end)
         }
     }
     fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
         data_pointer_from_tag_assertions!(at, struct_end, data, TAG_REFERENCE_STRUCT_SIZE, cursor);
 
         // Does this array fit?
-        let length = u32::from_tag(data, at + 0xC, struct_end, cursor)?;
+        let length = u32::from_tag(data, at + 0x8, struct_end, cursor)?;
 
         if length > 0 {
             let fourcc = u32::from_tag(data, at + 0x0, struct_end, cursor)?;
