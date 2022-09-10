@@ -2,94 +2,177 @@ use crate::types::FourCC;
 use std::fmt;
 
 /// Tag groups define types of tags.
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, PartialOrd, Ord, Eq)]
 pub enum TagGroup {
-    /// Special group for when there is an absence of a group
-    None,
-
+    /// Corresponds to [`crate::engines::h1::definitions::Actor`].
     Actor,
+    /// Corresponds to [`crate::engines::h1::definitions::ActorVariant`].
     ActorVariant,
+    /// Corresponds to [`crate::engines::h1::definitions::Antenna`].
     Antenna,
+    /// Corresponds to [`crate::engines::h1::definitions::Biped`].
     Biped,
+    /// Corresponds to [`crate::engines::h1::definitions::Bitmap`].
     Bitmap,
+    /// Corresponds to [`crate::engines::h1::definitions::CameraTrack`].
     CameraTrack,
+    /// Corresponds to [`crate::engines::h1::definitions::ColorTable`].
     ColorTable,
+    /// Corresponds to [`crate::engines::h1::definitions::ContinuousDamageEffect`].
     ContinuousDamageEffect,
+    /// Corresponds to [`crate::engines::h1::definitions::Contrail`].
     Contrail,
+    /// Corresponds to [`crate::engines::h1::definitions::DamageEffect`].
     DamageEffect,
+    /// Corresponds to [`crate::engines::h1::definitions::Decal`].
     Decal,
+    /// Corresponds to [`crate::engines::h1::definitions::DetailObjectCollection`].
     DetailObjectCollection,
+    /// Corresponds to [`crate::engines::h1::definitions::Device`].
     Device,
+    /// Corresponds to [`crate::engines::h1::definitions::DeviceControl`].
     DeviceControl,
+    /// Corresponds to [`crate::engines::h1::definitions::DeviceLightFixture`].
     DeviceLightFixture,
+    /// Corresponds to [`crate::engines::h1::definitions::DeviceMachine`].
     DeviceMachine,
+    /// Corresponds to [`crate::engines::h1::definitions::Dialogue`].
     Dialogue,
+    /// Corresponds to [`crate::engines::h1::definitions::Effect`].
     Effect,
+    /// Corresponds to [`crate::engines::h1::definitions::Equipment`].
     Equipment,
+    /// Corresponds to [`crate::engines::h1::definitions::Flag`].
     Flag,
+    /// Corresponds to [`crate::engines::h1::definitions::Fog`].
     Fog,
+    /// Corresponds to [`crate::engines::h1::definitions::Font`].
     Font,
+    /// Corresponds to [`crate::engines::h1::definitions::Garbage`].
     Garbage,
+    /// Corresponds to [`crate::engines::h1::definitions::GBXModel`].
     GBXModel,
+    /// Corresponds to [`crate::engines::h1::definitions::Globals`].
     Globals,
+    /// Corresponds to [`crate::engines::h1::definitions::Glow`].
     Glow,
+    /// Corresponds to [`crate::engines::h1::definitions::GrenadeHUDInterface`].
     GrenadeHUDInterface,
+    /// Corresponds to [`crate::engines::h1::definitions::HUDGlobals`].
     HUDGlobals,
+    /// Corresponds to [`crate::engines::h1::definitions::HUDMessageText`].
     HUDMessageText,
+    /// Corresponds to [`crate::engines::h1::definitions::HUDNumber`].
     HUDNumber,
+    /// Corresponds to [`crate::engines::h1::definitions::InputDeviceDefaults`].
     InputDeviceDefaults,
+    /// Corresponds to [`crate::engines::h1::definitions::Item`].
     Item,
+    /// Corresponds to [`crate::engines::h1::definitions::ItemCollection`].
     ItemCollection,
+    /// Corresponds to [`crate::engines::h1::definitions::LensFlare`].
     LensFlare,
+    /// Corresponds to [`crate::engines::h1::definitions::Light`].
     Light,
+    /// Corresponds to [`crate::engines::h1::definitions::Lightning`].
     Lightning,
+    /// Corresponds to [`crate::engines::h1::definitions::LightVolume`].
     LightVolume,
+    /// Corresponds to [`crate::engines::h1::definitions::MaterialEffects`].
     MaterialEffects,
+    /// Corresponds to [`crate::engines::h1::definitions::Meter`].
     Meter,
+    /// Corresponds to [`crate::engines::h1::definitions::Model`].
     Model,
+    /// Corresponds to [`crate::engines::h1::definitions::ModelAnimations`].
     ModelAnimations,
+    /// Corresponds to [`crate::engines::h1::definitions::ModelCollisionGeometry`].
     ModelCollisionGeometry,
+    /// Corresponds to [`crate::engines::h1::definitions::MultiplayerScenarioDescription`].
     MultiplayerScenarioDescription,
+    /// Corresponds to [`crate::engines::h1::definitions::Object`].
     Object,
+    /// Corresponds to [`crate::engines::h1::definitions::Particle`].
     Particle,
+    /// Corresponds to [`crate::engines::h1::definitions::ParticleSystem`].
     ParticleSystem,
+    /// Corresponds to [`crate::engines::h1::definitions::Physics`].
     Physics,
+    /// Corresponds to [`crate::engines::h1::definitions::Placeholder`].
     Placeholder,
+    /// Corresponds to [`crate::engines::h1::definitions::PointPhysics`].
     PointPhysics,
+    /// Corresponds to [`crate::engines::h1::definitions::PreferencesNetworkGame`].
     PreferencesNetworkGame,
+    /// Corresponds to [`crate::engines::h1::definitions::Projectile`].
     Projectile,
+    /// Corresponds to [`crate::engines::h1::definitions::Scenario`].
     Scenario,
-    ScenarioStructureBsp,
+    /// Corresponds to [`crate::engines::h1::definitions::ScenarioStructureBSP`].
+    ScenarioStructureBSP,
+    /// Corresponds to [`crate::engines::h1::definitions::Scenery`].
     Scenery,
+    /// Corresponds to [`crate::engines::h1::definitions::Shader`].
     Shader,
+    /// Corresponds to [`crate::engines::h1::definitions::ShaderEnvironment`].
     ShaderEnvironment,
+    /// Corresponds to [`crate::engines::h1::definitions::ShaderModel`].
     ShaderModel,
+    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentChicago`].
     ShaderTransparentChicago,
+    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentChicagoExtended`].
     ShaderTransparentChicagoExtended,
+    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentGeneric`].
     ShaderTransparentGeneric,
+    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentGlass`].
     ShaderTransparentGlass,
+    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentMeter`].
     ShaderTransparentMeter,
+    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentPlasma`].
     ShaderTransparentPlasma,
+    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentWater`].
     ShaderTransparentWater,
+    /// Corresponds to [`crate::engines::h1::definitions::Sky`].
     Sky,
+    /// Corresponds to [`crate::engines::h1::definitions::Sound`].
     Sound,
+    /// Corresponds to [`crate::engines::h1::definitions::SoundEnvironment`].
     SoundEnvironment,
+    /// Corresponds to [`crate::engines::h1::definitions::SoundLooping`].
     SoundLooping,
+    /// Corresponds to [`crate::engines::h1::definitions::SoundScenery`].
     SoundScenery,
+    /// Corresponds to the removed Spheroid tag.
     Spheroid,
+    /// Corresponds to [`crate::engines::h1::definitions::StringList`].
     StringList,
+    /// Corresponds to [`crate::engines::h1::definitions::TagCollection`].
     TagCollection,
+    /// Corresponds to [`crate::engines::h1::definitions::UIWidgetCollection`].
     UIWidgetCollection,
+    /// Corresponds to [`crate::engines::h1::definitions::UIWidgetDefinition`].
     UIWidgetDefinition,
+    /// Corresponds to [`crate::engines::h1::definitions::UnicodeStringList`].
     UnicodeStringList,
+    /// Corresponds to [`crate::engines::h1::definitions::Unit`].
     Unit,
+    /// Corresponds to [`crate::engines::h1::definitions::UnitHUDInterface`].
     UnitHUDInterface,
+    /// Corresponds to [`crate::engines::h1::definitions::Vehicle`].
     Vehicle,
+    /// Corresponds to [`crate::engines::h1::definitions::VirtualKeyboard`].
     VirtualKeyboard,
+    /// Corresponds to [`crate::engines::h1::definitions::Weapon`].
     Weapon,
+    /// Corresponds to [`crate::engines::h1::definitions::WeaponHUDInterface`].
     WeaponHUDInterface,
+    /// Corresponds to [`crate::engines::h1::definitions::WeatherParticleSystem`].
     WeatherParticleSystem,
-    Wind
+    /// Corresponds to [`crate::engines::h1::definitions::Wind`].
+    Wind,
+
+    /// Special group for when there is an absence of a group.
+    _None,
 }
 
 impl fmt::Display for TagGroup {
@@ -99,374 +182,155 @@ impl fmt::Display for TagGroup {
     }
 }
 
+/// All tag groups for CE sorted alphabetically to allow for efficient binary searching.
+const ALL_GROUPS: &'static [(&'static str, TagGroup, FourCC)] = &[
+    ("actor", TagGroup::Actor, 0x61637472),
+    ("actor_variant", TagGroup::ActorVariant, 0x61637476),
+    ("antenna", TagGroup::Antenna, 0x616E7421),
+    ("biped", TagGroup::Biped, 0x62697064),
+    ("bitmap", TagGroup::Bitmap, 0x6269746D),
+    ("camera_track", TagGroup::CameraTrack, 0x7472616B),
+    ("color_table", TagGroup::ColorTable, 0x636F6C6F),
+    ("continuous_damage_effect", TagGroup::ContinuousDamageEffect, 0x63646D67),
+    ("contrail", TagGroup::Contrail, 0x636F6E74),
+    ("damage_effect", TagGroup::DamageEffect, 0x6A707421),
+    ("decal", TagGroup::Decal, 0x64656361),
+    ("detail_object_collection", TagGroup::DetailObjectCollection, 0x646F6263),
+    ("device", TagGroup::Device, 0x64657669),
+    ("device_control", TagGroup::DeviceControl, 0x6374726C),
+    ("device_light_fixture", TagGroup::DeviceLightFixture, 0x6C696669),
+    ("device_machine", TagGroup::DeviceMachine, 0x6D616368),
+    ("dialogue", TagGroup::Dialogue, 0x75646C67),
+    ("effect", TagGroup::Effect, 0x65666665),
+    ("equipment", TagGroup::Equipment, 0x65716970),
+    ("flag", TagGroup::Flag, 0x666C6167),
+    ("fog", TagGroup::Fog, 0x666F6720),
+    ("font", TagGroup::Font, 0x666F6E74),
+    ("garbage", TagGroup::Garbage, 0x67617262),
+    ("gbxmodel", TagGroup::GBXModel, 0x6D6F6432),
+    ("globals", TagGroup::Globals, 0x6D617467),
+    ("glow", TagGroup::Glow, 0x676C7721),
+    ("grenade_hud_interface", TagGroup::GrenadeHUDInterface, 0x67726869),
+    ("hud_globals", TagGroup::HUDGlobals, 0x68756467),
+    ("hud_message_text", TagGroup::HUDMessageText, 0x686D7420),
+    ("hud_number", TagGroup::HUDNumber, 0x68756423),
+    ("input_device_defaults", TagGroup::InputDeviceDefaults, 0x64657663),
+    ("item", TagGroup::Item, 0x6974656D),
+    ("item_collection", TagGroup::ItemCollection, 0x69746D63),
+    ("lens_flare", TagGroup::LensFlare, 0x6C656E73),
+    ("light", TagGroup::Light, 0x6C696768),
+    ("light_volume", TagGroup::Lightning, 0x6D677332),
+    ("lightning", TagGroup::LightVolume, 0x656C6563),
+    ("material_effects", TagGroup::MaterialEffects, 0x666F6F74),
+    ("meter", TagGroup::Meter, 0x6D657472),
+    ("model", TagGroup::Model, 0x6D6F6465),
+    ("model_animations", TagGroup::ModelAnimations, 0x616E7472),
+    ("model_collision_geometry", TagGroup::ModelCollisionGeometry, 0x636F6C6C),
+    ("multiplayer_scenario_description", TagGroup::MultiplayerScenarioDescription, 0x6D706C79),
+    ("object", TagGroup::Object, 0x6F626A65),
+    ("particle", TagGroup::Particle, 0x70617274),
+    ("particle_system", TagGroup::ParticleSystem, 0x7063746C),
+    ("physics", TagGroup::Physics, 0x70687973),
+    ("placeholder", TagGroup::Placeholder, 0x706C6163),
+    ("point_physics", TagGroup::PointPhysics, 0x70706879),
+    ("preferences_network_game", TagGroup::PreferencesNetworkGame, 0x6E677072),
+    ("projectile", TagGroup::Projectile, 0x70726F6A),
+    ("scenario", TagGroup::Scenario, 0x73636E72),
+    ("scenario_structure_bsp", TagGroup::ScenarioStructureBSP, 0x73627370),
+    ("scenery", TagGroup::Scenery, 0x7363656E),
+    ("shader", TagGroup::Shader, 0x73686472),
+    ("shader_environment", TagGroup::ShaderEnvironment, 0x73656E76),
+    ("shader_model", TagGroup::ShaderModel, 0x736F736F),
+    ("shader_transparent_chicago", TagGroup::ShaderTransparentChicago, 0x73636869),
+    ("shader_transparent_chicago_extended", TagGroup::ShaderTransparentChicagoExtended, 0x73636578),
+    ("shader_transparent_generic", TagGroup::ShaderTransparentGeneric, 0x736F7472),
+    ("shader_transparent_glass", TagGroup::ShaderTransparentGlass, 0x73676C61),
+    ("shader_transparent_meter", TagGroup::ShaderTransparentMeter, 0x736D6574),
+    ("shader_transparent_plasma", TagGroup::ShaderTransparentPlasma, 0x73706C61),
+    ("shader_transparent_water", TagGroup::ShaderTransparentWater, 0x73776174),
+    ("sky", TagGroup::Sky, 0x736B7920),
+    ("sound", TagGroup::Sound, 0x736E6421),
+    ("sound_environment", TagGroup::SoundEnvironment, 0x736E6465),
+    ("sound_looping", TagGroup::SoundLooping, 0x6C736E64),
+    ("sound_scenery", TagGroup::SoundScenery, 0x73736365),
+    ("spheroid", TagGroup::Spheroid, 0x626F6F6D),
+    ("string_list", TagGroup::StringList, 0x73747223),
+    ("tag_collection", TagGroup::TagCollection, 0x74616763),
+    ("ui_widget_collection", TagGroup::UIWidgetCollection, 0x536F756C),
+    ("ui_widget_definition", TagGroup::UIWidgetDefinition, 0x44654C61),
+    ("unicode_string_list", TagGroup::UnicodeStringList, 0x75737472),
+    ("unit", TagGroup::Unit, 0x756E6974),
+    ("unit_hud_interface", TagGroup::UnitHUDInterface, 0x756E6869),
+    ("vehicle", TagGroup::Vehicle, 0x76656869),
+    ("virtual_keyboard", TagGroup::VirtualKeyboard, 0x76636B79),
+    ("weapon", TagGroup::Weapon, 0x77656170),
+    ("weapon_hud_interface", TagGroup::WeaponHUDInterface, 0x77706869),
+    ("weather_particle_system", TagGroup::WeatherParticleSystem, 0x7261696E),
+    ("wind", TagGroup::Wind, 0x77696E64),
+    ("zz_<none>", TagGroup::_None, 0xFFFFFFFF),
+];
+
 impl crate::types::tag::TagGroupFn for TagGroup {
     fn as_str(&self) -> &'static str {
-        match *self {
-            TagGroup::None => "<none>",
-
-            TagGroup::Actor => "actor",
-            TagGroup::ActorVariant => "actor_variant",
-            TagGroup::Antenna => "antenna",
-            TagGroup::Biped => "biped",
-            TagGroup::Bitmap => "bitmap",
-            TagGroup::CameraTrack => "camera_track",
-            TagGroup::ColorTable => "color_table",
-            TagGroup::ContinuousDamageEffect => "continuous_damage_effect",
-            TagGroup::Contrail => "contrail",
-            TagGroup::DamageEffect => "damage_effect",
-            TagGroup::Decal => "decal",
-            TagGroup::DetailObjectCollection => "detail_object_collection",
-            TagGroup::Device => "device",
-            TagGroup::DeviceControl => "device_control",
-            TagGroup::DeviceLightFixture => "device_light_fixture",
-            TagGroup::DeviceMachine => "device_machine",
-            TagGroup::Dialogue => "dialogue",
-            TagGroup::Effect => "effect",
-            TagGroup::Equipment => "equipment",
-            TagGroup::Flag => "flag",
-            TagGroup::Fog => "fog",
-            TagGroup::Font => "font",
-            TagGroup::Garbage => "garbage",
-            TagGroup::GBXModel => "gbxmodel",
-            TagGroup::Globals => "globals",
-            TagGroup::Glow => "glow",
-            TagGroup::GrenadeHUDInterface => "grenade_hud_interface",
-            TagGroup::HUDGlobals => "hud_globals",
-            TagGroup::HUDMessageText => "hud_message_text",
-            TagGroup::HUDNumber => "hud_number",
-            TagGroup::InputDeviceDefaults => "input_device_defaults",
-            TagGroup::Item => "item",
-            TagGroup::ItemCollection => "item_collection",
-            TagGroup::LensFlare => "lens_flare",
-            TagGroup::Light => "light",
-            TagGroup::Lightning => "light_volume",
-            TagGroup::LightVolume => "lightning",
-            TagGroup::MaterialEffects => "material_effects",
-            TagGroup::Meter => "meter",
-            TagGroup::Model => "model",
-            TagGroup::ModelAnimations => "model_animations",
-            TagGroup::ModelCollisionGeometry => "model_collision_geometry",
-            TagGroup::MultiplayerScenarioDescription => "multiplayer_scenario_description",
-            TagGroup::Object => "object",
-            TagGroup::Particle => "particle",
-            TagGroup::ParticleSystem => "particle_system",
-            TagGroup::Physics => "physics",
-            TagGroup::Placeholder => "placeholder",
-            TagGroup::PointPhysics => "point_physics",
-            TagGroup::PreferencesNetworkGame => "preferences_network_game",
-            TagGroup::Projectile => "projectile",
-            TagGroup::Scenario => "scenario",
-            TagGroup::ScenarioStructureBsp => "scenario_structure_bsp",
-            TagGroup::Scenery => "scenery",
-            TagGroup::Shader => "shader",
-            TagGroup::ShaderEnvironment => "shader_environment",
-            TagGroup::ShaderModel => "shader_model",
-            TagGroup::ShaderTransparentChicago => "shader_transparent_chicago",
-            TagGroup::ShaderTransparentChicagoExtended => "shader_transparent_chicago_extended",
-            TagGroup::ShaderTransparentGeneric => "shader_transparent_generic",
-            TagGroup::ShaderTransparentGlass => "shader_transparent_glass",
-            TagGroup::ShaderTransparentMeter => "shader_transparent_meter",
-            TagGroup::ShaderTransparentPlasma => "shader_transparent_plasma",
-            TagGroup::ShaderTransparentWater => "shader_transparent_water",
-            TagGroup::Sky => "sky",
-            TagGroup::Sound => "sound",
-            TagGroup::SoundEnvironment => "sound_environment",
-            TagGroup::SoundLooping => "sound_looping",
-            TagGroup::SoundScenery => "sound_scenery",
-            TagGroup::Spheroid => "spheroid",
-            TagGroup::StringList => "string_list",
-            TagGroup::TagCollection => "tag_collection",
-            TagGroup::UIWidgetCollection => "ui_widget_collection",
-            TagGroup::UIWidgetDefinition => "ui_widget_definition",
-            TagGroup::UnicodeStringList => "unicode_string_list",
-            TagGroup::Unit => "unit",
-            TagGroup::UnitHUDInterface => "unit_hud_interface",
-            TagGroup::Vehicle => "vehicle",
-            TagGroup::VirtualKeyboard => "virtual_keyboard",
-            TagGroup::Weapon => "weapon",
-            TagGroup::WeaponHUDInterface => "weapon_hud_interface",
-            TagGroup::WeatherParticleSystem => "weather_particle_system",
-            TagGroup::Wind => "wind"
-        }
+        ALL_GROUPS[*self as usize].0
     }
 
     fn from_str(str: &str) -> Option<TagGroup> {
-        match str {
-            "actor" => Some(TagGroup::Actor),
-            "actor_variant" => Some(TagGroup::ActorVariant),
-            "antenna" => Some(TagGroup::Antenna),
-            "biped" => Some(TagGroup::Biped),
-            "bitmap" => Some(TagGroup::Bitmap),
-            "camera_track" => Some(TagGroup::CameraTrack),
-            "color_table" => Some(TagGroup::ColorTable),
-            "continuous_damage_effect" => Some(TagGroup::ContinuousDamageEffect),
-            "contrail" => Some(TagGroup::Contrail),
-            "damage_effect" => Some(TagGroup::DamageEffect),
-            "decal" => Some(TagGroup::Decal),
-            "detail_object_collection" => Some(TagGroup::DetailObjectCollection),
-            "device" => Some(TagGroup::Device),
-            "device_control" => Some(TagGroup::DeviceControl),
-            "device_light_fixture" => Some(TagGroup::DeviceLightFixture),
-            "device_machine" => Some(TagGroup::DeviceMachine),
-            "dialogue" => Some(TagGroup::Dialogue),
-            "effect" => Some(TagGroup::Effect),
-            "equipment" => Some(TagGroup::Equipment),
-            "flag" => Some(TagGroup::Flag),
-            "fog" => Some(TagGroup::Fog),
-            "font" => Some(TagGroup::Font),
-            "garbage" => Some(TagGroup::Garbage),
-            "gbxmodel" => Some(TagGroup::GBXModel),
-            "globals" => Some(TagGroup::Globals),
-            "glow" => Some(TagGroup::Glow),
-            "grenade_hud_interface" => Some(TagGroup::GrenadeHUDInterface),
-            "hud_globals" => Some(TagGroup::HUDGlobals),
-            "hud_message_text" => Some(TagGroup::HUDMessageText),
-            "hud_number" => Some(TagGroup::HUDNumber),
-            "input_device_defaults" => Some(TagGroup::InputDeviceDefaults),
-            "item" => Some(TagGroup::Item),
-            "item_collection" => Some(TagGroup::ItemCollection),
-            "lens_flare" => Some(TagGroup::LensFlare),
-            "light" => Some(TagGroup::Light),
-            "light_volume" => Some(TagGroup::Lightning),
-            "lightning" => Some(TagGroup::LightVolume),
-            "material_effects" => Some(TagGroup::MaterialEffects),
-            "meter" => Some(TagGroup::Meter),
-            "model" => Some(TagGroup::Model),
-            "model_animations" => Some(TagGroup::ModelAnimations),
-            "model_collision_geometry" => Some(TagGroup::ModelCollisionGeometry),
-            "multiplayer_scenario_description" => Some(TagGroup::MultiplayerScenarioDescription),
-            "object" => Some(TagGroup::Object),
-            "particle" => Some(TagGroup::Particle),
-            "particle_system" => Some(TagGroup::ParticleSystem),
-            "physics" => Some(TagGroup::Physics),
-            "placeholder" => Some(TagGroup::Placeholder),
-            "point_physics" => Some(TagGroup::PointPhysics),
-            "preferences_network_game" => Some(TagGroup::PreferencesNetworkGame),
-            "projectile" => Some(TagGroup::Projectile),
-            "scenario" => Some(TagGroup::Scenario),
-            "scenario_structure_bsp" => Some(TagGroup::ScenarioStructureBsp),
-            "scenery" => Some(TagGroup::Scenery),
-            "shader" => Some(TagGroup::Shader),
-            "shader_environment" => Some(TagGroup::ShaderEnvironment),
-            "shader_model" => Some(TagGroup::ShaderModel),
-            "shader_transparent_chicago" => Some(TagGroup::ShaderTransparentChicago),
-            "shader_transparent_chicago_extended" => Some(TagGroup::ShaderTransparentChicagoExtended),
-            "shader_transparent_generic" => Some(TagGroup::ShaderTransparentGeneric),
-            "shader_transparent_glass" => Some(TagGroup::ShaderTransparentGlass),
-            "shader_transparent_meter" => Some(TagGroup::ShaderTransparentMeter),
-            "shader_transparent_plasma" => Some(TagGroup::ShaderTransparentPlasma),
-            "shader_transparent_water" => Some(TagGroup::ShaderTransparentWater),
-            "sky" => Some(TagGroup::Sky),
-            "sound" => Some(TagGroup::Sound),
-            "sound_environment" => Some(TagGroup::SoundEnvironment),
-            "sound_looping" => Some(TagGroup::SoundLooping),
-            "sound_scenery" => Some(TagGroup::SoundScenery),
-            "spheroid" => Some(TagGroup::Spheroid),
-            "string_list" => Some(TagGroup::StringList),
-            "tag_collection" => Some(TagGroup::TagCollection),
-            "ui_widget_collection" => Some(TagGroup::UIWidgetCollection),
-            "ui_widget_definition" => Some(TagGroup::UIWidgetDefinition),
-            "unicode_string_list" => Some(TagGroup::UnicodeStringList),
-            "unit" => Some(TagGroup::Unit),
-            "unit_hud_interface" => Some(TagGroup::UnitHUDInterface),
-            "vehicle" => Some(TagGroup::Vehicle),
-            "virtual_keyboard" => Some(TagGroup::VirtualKeyboard),
-            "weapon" => Some(TagGroup::Weapon),
-            "weapon_hud_interface" => Some(TagGroup::WeaponHUDInterface),
-            "weather_particle_system" => Some(TagGroup::WeatherParticleSystem),
-            "wind" => Some(TagGroup::Wind),
-            _ => None
+        match ALL_GROUPS.binary_search_by(|probe| probe.0.cmp(str)) {
+            Ok(n) => Some(ALL_GROUPS[n].1),
+            Err(_) => None
         }
     }
 
-    fn to_fourcc(&self) -> FourCC {
-        match *self {
-            TagGroup::None => 0xFFFFFFFF,
-
-            TagGroup::Actor => 0x61637472,
-            TagGroup::ActorVariant => 0x61637476,
-            TagGroup::Antenna => 0x616E7421,
-            TagGroup::Biped => 0x62697064,
-            TagGroup::Bitmap => 0x6269746D,
-            TagGroup::CameraTrack => 0x7472616B,
-            TagGroup::ColorTable => 0x636F6C6F,
-            TagGroup::ContinuousDamageEffect => 0x63646D67,
-            TagGroup::Contrail => 0x636F6E74,
-            TagGroup::DamageEffect => 0x6A707421,
-            TagGroup::Decal => 0x64656361,
-            TagGroup::DetailObjectCollection => 0x646F6263,
-            TagGroup::Device => 0x64657669,
-            TagGroup::DeviceControl => 0x6374726C,
-            TagGroup::DeviceLightFixture => 0x6C696669,
-            TagGroup::DeviceMachine => 0x6D616368,
-            TagGroup::Dialogue => 0x75646C67,
-            TagGroup::Effect => 0x65666665,
-            TagGroup::Equipment => 0x65716970,
-            TagGroup::Flag => 0x666C6167,
-            TagGroup::Fog => 0x666F6720,
-            TagGroup::Font => 0x666F6E74,
-            TagGroup::Garbage => 0x67617262,
-            TagGroup::GBXModel => 0x6D6F6432,
-            TagGroup::Globals => 0x6D617467,
-            TagGroup::Glow => 0x676C7721,
-            TagGroup::GrenadeHUDInterface => 0x67726869,
-            TagGroup::HUDGlobals => 0x68756467,
-            TagGroup::HUDMessageText => 0x686D7420,
-            TagGroup::HUDNumber => 0x68756423,
-            TagGroup::InputDeviceDefaults => 0x64657663,
-            TagGroup::Item => 0x6974656D,
-            TagGroup::ItemCollection => 0x69746D63,
-            TagGroup::LensFlare => 0x6C656E73,
-            TagGroup::Light => 0x6C696768,
-            TagGroup::Lightning => 0x6D677332,
-            TagGroup::LightVolume => 0x656C6563,
-            TagGroup::MaterialEffects => 0x666F6F74,
-            TagGroup::Meter => 0x6D657472,
-            TagGroup::Model => 0x6D6F6465,
-            TagGroup::ModelAnimations => 0x616E7472,
-            TagGroup::ModelCollisionGeometry => 0x636F6C6C,
-            TagGroup::MultiplayerScenarioDescription => 0x6D706C79,
-            TagGroup::Object => 0x6F626A65,
-            TagGroup::Particle => 0x70617274,
-            TagGroup::ParticleSystem => 0x7063746C,
-            TagGroup::Physics => 0x70687973,
-            TagGroup::Placeholder => 0x706C6163,
-            TagGroup::PointPhysics => 0x70706879,
-            TagGroup::PreferencesNetworkGame => 0x6E677072,
-            TagGroup::Projectile => 0x70726F6A,
-            TagGroup::Scenario => 0x73636E72,
-            TagGroup::ScenarioStructureBsp => 0x73627370,
-            TagGroup::Scenery => 0x7363656E,
-            TagGroup::Shader => 0x73686472,
-            TagGroup::ShaderEnvironment => 0x73656E76,
-            TagGroup::ShaderModel => 0x736F736F,
-            TagGroup::ShaderTransparentChicago => 0x73636869,
-            TagGroup::ShaderTransparentChicagoExtended => 0x73636578,
-            TagGroup::ShaderTransparentGeneric => 0x736F7472,
-            TagGroup::ShaderTransparentGlass => 0x73676C61,
-            TagGroup::ShaderTransparentMeter => 0x736D6574,
-            TagGroup::ShaderTransparentPlasma => 0x73706C61,
-            TagGroup::ShaderTransparentWater => 0x73776174,
-            TagGroup::Sky => 0x736B7920,
-            TagGroup::Sound => 0x736E6421,
-            TagGroup::SoundEnvironment => 0x736E6465,
-            TagGroup::SoundLooping => 0x6C736E64,
-            TagGroup::SoundScenery => 0x73736365,
-            TagGroup::Spheroid => 0x626F6F6D,
-            TagGroup::StringList => 0x73747223,
-            TagGroup::TagCollection => 0x74616763,
-            TagGroup::UIWidgetCollection => 0x536F756C,
-            TagGroup::UIWidgetDefinition => 0x44654C61,
-            TagGroup::UnicodeStringList => 0x75737472,
-            TagGroup::Unit => 0x756E6974,
-            TagGroup::UnitHUDInterface => 0x756E6869,
-            TagGroup::Vehicle => 0x76656869,
-            TagGroup::VirtualKeyboard => 0x76636B79,
-            TagGroup::Weapon => 0x77656170,
-            TagGroup::WeaponHUDInterface => 0x77706869,
-            TagGroup::WeatherParticleSystem => 0x7261696E,
-            TagGroup::Wind => 0x77696E64
-        }
+    fn as_fourcc(&self) -> FourCC {
+        ALL_GROUPS[*self as usize].2
     }
 
     fn from_fourcc(fourcc: FourCC) -> Option<TagGroup> {
-        match fourcc {
-            0xFFFFFFFF => Some(TagGroup::None),
-
-            0x61637472 => Some(TagGroup::Actor),
-            0x61637476 => Some(TagGroup::ActorVariant),
-            0x616E7421 => Some(TagGroup::Antenna),
-            0x62697064 => Some(TagGroup::Biped),
-            0x6269746D => Some(TagGroup::Bitmap),
-            0x7472616B => Some(TagGroup::CameraTrack),
-            0x636F6C6F => Some(TagGroup::ColorTable),
-            0x63646D67 => Some(TagGroup::ContinuousDamageEffect),
-            0x636F6E74 => Some(TagGroup::Contrail),
-            0x6A707421 => Some(TagGroup::DamageEffect),
-            0x64656361 => Some(TagGroup::Decal),
-            0x646F6263 => Some(TagGroup::DetailObjectCollection),
-            0x64657669 => Some(TagGroup::Device),
-            0x6374726C => Some(TagGroup::DeviceControl),
-            0x6C696669 => Some(TagGroup::DeviceLightFixture),
-            0x6D616368 => Some(TagGroup::DeviceMachine),
-            0x75646C67 => Some(TagGroup::Dialogue),
-            0x65666665 => Some(TagGroup::Effect),
-            0x65716970 => Some(TagGroup::Equipment),
-            0x666C6167 => Some(TagGroup::Flag),
-            0x666F6720 => Some(TagGroup::Fog),
-            0x666F6E74 => Some(TagGroup::Font),
-            0x67617262 => Some(TagGroup::Garbage),
-            0x6D6F6432 => Some(TagGroup::GBXModel),
-            0x6D617467 => Some(TagGroup::Globals),
-            0x676C7721 => Some(TagGroup::Glow),
-            0x67726869 => Some(TagGroup::GrenadeHUDInterface),
-            0x68756467 => Some(TagGroup::HUDGlobals),
-            0x686D7420 => Some(TagGroup::HUDMessageText),
-            0x68756423 => Some(TagGroup::HUDNumber),
-            0x64657663 => Some(TagGroup::InputDeviceDefaults),
-            0x6974656D => Some(TagGroup::Item),
-            0x69746D63 => Some(TagGroup::ItemCollection),
-            0x6C656E73 => Some(TagGroup::LensFlare),
-            0x6C696768 => Some(TagGroup::Light),
-            0x6D677332 => Some(TagGroup::Lightning),
-            0x656C6563 => Some(TagGroup::LightVolume),
-            0x666F6F74 => Some(TagGroup::MaterialEffects),
-            0x6D657472 => Some(TagGroup::Meter),
-            0x6D6F6465 => Some(TagGroup::Model),
-            0x616E7472 => Some(TagGroup::ModelAnimations),
-            0x636F6C6C => Some(TagGroup::ModelCollisionGeometry),
-            0x6D706C79 => Some(TagGroup::MultiplayerScenarioDescription),
-            0x6F626A65 => Some(TagGroup::Object),
-            0x70617274 => Some(TagGroup::Particle),
-            0x7063746C => Some(TagGroup::ParticleSystem),
-            0x70687973 => Some(TagGroup::Physics),
-            0x706C6163 => Some(TagGroup::Placeholder),
-            0x70706879 => Some(TagGroup::PointPhysics),
-            0x6E677072 => Some(TagGroup::PreferencesNetworkGame),
-            0x70726F6A => Some(TagGroup::Projectile),
-            0x73636E72 => Some(TagGroup::Scenario),
-            0x73627370 => Some(TagGroup::ScenarioStructureBsp),
-            0x7363656E => Some(TagGroup::Scenery),
-            0x73686472 => Some(TagGroup::Shader),
-            0x73656E76 => Some(TagGroup::ShaderEnvironment),
-            0x736F736F => Some(TagGroup::ShaderModel),
-            0x73636869 => Some(TagGroup::ShaderTransparentChicago),
-            0x73636578 => Some(TagGroup::ShaderTransparentChicagoExtended),
-            0x736F7472 => Some(TagGroup::ShaderTransparentGeneric),
-            0x73676C61 => Some(TagGroup::ShaderTransparentGlass),
-            0x736D6574 => Some(TagGroup::ShaderTransparentMeter),
-            0x73706C61 => Some(TagGroup::ShaderTransparentPlasma),
-            0x73776174 => Some(TagGroup::ShaderTransparentWater),
-            0x736B7920 => Some(TagGroup::Sky),
-            0x736E6421 => Some(TagGroup::Sound),
-            0x736E6465 => Some(TagGroup::SoundEnvironment),
-            0x6C736E64 => Some(TagGroup::SoundLooping),
-            0x73736365 => Some(TagGroup::SoundScenery),
-            0x626F6F6D => Some(TagGroup::Spheroid),
-            0x73747223 => Some(TagGroup::StringList),
-            0x74616763 => Some(TagGroup::TagCollection),
-            0x536F756C => Some(TagGroup::UIWidgetCollection),
-            0x44654C61 => Some(TagGroup::UIWidgetDefinition),
-            0x75737472 => Some(TagGroup::UnicodeStringList),
-            0x756E6974 => Some(TagGroup::Unit),
-            0x756E6869 => Some(TagGroup::UnitHUDInterface),
-            0x76656869 => Some(TagGroup::Vehicle),
-            0x76636B79 => Some(TagGroup::VirtualKeyboard),
-            0x77656170 => Some(TagGroup::Weapon),
-            0x77706869 => Some(TagGroup::WeaponHUDInterface),
-            0x7261696E => Some(TagGroup::WeatherParticleSystem),
-            0x77696E64 => Some(TagGroup::Wind),
-            _ => None
+        for i in ALL_GROUPS {
+            if i.2 == fourcc {
+                return Some(i.1)
+            }
         }
+        None
     }
 
     fn none() -> TagGroup {
-        TagGroup::None
+        TagGroup::_None
     }
 }
 
 impl Default for TagGroup {
     fn default() -> Self {
-        TagGroup::None
+        TagGroup::_None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::types::tag::TagGroupFn;
+
+    use super::{ALL_GROUPS, TagGroup};
+
+    // Check if tag groups are sorted to ensure binary searching works.
+    #[test]
+    fn test_tag_groups_are_sorted() {
+        for i in 0..ALL_GROUPS.len()-1 {
+            let this = ALL_GROUPS[i];
+            let next = ALL_GROUPS[i + 1];
+            assert!(this.0 < next.0, "{} is not < {} (extension)", this.0, next.0);
+            assert!(this.1 < next.1, "{} is not < {} (enum value)", this.0, next.0);
+        }
+        assert_eq!(TagGroup::_None as usize + 1, ALL_GROUPS.len(), "One or more groups are not in ALL_GROUPS!");
+
+        // Test actually getting the values
+        for i in ALL_GROUPS {
+            assert_eq!(i.0, i.1.as_str());
+
+            assert_eq!(i.1, TagGroup::from_str(i.0).unwrap());
+            assert_eq!(i.1, TagGroup::from_fourcc(i.2).unwrap());
+
+            assert_eq!(i.2, i.1.as_fourcc());
+        }
     }
 }

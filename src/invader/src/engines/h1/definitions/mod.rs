@@ -82,6 +82,7 @@ load_json_def!("sound_looping.json");
 load_json_def!("sound_scenery.json");
 load_json_def!("string_list.json");
 load_json_def!("tag_collection.json");
+load_json_def!("ui_widget_collection.json");
 load_json_def!("ui_widget_definition.json");
 load_json_def!("unicode_string_list.json");
 load_json_def!("unit_hud_interface.json");

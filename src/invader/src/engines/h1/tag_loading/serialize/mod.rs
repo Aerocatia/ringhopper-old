@@ -86,7 +86,7 @@ impl TagFileHeader {
             TagGroup::Placeholder => 2,
             TagGroup::PreferencesNetworkGame => 2,
             TagGroup::Projectile => 5,
-            TagGroup::ScenarioStructureBsp => 5,
+            TagGroup::ScenarioStructureBSP => 5,
             TagGroup::Scenario => 2,
             TagGroup::ShaderEnvironment => 2,
             TagGroup::Sound => 4,
@@ -488,7 +488,7 @@ impl TagSerialize for TagReference {
         (0xFFFFFFFFu32).into_tag(data, at + 0xC, struct_end)?;
 
         if path.is_empty() {
-            (self.group.to_fourcc()).into_tag(data, at + 0x0, struct_end)
+            (self.group.as_fourcc()).into_tag(data, at + 0x0, struct_end)
         }
         else {
             // internally this is stored as a 32-bit signed integer
@@ -500,7 +500,7 @@ impl TagSerialize for TagReference {
 
             data.extend_from_slice(path.as_bytes());
             data.push(0); // null terminator
-            (self.group.to_fourcc()).into_tag(data, at + 0x0, struct_end)?;
+            (self.group.as_fourcc()).into_tag(data, at + 0x0, struct_end)?;
             (path.len() as u32).into_tag(data, at + 0x8, struct_end)
         }
     }
@@ -538,7 +538,7 @@ impl TagSerialize for TagReference {
         }
         else {
             let mut result = TagReference::default();
-            result.group = TagGroup::from_fourcc(u32::from_tag(data, at + 0x0, struct_end, cursor)?).unwrap_or(TagGroup::None);
+            result.group = TagGroup::from_fourcc(u32::from_tag(data, at + 0x0, struct_end, cursor)?).unwrap_or(TagGroup::_None);
             Ok(result)
         }
     }
@@ -631,7 +631,7 @@ impl TagSerialize for TagFileHeader {
 
         self.old_tag_id.into_tag(data, 0x00, struct_end)?;
         self.old_tag_name.into_tag(data, 0x04, struct_end)?;
-        self.tag_group.to_fourcc().into_tag(data, 0x24, struct_end)?;
+        self.tag_group.as_fourcc().into_tag(data, 0x24, struct_end)?;
         self.crc32.into_tag(data, 0x28, struct_end)?;
         self.header_length.into_tag(data, 0x2C, struct_end)?;
         self.tag_group_version.into_tag(data, 0x38, struct_end)?;

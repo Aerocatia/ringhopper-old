@@ -25,10 +25,10 @@ pub trait TagGroupFn where Self: Sized {
     /// Get a tag group from the [`FourCC`] signature or `None` if the FourCC is unrecognized.
     fn from_fourcc(fourcc: FourCC) -> Option<Self>;
 
-    /// Get the name of the tag group used in tag extensions.
-    fn to_fourcc(&self) -> FourCC;
+    /// Get the internal FourCC of the tag group.
+    fn as_fourcc(&self) -> FourCC;
 
-    /// Get the name of the tag group used in tag extensions.
+    /// Get the name of the tag group used in file extensions.
     fn as_str(&self) -> &'static str;
 
     /// Get a tag group from a string or `None` if the string is unrecognized.
