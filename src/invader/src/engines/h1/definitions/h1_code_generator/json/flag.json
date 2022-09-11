@@ -90,14 +90,14 @@
             {
                 "name": "red flag shader",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "shader"
                 ]
             },
             {
                 "name": "physics",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "point_physics"
                 ]
             },
@@ -113,7 +113,7 @@
             {
                 "name": "blue flag shader",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "shader"
                 ]
             },

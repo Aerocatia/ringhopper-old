@@ -89,10 +89,10 @@
             {
                 "name": "don't use",
                 "type": "TagReference",
-                "classes": [
+                "unused": true,
+                "groups": [
                     "damage_effect"
-                ],
-                "unused": true
+                ]
             },
             {
                 "name": "bank angle",
@@ -187,7 +187,7 @@
             {
                 "name": "footsteps",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "material_effects"
                 ]
             },

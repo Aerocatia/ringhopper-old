@@ -469,14 +469,14 @@
             {
                 "name": "widget tag",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "ui_widget_definition"
                 ]
             },
             {
                 "name": "sound effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
@@ -510,7 +510,7 @@
             {
                 "name": "widget tag",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "ui_widget_definition"
                 ]
             },
@@ -541,7 +541,7 @@
             {
                 "name": "widget tag",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "ui_widget_definition"
                 ]
             },
@@ -608,7 +608,7 @@
             {
                 "name": "background bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -637,14 +637,14 @@
             {
                 "name": "text label unicode strings list",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unicode_string_list"
                 ]
             },
             {
                 "name": "text font",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "font"
                 ]
             },
@@ -691,14 +691,14 @@
             {
                 "name": "list header bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "list footer bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -717,7 +717,7 @@
             {
                 "name": "extended description widget",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "ui_widget_definition"
                 ]
             },

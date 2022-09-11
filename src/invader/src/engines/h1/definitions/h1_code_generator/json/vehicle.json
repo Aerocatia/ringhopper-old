@@ -252,28 +252,28 @@
             {
                 "name": "suspension sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "crash sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "material effects",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "material_effects"
                 ]
             },
             {
                 "name": "effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             }

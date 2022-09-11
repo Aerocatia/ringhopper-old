@@ -74,10 +74,10 @@
         "fields": [
             {
                 "type": "TagReference",
-                "classes": [
+                "name": "target bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "name": "target bitmap"
+                ]
             },
             {
                 "name": "language",
@@ -96,10 +96,10 @@
         "fields": [
             {
                 "type": "TagReference",
-                "classes": [
+                "name": "source bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "name": "source bitmap"
+                ]
             },
             {
                 "type": "Reflexive",
@@ -209,14 +209,14 @@
             {
                 "name": "single player font",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "font"
                 ]
             },
             {
                 "name": "multi player font",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "font"
                 ]
             },
@@ -243,21 +243,21 @@
             {
                 "name": "item message text",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unicode_string_list"
                 ]
             },
             {
                 "name": "icon bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "alternate icon text",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unicode_string_list"
                 ]
             },
@@ -306,7 +306,7 @@
             {
                 "name": "hud messages",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "hud_message_text"
                 ]
             },
@@ -373,7 +373,7 @@
             {
                 "name": "arrow bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -398,7 +398,7 @@
             {
                 "name": "default weapon hud",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "weapon_hud_interface"
                 ]
             },
@@ -445,7 +445,7 @@
             {
                 "name": "hud damage indicator bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -544,7 +544,7 @@
             {
                 "name": "carnage report bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -567,7 +567,7 @@
             {
                 "name": "checkpoint sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },

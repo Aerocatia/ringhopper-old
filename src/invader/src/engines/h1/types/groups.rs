@@ -4,171 +4,171 @@ use std::fmt;
 /// Tag groups define types of tags.
 #[derive(Copy, Clone, PartialEq, Debug, PartialOrd, Ord, Eq)]
 pub enum TagGroup {
-    /// Corresponds to [`crate::engines::h1::definitions::Actor`].
+    /// Corresponds to the [`Actor`](crate::engines::h1::definitions::Actor) struct.
     Actor,
-    /// Corresponds to [`crate::engines::h1::definitions::ActorVariant`].
+    /// Corresponds to the [`ActorVariant`](crate::engines::h1::definitions::ActorVariant) struct.
     ActorVariant,
-    /// Corresponds to [`crate::engines::h1::definitions::Antenna`].
+    /// Corresponds to the [`Antenna`](crate::engines::h1::definitions::Antenna) struct.
     Antenna,
-    /// Corresponds to [`crate::engines::h1::definitions::Biped`].
+    /// Corresponds to the [`Biped`](crate::engines::h1::definitions::Biped) struct.
     Biped,
-    /// Corresponds to [`crate::engines::h1::definitions::Bitmap`].
+    /// Corresponds to the [`Bitmap`](crate::engines::h1::definitions::Bitmap) struct.
     Bitmap,
-    /// Corresponds to [`crate::engines::h1::definitions::CameraTrack`].
+    /// Corresponds to the [`CameraTrack`](crate::engines::h1::definitions::CameraTrack) struct.
     CameraTrack,
-    /// Corresponds to [`crate::engines::h1::definitions::ColorTable`].
+    /// Corresponds to the [`ColorTable`](crate::engines::h1::definitions::ColorTable) struct.
     ColorTable,
-    /// Corresponds to [`crate::engines::h1::definitions::ContinuousDamageEffect`].
+    /// Corresponds to the [`ContinuousDamageEffect`](crate::engines::h1::definitions::ContinuousDamageEffect) struct.
     ContinuousDamageEffect,
-    /// Corresponds to [`crate::engines::h1::definitions::Contrail`].
+    /// Corresponds to the [`Contrail`](crate::engines::h1::definitions::Contrail) struct.
     Contrail,
-    /// Corresponds to [`crate::engines::h1::definitions::DamageEffect`].
+    /// Corresponds to the [`DamageEffect`](crate::engines::h1::definitions::DamageEffect) struct.
     DamageEffect,
-    /// Corresponds to [`crate::engines::h1::definitions::Decal`].
+    /// Corresponds to the [`Decal`](crate::engines::h1::definitions::Decal) struct.
     Decal,
-    /// Corresponds to [`crate::engines::h1::definitions::DetailObjectCollection`].
+    /// Corresponds to the [`DetailObjectCollection`](crate::engines::h1::definitions::DetailObjectCollection) struct.
     DetailObjectCollection,
-    /// Corresponds to [`crate::engines::h1::definitions::Device`].
+    /// Corresponds to the [`Device`](crate::engines::h1::definitions::Device) struct.
     Device,
-    /// Corresponds to [`crate::engines::h1::definitions::DeviceControl`].
+    /// Corresponds to the [`DeviceControl`](crate::engines::h1::definitions::DeviceControl) struct.
     DeviceControl,
-    /// Corresponds to [`crate::engines::h1::definitions::DeviceLightFixture`].
+    /// Corresponds to the [`DeviceLightFixture`](crate::engines::h1::definitions::DeviceLightFixture) struct.
     DeviceLightFixture,
-    /// Corresponds to [`crate::engines::h1::definitions::DeviceMachine`].
+    /// Corresponds to the [`DeviceMachine`](crate::engines::h1::definitions::DeviceMachine) struct.
     DeviceMachine,
-    /// Corresponds to [`crate::engines::h1::definitions::Dialogue`].
+    /// Corresponds to the [`Dialogue`](crate::engines::h1::definitions::Dialogue) struct.
     Dialogue,
-    /// Corresponds to [`crate::engines::h1::definitions::Effect`].
+    /// Corresponds to the [`Effect`](crate::engines::h1::definitions::Effect) struct.
     Effect,
-    /// Corresponds to [`crate::engines::h1::definitions::Equipment`].
+    /// Corresponds to the [`Equipment`](crate::engines::h1::definitions::Equipment) struct.
     Equipment,
-    /// Corresponds to [`crate::engines::h1::definitions::Flag`].
+    /// Corresponds to the [`Flag`](crate::engines::h1::definitions::Flag) struct.
     Flag,
-    /// Corresponds to [`crate::engines::h1::definitions::Fog`].
+    /// Corresponds to the [`Fog`](crate::engines::h1::definitions::Fog) struct.
     Fog,
-    /// Corresponds to [`crate::engines::h1::definitions::Font`].
+    /// Corresponds to the [`Font`](crate::engines::h1::definitions::Font) struct.
     Font,
-    /// Corresponds to [`crate::engines::h1::definitions::Garbage`].
+    /// Corresponds to the [`Garbage`](crate::engines::h1::definitions::Garbage) struct.
     Garbage,
-    /// Corresponds to [`crate::engines::h1::definitions::GBXModel`].
+    /// Corresponds to the [`GBXModel`](crate::engines::h1::definitions::GBXModel) struct.
     GBXModel,
-    /// Corresponds to [`crate::engines::h1::definitions::Globals`].
+    /// Corresponds to the [`Globals`](crate::engines::h1::definitions::Globals) struct.
     Globals,
-    /// Corresponds to [`crate::engines::h1::definitions::Glow`].
+    /// Corresponds to the [`Glow`](crate::engines::h1::definitions::Glow) struct.
     Glow,
-    /// Corresponds to [`crate::engines::h1::definitions::GrenadeHUDInterface`].
+    /// Corresponds to the [`GrenadeHUDInterface`](crate::engines::h1::definitions::GrenadeHUDInterface) struct.
     GrenadeHUDInterface,
-    /// Corresponds to [`crate::engines::h1::definitions::HUDGlobals`].
+    /// Corresponds to the [`HUDGlobals`](crate::engines::h1::definitions::HUDGlobals) struct.
     HUDGlobals,
-    /// Corresponds to [`crate::engines::h1::definitions::HUDMessageText`].
+    /// Corresponds to the [`HUDMessageText`](crate::engines::h1::definitions::HUDMessageText) struct.
     HUDMessageText,
-    /// Corresponds to [`crate::engines::h1::definitions::HUDNumber`].
+    /// Corresponds to the [`HUDNumber`](crate::engines::h1::definitions::HUDNumber) struct.
     HUDNumber,
-    /// Corresponds to [`crate::engines::h1::definitions::InputDeviceDefaults`].
+    /// Corresponds to the [`InputDeviceDefaults`](crate::engines::h1::definitions::InputDeviceDefaults) struct.
     InputDeviceDefaults,
-    /// Corresponds to [`crate::engines::h1::definitions::Item`].
+    /// Corresponds to the [`Item`](crate::engines::h1::definitions::Item) struct.
     Item,
-    /// Corresponds to [`crate::engines::h1::definitions::ItemCollection`].
+    /// Corresponds to the [`ItemCollection`](crate::engines::h1::definitions::ItemCollection) struct.
     ItemCollection,
-    /// Corresponds to [`crate::engines::h1::definitions::LensFlare`].
+    /// Corresponds to the [`LensFlare`](crate::engines::h1::definitions::LensFlare) struct.
     LensFlare,
-    /// Corresponds to [`crate::engines::h1::definitions::Light`].
+    /// Corresponds to the [`Light`](crate::engines::h1::definitions::Light) struct.
     Light,
-    /// Corresponds to [`crate::engines::h1::definitions::Lightning`].
+    /// Corresponds to the [`Lightning`](crate::engines::h1::definitions::Lightning) struct.
     Lightning,
-    /// Corresponds to [`crate::engines::h1::definitions::LightVolume`].
+    /// Corresponds to the [`LightVolume`](crate::engines::h1::definitions::LightVolume) struct.
     LightVolume,
-    /// Corresponds to [`crate::engines::h1::definitions::MaterialEffects`].
+    /// Corresponds to the [`MaterialEffects`](crate::engines::h1::definitions::MaterialEffects) struct.
     MaterialEffects,
-    /// Corresponds to [`crate::engines::h1::definitions::Meter`].
+    /// Corresponds to the [`Meter`](crate::engines::h1::definitions::Meter) struct.
     Meter,
-    /// Corresponds to [`crate::engines::h1::definitions::Model`].
+    /// Corresponds to the [`Model`](crate::engines::h1::definitions::Model) struct.
     Model,
-    /// Corresponds to [`crate::engines::h1::definitions::ModelAnimations`].
+    /// Corresponds to the [`ModelAnimations`](crate::engines::h1::definitions::ModelAnimations) struct.
     ModelAnimations,
-    /// Corresponds to [`crate::engines::h1::definitions::ModelCollisionGeometry`].
+    /// Corresponds to the [`ModelCollisionGeometry`](crate::engines::h1::definitions::ModelCollisionGeometry) struct.
     ModelCollisionGeometry,
-    /// Corresponds to [`crate::engines::h1::definitions::MultiplayerScenarioDescription`].
+    /// Corresponds to the [`MultiplayerScenarioDescription`](crate::engines::h1::definitions::MultiplayerScenarioDescription) struct.
     MultiplayerScenarioDescription,
-    /// Corresponds to [`crate::engines::h1::definitions::Object`].
+    /// Corresponds to the [`Object`](crate::engines::h1::definitions::Object) struct.
     Object,
-    /// Corresponds to [`crate::engines::h1::definitions::Particle`].
+    /// Corresponds to the [`Particle`](crate::engines::h1::definitions::Particle) struct.
     Particle,
-    /// Corresponds to [`crate::engines::h1::definitions::ParticleSystem`].
+    /// Corresponds to the [`ParticleSystem`](crate::engines::h1::definitions::ParticleSystem) struct.
     ParticleSystem,
-    /// Corresponds to [`crate::engines::h1::definitions::Physics`].
+    /// Corresponds to the [`Physics`](crate::engines::h1::definitions::Physics) struct.
     Physics,
-    /// Corresponds to [`crate::engines::h1::definitions::Placeholder`].
+    /// Corresponds to the [`Placeholder`](crate::engines::h1::definitions::Placeholder) struct.
     Placeholder,
-    /// Corresponds to [`crate::engines::h1::definitions::PointPhysics`].
+    /// Corresponds to the [`PointPhysics`](crate::engines::h1::definitions::PointPhysics) struct.
     PointPhysics,
-    /// Corresponds to [`crate::engines::h1::definitions::PreferencesNetworkGame`].
+    /// Corresponds to the [`PreferencesNetworkGame`](crate::engines::h1::definitions::PreferencesNetworkGame) struct.
     PreferencesNetworkGame,
-    /// Corresponds to [`crate::engines::h1::definitions::Projectile`].
+    /// Corresponds to the [`Projectile`](crate::engines::h1::definitions::Projectile) struct.
     Projectile,
-    /// Corresponds to [`crate::engines::h1::definitions::Scenario`].
+    /// Corresponds to the [`Scenario`](crate::engines::h1::definitions::Scenario) struct.
     Scenario,
-    /// Corresponds to [`crate::engines::h1::definitions::ScenarioStructureBSP`].
+    /// Corresponds to the [`ScenarioStructureBSP`](crate::engines::h1::definitions::ScenarioStructureBSP) struct.
     ScenarioStructureBSP,
-    /// Corresponds to [`crate::engines::h1::definitions::Scenery`].
+    /// Corresponds to the [`Scenery`](crate::engines::h1::definitions::Scenery) struct.
     Scenery,
-    /// Corresponds to [`crate::engines::h1::definitions::Shader`].
+    /// Corresponds to the [`Shader`](crate::engines::h1::definitions::Shader) struct.
     Shader,
-    /// Corresponds to [`crate::engines::h1::definitions::ShaderEnvironment`].
+    /// Corresponds to the [`ShaderEnvironment`](crate::engines::h1::definitions::ShaderEnvironment) struct.
     ShaderEnvironment,
-    /// Corresponds to [`crate::engines::h1::definitions::ShaderModel`].
+    /// Corresponds to the [`ShaderModel`](crate::engines::h1::definitions::ShaderModel) struct.
     ShaderModel,
-    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentChicago`].
+    /// Corresponds to the [`ShaderTransparentChicago`](crate::engines::h1::definitions::ShaderTransparentChicago) struct.
     ShaderTransparentChicago,
-    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentChicagoExtended`].
+    /// Corresponds to the [`ShaderTransparentChicagoExtended`](crate::engines::h1::definitions::ShaderTransparentChicagoExtended) struct.
     ShaderTransparentChicagoExtended,
-    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentGeneric`].
+    /// Corresponds to the [`ShaderTransparentGeneric`](crate::engines::h1::definitions::ShaderTransparentGeneric) struct.
     ShaderTransparentGeneric,
-    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentGlass`].
+    /// Corresponds to the [`ShaderTransparentGlass`](crate::engines::h1::definitions::ShaderTransparentGlass) struct.
     ShaderTransparentGlass,
-    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentMeter`].
+    /// Corresponds to the [`ShaderTransparentMeter`](crate::engines::h1::definitions::ShaderTransparentMeter) struct.
     ShaderTransparentMeter,
-    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentPlasma`].
+    /// Corresponds to the [`ShaderTransparentPlasma`](crate::engines::h1::definitions::ShaderTransparentPlasma) struct.
     ShaderTransparentPlasma,
-    /// Corresponds to [`crate::engines::h1::definitions::ShaderTransparentWater`].
+    /// Corresponds to the [`ShaderTransparentWater`](crate::engines::h1::definitions::ShaderTransparentWater) struct.
     ShaderTransparentWater,
-    /// Corresponds to [`crate::engines::h1::definitions::Sky`].
+    /// Corresponds to the [`Sky`](crate::engines::h1::definitions::Sky) struct.
     Sky,
-    /// Corresponds to [`crate::engines::h1::definitions::Sound`].
+    /// Corresponds to the [`Sound`](crate::engines::h1::definitions::Sound) struct.
     Sound,
-    /// Corresponds to [`crate::engines::h1::definitions::SoundEnvironment`].
+    /// Corresponds to the [`SoundEnvironment`](crate::engines::h1::definitions::SoundEnvironment) struct.
     SoundEnvironment,
-    /// Corresponds to [`crate::engines::h1::definitions::SoundLooping`].
+    /// Corresponds to the [`SoundLooping`](crate::engines::h1::definitions::SoundLooping) struct.
     SoundLooping,
-    /// Corresponds to [`crate::engines::h1::definitions::SoundScenery`].
+    /// Corresponds to the [`SoundScenery`](crate::engines::h1::definitions::SoundScenery) struct.
     SoundScenery,
-    /// Corresponds to the removed Spheroid tag.
+    /// Corresponds to the the removed Spheroid tag.
     Spheroid,
-    /// Corresponds to [`crate::engines::h1::definitions::StringList`].
+    /// Corresponds to the [`StringList`](crate::engines::h1::definitions::StringList) struct.
     StringList,
-    /// Corresponds to [`crate::engines::h1::definitions::TagCollection`].
+    /// Corresponds to the [`TagCollection`](crate::engines::h1::definitions::TagCollection) struct.
     TagCollection,
-    /// Corresponds to [`crate::engines::h1::definitions::UIWidgetCollection`].
+    /// Corresponds to the [`UIWidgetCollection`](crate::engines::h1::definitions::UIWidgetCollection) struct.
     UIWidgetCollection,
-    /// Corresponds to [`crate::engines::h1::definitions::UIWidgetDefinition`].
+    /// Corresponds to the [`UIWidgetDefinition`](crate::engines::h1::definitions::UIWidgetDefinition) struct.
     UIWidgetDefinition,
-    /// Corresponds to [`crate::engines::h1::definitions::UnicodeStringList`].
+    /// Corresponds to the [`UnicodeStringList`](crate::engines::h1::definitions::UnicodeStringList) struct.
     UnicodeStringList,
-    /// Corresponds to [`crate::engines::h1::definitions::Unit`].
+    /// Corresponds to the [`Unit`](crate::engines::h1::definitions::Unit) struct.
     Unit,
-    /// Corresponds to [`crate::engines::h1::definitions::UnitHUDInterface`].
+    /// Corresponds to the [`UnitHUDInterface`](crate::engines::h1::definitions::UnitHUDInterface) struct.
     UnitHUDInterface,
-    /// Corresponds to [`crate::engines::h1::definitions::Vehicle`].
+    /// Corresponds to the [`Vehicle`](crate::engines::h1::definitions::Vehicle) struct.
     Vehicle,
-    /// Corresponds to [`crate::engines::h1::definitions::VirtualKeyboard`].
+    /// Corresponds to the [`VirtualKeyboard`](crate::engines::h1::definitions::VirtualKeyboard) struct.
     VirtualKeyboard,
-    /// Corresponds to [`crate::engines::h1::definitions::Weapon`].
+    /// Corresponds to the [`Weapon`](crate::engines::h1::definitions::Weapon) struct.
     Weapon,
-    /// Corresponds to [`crate::engines::h1::definitions::WeaponHUDInterface`].
+    /// Corresponds to the [`WeaponHUDInterface`](crate::engines::h1::definitions::WeaponHUDInterface) struct.
     WeaponHUDInterface,
-    /// Corresponds to [`crate::engines::h1::definitions::WeatherParticleSystem`].
+    /// Corresponds to the [`WeatherParticleSystem`](crate::engines::h1::definitions::WeatherParticleSystem) struct.
     WeatherParticleSystem,
-    /// Corresponds to [`crate::engines::h1::definitions::Wind`].
+    /// Corresponds to the [`Wind`](crate::engines::h1::definitions::Wind) struct.
     Wind,
 
     /// Special group for when there is an absence of a group.

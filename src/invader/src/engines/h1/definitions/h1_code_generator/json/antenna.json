@@ -58,14 +58,14 @@
             {
                 "name": "bitmaps",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "physics",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "point_physics"
                 ]
             },

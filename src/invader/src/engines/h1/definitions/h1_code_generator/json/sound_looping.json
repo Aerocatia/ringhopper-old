@@ -60,21 +60,21 @@
             {
                 "name": "start",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "loop",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "end",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
@@ -85,14 +85,14 @@
             {
                 "name": "alternate loop",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "alternate end",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             }
@@ -106,7 +106,7 @@
             {
                 "name": "sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
@@ -204,7 +204,7 @@
             {
                 "name": "continuous damage effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "continuous_damage_effect"
                 ]
             },

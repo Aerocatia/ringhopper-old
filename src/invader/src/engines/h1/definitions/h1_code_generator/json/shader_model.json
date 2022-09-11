@@ -130,7 +130,7 @@
             {
                 "name": "base map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -141,7 +141,7 @@
             {
                 "name": "multipurpose map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -165,7 +165,7 @@
             {
                 "name": "detail map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -291,7 +291,7 @@
             {
                 "name": "reflection cube map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

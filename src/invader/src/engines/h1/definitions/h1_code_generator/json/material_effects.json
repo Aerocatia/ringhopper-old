@@ -5,14 +5,14 @@
             {
                 "name": "effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
             {
                 "name": "sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },

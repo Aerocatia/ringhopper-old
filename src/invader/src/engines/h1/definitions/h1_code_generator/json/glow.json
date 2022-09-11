@@ -255,7 +255,7 @@
             {
                 "name": "texture",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             }

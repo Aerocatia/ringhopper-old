@@ -17,7 +17,7 @@
             {
                 "type": "TagReference",
                 "name": "pattern",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -32,7 +32,7 @@
             {
                 "type": "TagReference",
                 "name": "decal",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

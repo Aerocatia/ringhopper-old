@@ -53,7 +53,7 @@
             {
                 "name": "lens flare",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "lens_flare"
                 ]
             },
@@ -103,14 +103,14 @@
             {
                 "name": "model",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "model"
                 ]
             },
             {
                 "name": "animation graph",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "model_animations"
                 ]
             },
@@ -187,7 +187,7 @@
             {
                 "name": "indoor fog screen",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "fog"
                 ]
             },

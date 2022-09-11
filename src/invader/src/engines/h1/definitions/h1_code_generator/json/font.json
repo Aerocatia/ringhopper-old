@@ -109,28 +109,28 @@
             {
                 "name": "bold",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "font"
                 ]
             },
             {
                 "name": "italic",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "font"
                 ]
             },
             {
                 "name": "condense",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "font"
                 ]
             },
             {
                 "name": "underline",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "font"
                 ]
             },

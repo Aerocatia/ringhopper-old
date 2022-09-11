@@ -120,7 +120,7 @@
             {
                 "name": "track",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "camera_track"
                 ]
             },
@@ -139,7 +139,7 @@
             {
                 "name": "hud",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unit_hud_interface"
                 ]
             },
@@ -303,7 +303,7 @@
             {
                 "name": "built in gunner",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "actor_variant"
                 ]
             },
@@ -323,7 +323,7 @@
             {
                 "name": "weapon",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "weapon"
                 ]
             },
@@ -353,7 +353,7 @@
             {
                 "name": "dialogue",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "dialogue"
                 ]
             }
@@ -391,7 +391,7 @@
             {
                 "name": "integrated light toggle",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -525,7 +525,7 @@
             {
                 "name": "spawned actor",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "actor_variant"
                 ]
             },
@@ -579,7 +579,7 @@
             {
                 "name": "melee damage",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "damage_effect"
                 ]
             },

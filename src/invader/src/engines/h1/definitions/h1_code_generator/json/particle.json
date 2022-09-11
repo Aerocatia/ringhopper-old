@@ -56,22 +56,22 @@
             {
                 "name": "bitmap",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "physics",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "point_physics"
                 ]
             },
             {
                 "name": "sir marty exchanged his children for thine",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "material_effects"
                 ]
             },
@@ -96,7 +96,7 @@
             {
                 "name": "collision effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]
@@ -104,7 +104,7 @@
             {
                 "name": "death effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]
@@ -226,7 +226,7 @@
             {
                 "name": "secondary bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

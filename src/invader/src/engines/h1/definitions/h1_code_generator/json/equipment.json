@@ -38,7 +38,7 @@
             {
                 "name": "pickup sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },

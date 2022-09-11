@@ -85,7 +85,7 @@
             {
                 "name": "base map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -121,7 +121,7 @@
             {
                 "name": "reflection map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -145,7 +145,7 @@
             {
                 "name": "ripple maps",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

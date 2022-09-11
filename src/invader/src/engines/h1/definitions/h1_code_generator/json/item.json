@@ -70,14 +70,14 @@
             {
                 "name": "material effects",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "material_effects"
                 ]
             },
             {
                 "name": "collision sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
@@ -94,14 +94,14 @@
             {
                 "name": "detonating effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
             {
                 "name": "detonation effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             }

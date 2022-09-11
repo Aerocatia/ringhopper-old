@@ -121,7 +121,7 @@
             {
                 "name": "primary noise map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -150,7 +150,7 @@
             {
                 "name": "secondary noise map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

@@ -90,7 +90,7 @@
             {
                 "name": "shader",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "shader"
                 ]
             }

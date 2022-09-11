@@ -614,7 +614,7 @@
             {
                 "name": "sky",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sky"
                 ]
             }
@@ -629,10 +629,10 @@
             {
                 "name": "child scenario",
                 "type": "TagReference",
-                "classes": [
+                "comment": "This scenario tag will be merged into the main scenario tag (and dereferenced) on map build.",
+                "groups": [
                     "scenario"
-                ],
-                "comment": "This scenario tag will be merged into the main scenario tag (and dereferenced) on map build."
+                ]
             },
             {
                 "type": "pad",
@@ -888,7 +888,7 @@
                 "name": "name",
                 "non_null": true,
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "scenery"
                 ]
             },
@@ -988,7 +988,7 @@
                 "name": "name",
                 "non_null": true,
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "biped"
                 ]
             },
@@ -1101,7 +1101,7 @@
                 "name": "name",
                 "non_null": true,
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "vehicle"
                 ]
             },
@@ -1176,7 +1176,7 @@
                 "name": "name",
                 "non_null": true,
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "equipment"
                 ]
             },
@@ -1280,7 +1280,7 @@
                 "name": "name",
                 "non_null": true,
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "weapon"
                 ]
             },
@@ -1402,7 +1402,7 @@
                 "name": "name",
                 "non_null": true,
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "device_machine"
                 ]
             },
@@ -1505,7 +1505,7 @@
                 "name": "name",
                 "non_null": true,
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "device_control"
                 ]
             },
@@ -1618,7 +1618,7 @@
                 "name": "name",
                 "non_null": true,
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "device_light_fixture"
                 ]
             },
@@ -1689,7 +1689,7 @@
                 "name": "name",
                 "non_null": true,
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound_scenery"
                 ]
             },
@@ -1724,7 +1724,7 @@
             {
                 "name": "primary weapon",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "weapon"
                 ]
             },
@@ -1740,7 +1740,7 @@
             {
                 "name": "secondary weapon",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "weapon"
                 ]
             },
@@ -1940,10 +1940,10 @@
             {
                 "name": "weapon group",
                 "type": "TagReference",
-                "classes": [
+                "unused": true,
+                "groups": [
                     "item_collection"
-                ],
-                "unused": true
+                ]
             },
             {
                 "type": "pad",
@@ -2007,7 +2007,7 @@
             {
                 "name": "item collection",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "item_collection"
                 ]
             },
@@ -2051,42 +2051,42 @@
             {
                 "name": "item collection 1",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "item_collection"
                 ]
             },
             {
                 "name": "item collection 2",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "item_collection"
                 ]
             },
             {
                 "name": "item collection 3",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "item_collection"
                 ]
             },
             {
                 "name": "item collection 4",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "item_collection"
                 ]
             },
             {
                 "name": "item collection 5",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "item_collection"
                 ]
             },
             {
                 "name": "item collection 6",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "item_collection"
                 ]
             },
@@ -2159,7 +2159,7 @@
             {
                 "name": "reference",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "decal"
                 ]
             }
@@ -2174,7 +2174,7 @@
             {
                 "name": "reference",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "detail_object_collection"
                 ]
             },
@@ -2193,7 +2193,7 @@
             {
                 "name": "reference",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "actor_variant"
                 ]
             }
@@ -2775,7 +2775,7 @@
             {
                 "name": "animation graph",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "model_animations"
                 ]
             },
@@ -2918,42 +2918,42 @@
             {
                 "name": "variant 1",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "variant 2",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "variant 3",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "variant 4",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "variant 5",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "variant 6",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             }
@@ -3113,7 +3113,7 @@
             {
                 "name": "reference",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "*"
                 ]
             }
@@ -3305,7 +3305,7 @@
             {
                 "name": "structure bsp",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "scenario_structure_bsp"
                 ]
             }
@@ -3406,26 +3406,26 @@
             {
                 "name": "don't use",
                 "type": "TagReference",
-                "classes": [
+                "unused": true,
+                "groups": [
                     "scenario_structure_bsp"
-                ],
-                "unused": true
+                ]
             },
             {
                 "name": "won't use",
                 "type": "TagReference",
-                "classes": [
+                "unused": true,
+                "groups": [
                     "scenario_structure_bsp"
-                ],
-                "unused": true
+                ]
             },
             {
                 "name": "can't use",
                 "type": "TagReference",
-                "classes": [
+                "unused": true,
+                "groups": [
                     "sky"
-                ],
-                "unused": true
+                ]
             },
             {
                 "name": "skies",
@@ -3911,21 +3911,21 @@
             {
                 "name": "custom object names",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unicode_string_list"
                 ]
             },
             {
                 "name": "ingame help text",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unicode_string_list"
                 ]
             },
             {
                 "name": "hud messages",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "hud_message_text"
                 ]
             },

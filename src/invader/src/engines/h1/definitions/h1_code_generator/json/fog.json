@@ -138,7 +138,7 @@
             {
                 "name": "map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -186,14 +186,14 @@
             {
                 "name": "background sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound_looping"
                 ]
             },
             {
                 "name": "sound environment",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound_environment"
                 ]
             },

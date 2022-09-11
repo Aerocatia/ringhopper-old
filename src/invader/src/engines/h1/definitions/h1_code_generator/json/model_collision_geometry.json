@@ -142,7 +142,7 @@
             {
                 "name": "destroyed effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -528,7 +528,7 @@
             {
                 "name": "localized damage effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -541,7 +541,7 @@
             {
                 "name": "area damage effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -552,14 +552,14 @@
             {
                 "name": "body damaged effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
             {
                 "name": "body depleted effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -570,7 +570,7 @@
             {
                 "name": "body destroyed effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -639,21 +639,21 @@
             {
                 "name": "shield damaged effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
             {
                 "name": "shield depleted effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
             {
                 "name": "shield recharging effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },

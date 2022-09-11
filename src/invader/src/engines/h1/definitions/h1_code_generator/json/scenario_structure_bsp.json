@@ -22,10 +22,10 @@
             {
                 "name": "shader",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "shader"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "type": "pad",
@@ -217,11 +217,11 @@
             {
                 "name": "shader",
                 "type": "TagReference",
-                "classes": [
-                    "shader"
-                ],
                 "non_null": true,
-                "read_only": false
+                "read_only": false,
+                "groups": [
+                    "shader"
+                ]
             },
             {
                 "name": "shader permutation",
@@ -419,7 +419,7 @@
             {
                 "name": "lens",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "lens_flare"
                 ]
             }
@@ -535,7 +535,7 @@
             {
                 "name": "shader",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "shader"
                 ]
             },
@@ -806,7 +806,7 @@
             {
                 "name": "fog",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "fog"
                 ]
             },
@@ -837,7 +837,7 @@
             {
                 "name": "particle system",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "weather_particle_system"
                 ]
             },
@@ -856,7 +856,7 @@
             {
                 "name": "wind",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "wind"
                 ]
             },
@@ -957,7 +957,7 @@
             {
                 "name": "background sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound_looping"
                 ]
             },
@@ -987,7 +987,7 @@
             {
                 "name": "sound environment",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound_environment"
                 ]
             },
@@ -1299,7 +1299,7 @@
                 "name": "lightmaps bitmap",
                 "read_only": false,
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

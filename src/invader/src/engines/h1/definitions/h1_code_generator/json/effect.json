@@ -163,7 +163,7 @@
             {
                 "name": "type",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "damage_effect",
                     "object",
                     "particle_system",
@@ -263,7 +263,7 @@
             {
                 "name": "particle type",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "particle"
                 ]
             },

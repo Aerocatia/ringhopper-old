@@ -115,10 +115,10 @@
             {
                 "name": "sprite plate",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "types",

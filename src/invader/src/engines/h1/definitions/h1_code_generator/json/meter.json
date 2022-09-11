@@ -36,20 +36,20 @@
             {
                 "name": "stencil bitmaps",
                 "type": "TagReference",
-                "classes": [
-                    "bitmap"
-                ],
                 "non_cached": true,
-                "comment": "Don't use this! This gets dereferenced on map build."
+                "comment": "Don't use this! This gets dereferenced on map build.",
+                "groups": [
+                    "bitmap"
+                ]
             },
             {
                 "name": "source bitmap",
                 "type": "TagReference",
-                "classes": [
-                    "bitmap"
-                ],
                 "non_cached": true,
-                "comment": "Don't use this! This gets dereferenced on map build."
+                "comment": "Don't use this! This gets dereferenced on map build.",
+                "groups": [
+                    "bitmap"
+                ]
             },
             {
                 "name": "stencil sequence index",

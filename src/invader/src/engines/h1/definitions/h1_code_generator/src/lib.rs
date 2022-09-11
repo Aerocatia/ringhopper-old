@@ -128,6 +128,76 @@ pub fn load_json_def(input: TokenStream) -> TokenStream {
                     _ => format!("[{field_type_data_type}; {count}]")
                 };
 
+                let mut doc = f.get("comment").unwrap_or(&Value::String(String::new())).as_str().unwrap().to_owned();
+
+                if field_type_struct == "TagReference" {
+                    if !doc.is_empty() {
+                        doc += "\n\n";
+                    }
+
+                    let groups_arr = f.get("groups").unwrap().as_array().unwrap();
+                    let mut groups = Vec::<String>::new();
+
+                    for g in groups_arr {
+                        let group = g.as_str().unwrap();
+                        let mut appended_group = match group {
+                            "unit" => vec!["biped".to_owned(), "vehicle".to_owned()],
+                            "item" => vec!["weapon".to_owned(), "equipment".to_owned(), "garbage".to_owned()],
+                            "model" => vec!["gbxmodel".to_owned(), "model".to_owned()],
+                            "shader" => vec![
+                                "shader_environment".to_owned(),
+                                "shader_model".to_owned(),
+                                "shader_transparent_chicago_extended".to_owned(),
+                                "shader_transparent_chicago".to_owned(),
+                                "shader_transparent_generic".to_owned(),
+                                "shader_transparent_glass".to_owned(),
+                                "shader_transparent_meter".to_owned(),
+                                "shader_transparent_plasma".to_owned(),
+                                "shader_transparent_water".to_owned()
+                            ],
+                            n => vec![n.to_owned()]
+                        };
+                        groups.append(&mut appended_group);
+                    }
+
+                    groups.dedup();
+                    groups.sort();
+
+                    if groups == ["*"] {
+                        doc += &format!("Allowed groups: All\n");
+                    }
+                    else {
+                        doc += &format!("Allowed groups: ");
+                        let mut add_comma = false;
+
+                        // Format groups into matching their equivalent group name
+                        for g in groups {
+                            let mut new_group = g.replace("gbxmodel", "GBXModel")
+                                                 .replace("bsp", "BSP")
+                                                 .replace("ui_", "UI_")
+                                                 .replace("hud_", "HUD_");
+
+                            while let Some(s) = new_group.find("_") {
+                                new_group.replace_range(s..s+2, &new_group[s+1..s+2].to_uppercase());
+                            }
+                            new_group.replace_range(0..1, &new_group[0..1].to_uppercase());
+
+                            match add_comma {
+                                true => doc += ", ",
+                                false => add_comma = true
+                            };
+
+                            doc += &format!("[{new_group}](crate::engines::h1::TagGroup::{new_group})");
+                        }
+                        doc += "\n";
+                    }
+                }
+
+                if doc != "" {
+                    doc = doc.replace("\"", "\\\"");
+                    all_fields_defined += &format!("#[doc=\"{doc}\"] ")
+                }
+
                 // Put it in the struct
                 all_fields_defined += &format!("pub {field_name_written}: {field_type_struct},");
 

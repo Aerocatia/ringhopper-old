@@ -389,10 +389,10 @@
             {
                 "name": "do not use",
                 "type": "TagReference",
-                "classes": [
+                "unused": true,
+                "groups": [
                     "weapon"
-                ],
-                "unused": true
+                ]
             },
             {
                 "type": "pad",
@@ -401,10 +401,10 @@
             {
                 "name": "do not use 1",
                 "type": "TagReference",
-                "classes": [
+                "unused": true,
+                "groups": [
                     "projectile"
-                ],
-                "unused": true
+                ]
             },
             {
                 "name": "unreachable danger trigger",
@@ -760,10 +760,10 @@
             {
                 "name": "do not use 2",
                 "type": "TagReference",
-                "classes": [
+                "unused": true,
+                "groups": [
                     "actor"
-                ],
-                "unused": true
+                ]
             },
             {
                 "type": "pad",

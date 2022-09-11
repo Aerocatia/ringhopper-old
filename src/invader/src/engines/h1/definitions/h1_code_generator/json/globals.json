@@ -73,7 +73,7 @@
             {
                 "name": "sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             }
@@ -88,7 +88,7 @@
             {
                 "name": "default unit camera track",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "camera_track"
                 ]
             }
@@ -665,28 +665,28 @@
             {
                 "name": "throwing effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
             {
                 "name": "hud interface",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "grenade_hud_interface"
                 ]
             },
             {
                 "name": "equipment",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "equipment"
                 ]
             },
             {
                 "name": "projectile",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "projectile"
                 ]
             }
@@ -701,58 +701,58 @@
             {
                 "name": "distance attenuation",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "vector normalization",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "atmospheric fog density",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "planar fog density",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "linear corner fade",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "active camouflage distortion",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "glow",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "type": "pad",
@@ -761,72 +761,72 @@
             {
                 "name": "default 2d",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "default 3d",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "default cube map",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "test 0",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "test 1",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "test 2",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "test 3",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "video scanline map",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "video noise map",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "type": "pad",
@@ -867,7 +867,7 @@
             {
                 "name": "distance attenuation 2d",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             }
@@ -881,122 +881,122 @@
             {
                 "name": "font system",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "font"
                 ]
             },
             {
                 "name": "font terminal",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "font"
                 ]
             },
             {
                 "name": "screen color table",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "color_table"
                 ]
             },
             {
                 "name": "hud color table",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "color_table"
                 ]
             },
             {
                 "name": "editor color table",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "color_table"
                 ]
             },
             {
                 "name": "dialog color table",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "color_table"
                 ]
             },
             {
                 "name": "hud globals",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "hud_globals"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "motion sensor sweep bitmap",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "motion sensor sweep bitmap mask",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "multiplayer hud bitmap",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "localization",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "string_list"
                 ]
             },
             {
                 "name": "hud digits definition",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "hud_number"
                 ]
             },
             {
                 "name": "motion sensor blip bitmap",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "interface goo map1",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "interface goo map2",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "interface goo map3",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "bitmap"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "type": "pad",
@@ -1013,7 +1013,7 @@
             {
                 "name": "weapon",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "item"
                 ]
             }
@@ -1027,7 +1027,7 @@
             {
                 "name": "powerup",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "equipment"
                 ]
             }
@@ -1041,7 +1041,7 @@
             {
                 "name": "vehicle",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unit"
                 ]
             }
@@ -1054,15 +1054,15 @@
             {
                 "name": "flag",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "weapon"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "unit",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unit"
                 ]
             },
@@ -1075,25 +1075,25 @@
             {
                 "name": "hill shader",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "shader"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "flag shader",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "shader"
                 ]
             },
             {
                 "name": "ball",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "weapon"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "sounds",
@@ -1116,7 +1116,7 @@
             {
                 "name": "unit",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unit"
                 ]
             },
@@ -1240,7 +1240,7 @@
             {
                 "name": "coop respawn effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -1266,22 +1266,22 @@
             {
                 "name": "first person hands",
                 "type": "TagReference",
-                "classes": [
+                "description": "This is the model used for hands when a weapon with first person animatinos is held.",
+                "groups": [
                     "model"
-                ],
-                "description": "This is the model used for hands when a weapon with first person animatinos is held."
+                ]
             },
             {
                 "name": "base bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "shield meter",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "meter"
                 ]
             },
@@ -1292,7 +1292,7 @@
             {
                 "name": "body meter",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "meter"
                 ]
             },
@@ -1303,18 +1303,18 @@
             {
                 "name": "night vision on effect",
                 "type": "TagReference",
-                "classes": [
+                "description": "This effect is played when enabling night vision.",
+                "groups": [
                     "effect"
-                ],
-                "description": "This effect is played when enabling night vision."
+                ]
             },
             {
                 "name": "night vision off effect",
                 "type": "TagReference",
-                "classes": [
+                "description": "This effect is played when disabling night vision.",
+                "groups": [
                     "effect"
-                ],
-                "description": "This effect is played when disabling night vision."
+                ]
             },
             {
                 "type": "pad",
@@ -1340,7 +1340,7 @@
             {
                 "name": "falling damage",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "damage_effect"
                 ]
             },
@@ -1356,35 +1356,35 @@
             {
                 "name": "distance damage",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "damage_effect"
                 ]
             },
             {
                 "name": "vehicle environment collision damage",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "damage_effect"
                 ]
             },
             {
                 "name": "vehicle killed unit damage",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "damage_effect"
                 ]
             },
             {
                 "name": "vehicle collision damage",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "damage_effect"
                 ]
             },
             {
                 "name": "flaming death damage",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "damage_effect"
                 ]
             },
@@ -1414,7 +1414,7 @@
             {
                 "name": "particle type",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "particle"
                 ]
             },
@@ -1527,14 +1527,14 @@
             {
                 "name": "effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
             {
                 "name": "sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
@@ -1555,7 +1555,7 @@
             {
                 "name": "melee hit sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             }

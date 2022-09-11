@@ -82,7 +82,7 @@
             {
                 "name": "default effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -118,7 +118,7 @@
             {
                 "name": "potential effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -146,7 +146,7 @@
             {
                 "name": "detonation effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -217,7 +217,7 @@
             {
                 "name": "super detonation",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -244,7 +244,7 @@
             {
                 "name": "effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
@@ -310,28 +310,28 @@
             {
                 "name": "detonation started",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },
             {
                 "name": "flyby sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },
             {
                 "name": "attached detonation damage",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "damage_effect"
                 ]
             },
             {
                 "name": "impact damage",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "damage_effect"
                 ]
             },

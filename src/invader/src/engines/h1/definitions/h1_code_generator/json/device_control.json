@@ -46,7 +46,7 @@
             {
                 "name": "on",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]
@@ -54,7 +54,7 @@
             {
                 "name": "off",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]
@@ -62,7 +62,7 @@
             {
                 "name": "deny",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]

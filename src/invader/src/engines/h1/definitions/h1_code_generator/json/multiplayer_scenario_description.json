@@ -5,14 +5,14 @@
             {
                 "name": "descriptive bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "displayed map name",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unicode_string_list"
                 ]
             },

@@ -323,7 +323,7 @@
             {
                 "name": "sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound"
                 ]
             },

@@ -165,7 +165,7 @@
             {
                 "name": "bitmaps",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -215,7 +215,7 @@
             {
                 "name": "point physics",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "point_physics"
                 ]
             },
@@ -255,7 +255,7 @@
             {
                 "name": "secondary map bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -448,7 +448,7 @@
             {
                 "name": "point physics",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "point_physics"
                 ]
             },

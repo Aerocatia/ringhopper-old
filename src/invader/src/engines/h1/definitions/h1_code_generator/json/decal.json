@@ -59,7 +59,7 @@
             {
                 "name": "next decal in chain",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "decal"
                 ]
             },
@@ -167,7 +167,7 @@
             {
                 "name": "map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

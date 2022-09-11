@@ -119,7 +119,7 @@
             {
                 "name": "sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "sound_looping"
                 ]
@@ -185,7 +185,7 @@
             {
                 "name": "background interface bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -272,7 +272,7 @@
             {
                 "name": "total grenades background interface bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -423,7 +423,7 @@
             {
                 "name": "total grenades overlay bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

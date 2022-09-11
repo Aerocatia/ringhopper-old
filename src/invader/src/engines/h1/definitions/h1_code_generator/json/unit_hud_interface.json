@@ -70,7 +70,7 @@
             {
                 "name": "interface bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -150,7 +150,7 @@
             {
                 "name": "sound",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "sound_looping"
                 ]
@@ -232,10 +232,10 @@
             {
                 "name": "background interface bitmap",
                 "type": "TagReference",
-                "classes": [
+                "display_name": "interface bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "display_name": "interface bitmap"
+                ]
             },
             {
                 "name": "background default color",
@@ -334,10 +334,10 @@
             {
                 "name": "meter meter bitmap",
                 "type": "TagReference",
-                "classes": [
+                "display_name": "meter bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "display_name": "meter bitmap"
+                ]
             },
             {
                 "name": "meter color at meter minimum",
@@ -524,10 +524,10 @@
             {
                 "name": "hud background interface bitmap",
                 "type": "TagReference",
-                "classes": [
+                "display_name": "interface bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "display_name": "interface bitmap"
+                ]
             },
             {
                 "name": "hud background default color",
@@ -626,10 +626,10 @@
             {
                 "name": "shield panel background interface bitmap",
                 "type": "TagReference",
-                "classes": [
+                "display_name": "interface bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "display_name": "interface bitmap"
+                ]
             },
             {
                 "name": "shield panel background default color",
@@ -728,10 +728,10 @@
             {
                 "name": "shield panel meter meter bitmap",
                 "type": "TagReference",
-                "classes": [
+                "display_name": "meter bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "display_name": "meter bitmap"
+                ]
             },
             {
                 "name": "shield panel meter color at meter minimum",
@@ -864,10 +864,10 @@
             {
                 "name": "health panel background interface bitmap",
                 "type": "TagReference",
-                "classes": [
+                "display_name": "interface bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "display_name": "interface bitmap"
+                ]
             },
             {
                 "name": "health panel background default color",
@@ -966,10 +966,10 @@
             {
                 "name": "health panel meter meter bitmap",
                 "type": "TagReference",
-                "classes": [
+                "display_name": "meter bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "display_name": "meter bitmap"
+                ]
             },
             {
                 "name": "health panel meter color at meter minimum",
@@ -1094,10 +1094,10 @@
             {
                 "name": "motion sensor background interface bitmap",
                 "type": "TagReference",
-                "classes": [
+                "display_name": "interface bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "display_name": "interface bitmap"
+                ]
             },
             {
                 "name": "motion sensor background default color",
@@ -1195,10 +1195,10 @@
             {
                 "name": "motion sensor foreground interface bitmap",
                 "type": "TagReference",
-                "classes": [
+                "display_name": "interface bitmap",
+                "groups": [
                     "bitmap"
-                ],
-                "display_name": "interface bitmap"
+                ]
             },
             {
                 "name": "motion sensor foreground default color",

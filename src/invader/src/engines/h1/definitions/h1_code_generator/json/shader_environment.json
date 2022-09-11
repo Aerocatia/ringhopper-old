@@ -79,7 +79,7 @@
             {
                 "name": "lens flare",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "lens_flare"
                 ]
             },
@@ -102,7 +102,7 @@
             {
                 "name": "base map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -126,7 +126,7 @@
             {
                 "name": "primary detail map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -138,7 +138,7 @@
             {
                 "name": "secondary detail map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -162,7 +162,7 @@
             {
                 "name": "micro detail map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -182,7 +182,7 @@
             {
                 "name": "bump map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -352,7 +352,7 @@
             {
                 "name": "map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -439,7 +439,7 @@
             {
                 "name": "reflection cube map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

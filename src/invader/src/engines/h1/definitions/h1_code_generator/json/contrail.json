@@ -73,7 +73,7 @@
             {
                 "name": "physics",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "point_physics"
                 ]
             },
@@ -168,7 +168,7 @@
             {
                 "name": "bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -220,7 +220,7 @@
             {
                 "name": "secondary bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

@@ -84,7 +84,7 @@
             {
                 "name": "open",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]
@@ -92,7 +92,7 @@
             {
                 "name": "close",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]
@@ -100,7 +100,7 @@
             {
                 "name": "opened",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]
@@ -108,7 +108,7 @@
             {
                 "name": "closed",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]
@@ -116,7 +116,7 @@
             {
                 "name": "depowered",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]
@@ -124,7 +124,7 @@
             {
                 "name": "repowered",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]
@@ -141,7 +141,7 @@
             {
                 "name": "delay effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "sound",
                     "effect"
                 ]

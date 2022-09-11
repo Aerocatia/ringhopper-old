@@ -89,21 +89,21 @@
             {
                 "name": "actor definition",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "actor"
                 ]
             },
             {
                 "name": "unit",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unit"
                 ]
             },
             {
                 "name": "major variant",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "actor_variant"
                 ]
             },
@@ -150,7 +150,7 @@
             {
                 "name": "weapon",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "weapon"
                 ]
             },
@@ -468,7 +468,7 @@
             {
                 "name": "equipment",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "equipment"
                 ]
             },

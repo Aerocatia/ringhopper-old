@@ -580,10 +580,10 @@
             {
                 "name": "shader",
                 "type": "TagReference",
-                "classes": [
+                "non_null": true,
+                "groups": [
                     "shader"
-                ],
-                "non_null": true
+                ]
             },
             {
                 "name": "permutation",

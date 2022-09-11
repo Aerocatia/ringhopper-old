@@ -58,7 +58,7 @@
             {
                 "name": "background tint map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -97,7 +97,7 @@
             {
                 "name": "reflection map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -109,7 +109,7 @@
             {
                 "name": "bump map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -129,7 +129,7 @@
             {
                 "name": "diffuse map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -141,7 +141,7 @@
             {
                 "name": "diffuse detail map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -161,7 +161,7 @@
             {
                 "name": "specular map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -173,7 +173,7 @@
             {
                 "name": "specular detail map",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },

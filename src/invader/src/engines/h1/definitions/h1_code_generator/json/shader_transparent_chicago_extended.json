@@ -45,7 +45,7 @@
             {
                 "name": "lens flare",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "lens_flare"
                 ]
             },

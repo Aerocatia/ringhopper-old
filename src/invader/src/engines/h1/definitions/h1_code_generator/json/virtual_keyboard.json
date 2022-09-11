@@ -87,28 +87,28 @@
             {
                 "name": "unselected background bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "selected background bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "active background bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "sticky background bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             }
@@ -122,21 +122,21 @@
             {
                 "name": "display font",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "font"
                 ]
             },
             {
                 "name": "background bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "special key labels string list",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "unicode_string_list"
                 ]
             },

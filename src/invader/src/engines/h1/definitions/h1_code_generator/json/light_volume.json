@@ -140,10 +140,10 @@
             {
                 "name": "map",
                 "type": "TagReference",
-                "classes": [
+                "compound": true,
+                "groups": [
                     "bitmap"
-                ],
-                "compound": true
+                ]
             },
             {
                 "name": "sequence index",

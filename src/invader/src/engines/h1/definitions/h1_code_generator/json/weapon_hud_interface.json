@@ -201,7 +201,7 @@
             {
                 "name": "interface bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -325,7 +325,7 @@
             {
                 "name": "meter bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -633,7 +633,7 @@
             {
                 "name": "crosshair bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -781,7 +781,7 @@
             {
                 "name": "overlay bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -822,14 +822,14 @@
             {
                 "name": "mask fullscreen",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
             {
                 "name": "mask splitscreen",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
@@ -910,7 +910,7 @@
             {
                 "name": "child hud",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "weapon_hud_interface"
                 ]
             },

@@ -111,7 +111,7 @@
             {
                 "name": "type",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "light",
                     "light_volume",
                     "contrail",
@@ -156,7 +156,7 @@
             {
                 "name": "reference",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "antenna",
                     "glow",
                     "light_volume",
@@ -399,14 +399,14 @@
             {
                 "name": "model",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "model"
                 ]
             },
             {
                 "name": "animation graph",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "model_animations"
                 ]
             },
@@ -417,28 +417,28 @@
             {
                 "name": "collision model",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "model_collision_geometry"
                 ]
             },
             {
                 "name": "physics",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "physics"
                 ]
             },
             {
                 "name": "modifier shader",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "shader"
                 ]
             },
             {
                 "name": "creation effect",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "effect"
                 ]
             },

@@ -214,7 +214,7 @@
             {
                 "name": "bitmap",
                 "type": "TagReference",
-                "classes": [
+                "groups": [
                     "bitmap"
                 ]
             },
