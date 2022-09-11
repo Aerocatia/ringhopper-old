@@ -5,8 +5,10 @@ use crate::error::*;
 use crate::types::*;
 use crate::types::tag::TagGroupFn;
 use crate::engines::h1::types::{TagGroup, TagReference};
-
+use crate::types::tag::TagBlockFn;
 use strings::get_compiled_string;
+
+use std::any::Any;
 
 /// FourCC "blam" used for tag file headers.
 pub const BLAM_FOURCC: u32 = 0x626C616D;
@@ -103,23 +105,23 @@ impl TagFileHeader {
 }
 
 /// Serialization implementation for tags in tag format using the normal endian (big endian).
-pub trait TagSerialize: Sized {
+pub trait TagSerialize {
     /// Get the size of the data
-    fn tag_size() -> usize;
+    fn tag_size() -> usize where Self: Sized;
 
     /// Serialize the data into tag format, returning an error on failure (except for out-of-bounds and allocation errors which will panic).
     fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()>;
 
     /// Deserialize the data from tag format, returning an error on failure (except for allocation errors which will panic).
-    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self>;
+    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> where Self: Sized;
 
     /// Get the size of the instance.
-    fn instance_tag_size(&self) -> usize {
+    fn instance_tag_size(&self) -> usize where Self: Sized {
         Self::tag_size()
     }
 
     /// Deserialize into an instance.
-    fn instance_from_tag(&self, data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
+    fn instance_from_tag(&self, data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> where Self: Sized {
         Self::from_tag(data, at, struct_end, cursor)
     }
 }
@@ -127,10 +129,10 @@ pub trait TagSerialize: Sized {
 /// Serialization implementation for tags in tag format using little endian.
 pub trait TagSerializeSwapped: TagSerialize {
     /// Serialize the data into tag format in little endian, returning an error on failure (except for out-of-bounds and allocation errors which will panic).
-    fn into_tag_swapped(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()>;
+    fn into_tag_swapped(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> where Self: Sized;
 
     /// Deserialize the data from tag format from little endian, returning an error on failure (except for allocation errors which will panic).
-    fn from_tag_swapped(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self>;
+    fn from_tag_swapped(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> where Self: Sized;
 }
 
 macro_rules! sizeof {
@@ -546,7 +548,7 @@ impl TagSerialize for TagReference {
 
 const BLOCK_ARRAY_STRUCT_SIZE: usize = sizeof!(u32) * 3;
 
-impl<T: tag::TagBlockFn + TagSerialize + Default> TagSerialize for Reflexive<T> {
+impl<T: TagBlockFn + TagSerialize + Default> TagSerialize for Reflexive<T> {
     fn tag_size() -> usize {
         BLOCK_ARRAY_STRUCT_SIZE
     }
@@ -619,7 +621,7 @@ impl<T: tag::TagBlockFn + TagSerialize + Default> TagSerialize for Reflexive<T> 
 }
 
 /// Size of the tag file header.
-const TAG_FILE_HEADER_LEN: usize = 0x40;
+pub(crate) const TAG_FILE_HEADER_LEN: usize = 0x40;
 
 impl TagSerialize for TagFileHeader {
     fn tag_size() -> usize {
@@ -664,12 +666,12 @@ impl TagSerialize for TagFileHeader {
 }
 
 /// Functionality for parsing and making tag file data.
-pub struct ParsedTagFile<T> {
+pub struct ParsedTagFile<T: ?Sized> {
     /// Header that was read from the tag.
     pub header: TagFileHeader,
 
     /// Data that was read from the tag.
-    pub data: T
+    pub data: Box<T>
 }
 
 impl<T: TagSerialize> ParsedTagFile<T> {
@@ -682,7 +684,7 @@ impl<T: TagSerialize> ParsedTagFile<T> {
 
         let final_data = ParsedTagFile {
             header: header,
-            data: T::from_tag(bytes, TAG_FILE_HEADER_LEN, cursor, &mut cursor)?
+            data: Box::new(T::from_tag(bytes, TAG_FILE_HEADER_LEN, cursor, &mut cursor)?)
         };
 
         if cursor != bytes.len() {
@@ -719,3 +721,13 @@ impl<T: TagSerialize> ParsedTagFile<T> {
         Ok(final_data)
     }
 }
+
+/// Functions for parsing and making tag file data for a specific tag group.
+pub trait TagFileSerializeFn: Any + TagBlockFn + TagSerialize {
+    /// Deserialize the data into the tag struct.
+    fn from_tag_file(data: &[u8]) -> ErrorMessageResult<ParsedTagFile<Self>> where Self: Sized;
+
+    /// Serialize the tag struct into a tag file.
+    fn into_tag_file(&self) -> ErrorMessageResult<Vec<u8>>;
+}
+

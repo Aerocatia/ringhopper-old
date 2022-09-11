@@ -1,5 +1,5 @@
-use engines::h1::definitions::UnicodeStringList;
-use super::{TagSerialize, ParsedTagFile};
+use engines::h1::definitions::{parse_tag_file, UnicodeStringList};
+use super::{TagSerialize, TagFileSerializeFn, ParsedTagFile};
 use crate::*;
 use crate::types::*;
 use crate::types::tag::*;
@@ -297,10 +297,21 @@ fn test_unicode_string_list() {
     assert_eq!("Parsing an actual tag works~", strings[2]);
 
     // Try remaking it and reparsing it. Check if it produces the same tag.
-    let new_file = ParsedTagFile::into_tag(&tag.data, engines::h1::types::TagGroup::UnicodeStringList).unwrap();
+    let new_file = ParsedTagFile::into_tag(tag.data.as_ref(), engines::h1::types::TagGroup::UnicodeStringList).unwrap();
     let new_tag : ParsedTagFile<UnicodeStringList> = ParsedTagFile::from_tag(&new_file).unwrap();
     assert!(new_tag.data == tag.data);
 
     // Lastly, check to see if we produce the same binary data
     assert_eq!(player_names_bytes, &new_file[..]);
+}
+
+#[test]
+fn test_loading_functions() {
+    let player_names_bytes = include_bytes!("unicode_string_list_test.unicode_string_list");
+
+    let parse_tag_file_known = UnicodeStringList::from_tag_file(player_names_bytes).unwrap();
+    let parse_tag_file_unknown = parse_tag_file(player_names_bytes).unwrap();
+
+    assert_eq!(player_names_bytes, &parse_tag_file_known.data.into_tag_file().unwrap()[..]);
+    assert_eq!(player_names_bytes, &parse_tag_file_unknown.data.into_tag_file().unwrap()[..]);
 }

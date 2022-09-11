@@ -35,6 +35,7 @@
 
     "engine.h1.types.tag.header.error": "Error parsing the tag header: {reason}",
     "engine.h1.types.tag.header.error_reason_blam_invalid": "Blam literal fourCC does not match (0x{blam:08X} expected, got 0x{other:08X} instead).",
+    "engine.h1.types.tag.header.error_reason_wrong_group": "Expected a {group_expected} tag file, got a {group_actual} tag file instead.",
     "engine.h1.types.tag.header.error_reason_version_unsupported": "Version for {group} is unsupported ({version} expected, got {other} instead).",
 
     "engine.h1.types.serialize.error_architecture_limit_exceeded": "Data is out of bounds. (Architecture size limit exceeded!)",

@@ -1,4 +1,5 @@
 use crate::types::FourCC;
+use crate::types::tag::TagGroupFn;
 use std::fmt;
 
 /// Tag groups define types of tags.
@@ -177,7 +178,6 @@ pub enum TagGroup {
 
 impl fmt::Display for TagGroup {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        use crate::types::tag::TagGroupFn;
         f.write_str(self.as_str())
     }
 }
@@ -270,7 +270,7 @@ const ALL_GROUPS: &'static [(&'static str, TagGroup, FourCC)] = &[
     ("zz_<none>", TagGroup::_None, 0xFFFFFFFF),
 ];
 
-impl crate::types::tag::TagGroupFn for TagGroup {
+impl TagGroupFn for TagGroup {
     fn as_str(&self) -> &'static str {
         ALL_GROUPS[*self as usize].0
     }
@@ -308,9 +308,7 @@ impl Default for TagGroup {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::tag::TagGroupFn;
-
-    use super::{ALL_GROUPS, TagGroup};
+    use super::{ALL_GROUPS, TagGroup, TagGroupFn};
 
     // Check if tag groups are sorted to ensure binary searching works.
     #[test]
