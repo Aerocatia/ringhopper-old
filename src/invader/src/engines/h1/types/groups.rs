@@ -75,10 +75,10 @@ pub enum TagGroup {
     LensFlare,
     /// Corresponds to the [`Light`](crate::engines::h1::definitions::Light) struct.
     Light,
-    /// Corresponds to the [`Lightning`](crate::engines::h1::definitions::Lightning) struct.
-    Lightning,
     /// Corresponds to the [`LightVolume`](crate::engines::h1::definitions::LightVolume) struct.
     LightVolume,
+    /// Corresponds to the [`Lightning`](crate::engines::h1::definitions::Lightning) struct.
+    Lightning,
     /// Corresponds to the [`MaterialEffects`](crate::engines::h1::definitions::MaterialEffects) struct.
     MaterialEffects,
     /// Corresponds to the [`Meter`](crate::engines::h1::definitions::Meter) struct.
@@ -219,8 +219,8 @@ const ALL_GROUPS: &'static [(&'static str, TagGroup, FourCC)] = &[
     ("item_collection", TagGroup::ItemCollection, 0x69746D63),
     ("lens_flare", TagGroup::LensFlare, 0x6C656E73),
     ("light", TagGroup::Light, 0x6C696768),
-    ("light_volume", TagGroup::Lightning, 0x6D677332),
-    ("lightning", TagGroup::LightVolume, 0x656C6563),
+    ("light_volume", TagGroup::LightVolume, 0x6D677332),
+    ("lightning", TagGroup::Lightning, 0x656C6563),
     ("material_effects", TagGroup::MaterialEffects, 0x666F6F74),
     ("meter", TagGroup::Meter, 0x6D657472),
     ("model", TagGroup::Model, 0x6D6F6465),
@@ -267,7 +267,7 @@ const ALL_GROUPS: &'static [(&'static str, TagGroup, FourCC)] = &[
     ("weapon_hud_interface", TagGroup::WeaponHUDInterface, 0x77706869),
     ("weather_particle_system", TagGroup::WeatherParticleSystem, 0x7261696E),
     ("wind", TagGroup::Wind, 0x77696E64),
-    ("zz_<none>", TagGroup::_None, 0xFFFFFFFF),
+    ("zz_<none>", TagGroup::_None, 0x00000000),
 ];
 
 impl TagGroupFn for TagGroup {

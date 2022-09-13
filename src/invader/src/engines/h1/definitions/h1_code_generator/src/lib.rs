@@ -6,7 +6,7 @@ use std::path::Path;
 use std::io::Read;
 
 extern crate serde_json;
-use serde_json::Value;
+use serde_json::{Value, Map};
 
 // Convert a tag group extension (e.g. "unit_hud_interface" -> "UnitHUDInterface")
 fn tag_group_extension_to_struct(group: &str) -> String {
@@ -19,6 +19,25 @@ fn tag_group_extension_to_struct(group: &str) -> String {
     }
     new_group.replace_range(0..1, &new_group[0..1].to_uppercase());
     new_group
+}
+
+// Format the string into being 'friendly' for use as an identifier in Rust code.
+fn format_tag_field_name(string: &str) -> String {
+    let field_name_written = string.replace(" ", "_").replace("-", "_").replace("'", "").replace(":", "").replace("(", "").replace(")", "");
+
+    // Keyword
+    let field_name_written = match field_name_written.as_str() {
+        "type" | "loop" => format!("_{field_name_written}"),
+        _ => field_name_written
+    };
+
+    // Number-only bitfields
+    if field_name_written.chars().next().unwrap().is_alphabetic() {
+        field_name_written
+    }
+    else {
+        format!("_{field_name_written}")
+    }
 }
 
 /// Load the definitions json files.
@@ -53,7 +72,83 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                 stream.extend(format!("pub type {object_name} = u16;").parse::<TokenStream>().unwrap());
             }
             else if object_type == "bitfield" {
-                stream.extend(format!("pub type {object_name} = u{width};", width = object.get("width").unwrap().as_u64().unwrap()).parse::<TokenStream>().unwrap());
+                // stream.extend(format!("pub type {object_name} = u{width};", width = object.get("width").unwrap().as_u64().unwrap()).parse::<TokenStream>().unwrap());
+
+                let width = object.get("width").unwrap().as_u64().unwrap();
+                let width_bytes = width / 8;
+                let mut fields = String::new();
+                let mut into_uint_code = String::new();
+                let mut from_uint_code = String::new();
+
+                let mut current_value = 1u32;
+                let mut tag_mask = 0xFFFFFFFFu32;
+                let mut value_mask = 0u32;
+
+                for f in object.get("fields").unwrap().as_array().unwrap() {
+                    let o = match f.as_object() {
+                        Some(n) => n.to_owned(),
+                        None => {
+                            let mut m = Map::<String, Value>::new();
+                            m.insert("name".to_owned(), Value::String(f.as_str().unwrap().to_owned()));
+                            m
+                        }
+                    };
+
+                    let name = format_tag_field_name(o.get("name").unwrap().as_str().unwrap());
+                    fields += &format!("pub {name}: bool,");
+
+                    // Set these masks so we know what to read/write
+                    if f.get("cache_only").unwrap_or(&Value::Bool(false)).as_bool().unwrap() {
+                        tag_mask &= !current_value; // exclude cache only bits from being read/written from tag files
+                    }
+                    value_mask |= current_value;
+
+                    into_uint_code += &format!("return_value |= {current_value}u{width} * (self.{name} as u{width});");
+                    from_uint_code += &format!("{name}: (input_value & {current_value}u{width}) != 0,");
+
+                    current_value <<= 1;
+                }
+
+                // Exclude all bits not actually used too.
+                tag_mask &= value_mask;
+
+                stream.extend(format!("
+                #[derive(Default, Copy, Clone, PartialEq)]
+                pub struct {object_name} {{
+                    {fields}
+                }}").parse::<TokenStream>().unwrap());
+
+                stream.extend(format!("impl {object_name} {{
+                    /// Get the numeric representation of the bitfield.
+                    pub fn into_u{width}(&self) -> u{width} {{
+                        let mut return_value = 0u{width};
+                        {into_uint_code}
+                        return_value
+                    }}
+
+                    /// Convert the number into a bitfield.
+                    ///
+                    /// Bits that do not exist on the bitfield are ignored.
+                    pub fn from_u{width}(input_value: u{width}) -> {object_name} {{
+                        {object_name} {{
+                            {from_uint_code}
+                        }}
+                    }}
+                }}").parse::<TokenStream>().unwrap());
+
+                let parsing_code = format!("
+                impl TagSerialize for {object_name} {{
+                    fn tag_size() -> usize {{
+                        {width_bytes}
+                    }}
+                    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {{
+                        (self.into_u{width}() & {tag_mask}).into_tag(data, at, struct_end)
+                    }}
+                    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<{object_name}> {{
+                        Ok({object_name}::from_u{width}(u{width}::from_tag(data, at, struct_end, cursor)? & {tag_mask}))
+                    }}
+                }}");
+                stream.extend(parsing_code.parse::<TokenStream>().unwrap());
             }
             else if object_type == "struct" {
                 // Generate Rust code to define our struct and implementation
@@ -95,11 +190,7 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
 
                     // Otherwise, let's do this
                     let field_name = f.get("name").unwrap().as_str().unwrap();
-                    let field_name_written = field_name.replace(" ", "_").replace("'", "").replace(":", "").replace("(", "").replace(")", "");
-                    let field_name_written = match field_name_written.as_str() {
-                        "type" | "loop" => format!("_{field_name_written}"),
-                        _ => field_name_written
-                    };
+                    let field_name_written = format_tag_field_name(&field_name);
 
                     let field_type_data_type = match field_type {
                         "Reflexive" => format!("Reflexive<{}>", f.get("struct").unwrap().as_str().unwrap()),
@@ -311,7 +402,7 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
         let header = TagFileHeader::from_tag(data, 0, TAG_FILE_HEADER_LEN, &mut TAG_FILE_HEADER_LEN.clone())?;
         match header.tag_group {{
             {group_read_match_block}
-            _ => panic!()
+            n => Err(ErrorMessage::AllocatedString(format!(get_compiled_string!(\"engine.h1.types.tag.header.error_reason_unparsable_group\"), group=n.as_str())))
         }}
     }}").parse::<TokenStream>());
 

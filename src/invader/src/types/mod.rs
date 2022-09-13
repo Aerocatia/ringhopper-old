@@ -2,6 +2,7 @@
 
 use std::cmp::PartialEq;
 use std::ops::{Index, IndexMut};
+use std::path::PathBuf;
 use std::fmt;
 
 pub mod tag;
@@ -159,9 +160,64 @@ impl<T: PartialOrd + Copy> Bounds<T> {
     }
 }
 
+fn match_pattern_bytes(string: &[u8], pattern: &[u8]) -> bool {
+    let string_len = string.len();
+    let pattern_len = pattern.len();
+
+    let mut string_index = 0usize;
+    let mut pattern_index = 0usize;
+
+    while string_index < string_len && pattern_index < pattern_len {
+        let p = pattern[pattern_index] as char;
+        let s = string[string_index] as char;
+
+        // Match single character (? matches anything, / matches path separators)
+        if (p == s && p != '*') || p == '?' || ((p == '/' || p == '\\' || p == std::path::MAIN_SEPARATOR) && (s == '/' || s == '\\' || s == std::path::MAIN_SEPARATOR)) {
+            pattern_index += 1;
+            string_index += 1;
+        }
+        else if p == '*' {
+            // Skip this wildcard and all consecutive wildcards
+            while pattern_index < pattern_len && pattern[pattern_index] as char == '*' {
+                pattern_index += 1;
+            }
+
+            // Now try to match the end of the string
+            for i in string_index..=string_len {
+                if match_pattern_bytes(&string[i..], &pattern[pattern_index..]) {
+                    return true
+                }
+            }
+
+            // Nope!
+            return false;
+        }
+        else {
+            // Mismatch!
+            return false;
+        }
+    }
+
+    // If both hit the end, yay!
+    string_index == string_len && pattern_index == pattern_len
+}
+
+/// Match the tag path pattern.
+///
+/// This returns true if pattern and string are equal under the following rules:
+/// - `*` refers to a wildcard that can be any number of characters.
+/// - `?` refers to a wildcard that can be any one character.
+/// - `/`, `\`, and the native path separators are all considered the same character.
+///
+/// Note that wildcard characters cannot be directly matched. These characters are unsupported in tag paths, anyway.
+pub fn match_pattern(string: &str, pattern: &str) -> bool {
+    match_pattern_bytes(string.as_bytes(), pattern.as_bytes())
+}
+
 /// Tag reference that describes a tag.
 ///
-/// For all functions that set a path, the path must be a valid path for Windows. The following characters are restricted:
+/// For all functions that set a path, the path must be a valid path for Windows. The following characters are
+/// restricted:
 ///
 /// - `<` (less than)
 /// - `>` (greater than)
@@ -176,20 +232,43 @@ impl<T: PartialOrd + Copy> Bounds<T> {
 /// If an invalid path is used, the string will not be written, and an [Err] will be returned with a message.
 ///
 /// Also, all characters will be made lowercase, and the native path separator will be replaced with a backslash (`\`).
+///
+/// Note that the [`to_string`](std::string::ToString::to_string) function and [`Display`](std::fmt::Display) will
+/// display native path separators. Use [`get_path_with_extension`](TagReference::get_path_with_extension) if you want
+/// to get a non-OS dependent path.
 #[derive(Clone, Default, PartialEq)]
 pub struct TagReference<T: TagGroupFn> {
     pub group: T,
     path: String
 }
 impl<T: TagGroupFn> TagReference<T> {
-    /// Get the path without extension.
+    /// Get the path without the file extension.
+    ///
+    /// This will return the path with Halo separators (i.e. backslashes).
     pub fn get_path_without_extension(&self) -> &str {
         &self.path
     }
 
+    /// Get the path concatenated with the file extension.
+    ///
+    /// This will return the path with Halo separators (i.e. backslashes).
+    pub fn get_path_with_extension(&self) -> String {
+        format!("{}.{}", self.path, self.group.as_str())
+    }
+
+    /// Convert to a relative filesystem path.
+    ///
+    /// This is a convenience function for using [`to_string`](std::string::ToString::to_string) and wrapping the
+    /// result in a [`PathBuf`].
+    pub fn get_relative_fs_path(&self) -> PathBuf {
+        PathBuf::from(self.to_string())
+    }
+
     /// Set the path without an extension.
     ///
-    /// If the path is invalid for a `TagReference`, an [Err] is returned.
+    /// Native path separators are converted into Halo path separators (i.e. backslashes).
+    ///
+    /// If the path is invalid for a `TagReference`, an [`Err`] is returned.
     pub fn set_path_without_extension(&mut self, path: &str) -> ErrorMessageResult<()> {
         let mut new_path = path.to_owned();
 
@@ -225,7 +304,7 @@ impl<T: TagGroupFn> TagReference<T> {
 
     /// Create a `TagReference` from a path containing an extension that corresponds to a tag group.
     ///
-    /// If the path is invalid for a `TagReference` or the extension is invalid or nonexistent, an [Err] is returned.
+    /// If the path is invalid for a `TagReference` or the extension is invalid or nonexistent, an [`Err`] is returned.
     pub fn from_path_with_extension(path: &str) -> ErrorMessageResult<TagReference<T>> {
         let pos = match path.rfind('.') {
             Some(n) => n,
@@ -243,15 +322,22 @@ impl<T: TagGroupFn> TagReference<T> {
 
     /// Create a `TagReference` from a path and group.
     ///
-    /// If the path is invalid for a `TagReference`, an [Err] is returned.
+    /// If the path is invalid for a `TagReference`, an [`Err`] is returned.
     pub fn from_path_and_group(path: &str, group: T) -> ErrorMessageResult<TagReference<T>> {
         let mut reference = TagReference { path: String::default(), group };
         reference.set_path_without_extension(path)?;
         Ok(reference)
     }
+
+    /// Check if the path matches the pattern.
+    ///
+    /// See [`match_pattern`] for more information.
+    pub fn matches_pattern(&self, pattern: &str) -> bool {
+        match_pattern(&self.get_path_with_extension(), pattern)
+    }
 }
 
-impl<T: TagGroupFn + fmt::Display> fmt::Display for TagReference<T> {
+impl<T: TagGroupFn> fmt::Display for TagReference<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         for c in self.path.chars() {
             let mut character = c;
@@ -261,8 +347,7 @@ impl<T: TagGroupFn + fmt::Display> fmt::Display for TagReference<T> {
             f.write_str(std::str::from_utf8(&[character as u8]).unwrap())?;
         }
         f.write_str(".")?;
-
-        self.group.fmt(f)
+        f.write_str(self.group.as_str())
     }
 }
 

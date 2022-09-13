@@ -81,7 +81,7 @@ impl TagFileHeader {
             TagGroup::GBXModel => 5,
             TagGroup::Globals => 3,
             TagGroup::Model => 4,
-            TagGroup::ModelCollisionGeometry => 1,
+            TagGroup::ModelCollisionGeometry => 10,
             TagGroup::Particle => 2,
             TagGroup::ParticleSystem => 4,
             TagGroup::Physics => 4,
@@ -141,17 +141,43 @@ macro_rules! sizeof {
     }
 }
 
-const fn fits(size: usize, at: usize, struct_end: usize, data_size: usize) -> ErrorMessageResult<()> {
+/// Check if a field fits in the given struct bounds.
+///
+/// Return `Ok` if this is true or `Err` if not.
+///
+/// Panics if debug assertions are enabled and data in the struct goes outside of the input struct size, as this is a programming error.
+///
+/// `size` is the size of the field, `at` is the offset of the field, `struct_end` is the length of the struct the field is in, `vec_size` is the size of the vector holding the data
+fn fits(size: usize, at: usize, struct_end: usize, vec_size: usize) -> ErrorMessageResult<()> {
     let end = match at.checked_add(size) {
         Some(n) => n,
         None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_architecture_limit_exceeded")))
     };
 
-    // If data is out of the struct bounds, then this is a programming error rather than bad tag data.
-    debug_assert!(end <= struct_end, "Data is outside of the struct (this is a bug!)");
+    // If data is out of the struct bounds, then this is a programming error rather than bad tag data as it means our struct size is wrong.
+    debug_assert!(end <= struct_end, "Data is outside of the struct (this is a bug!) - (0x{at:08X} [offset] + 0x{size:08X} [size] = 0x{end:08X} [end]) <= 0x{struct_end:08X} [struct_end]", at=at, size=size, end=end, struct_end=struct_end);
 
     // If we're outside of the data bounds, fail.
-    if end > data_size {
+    if end > vec_size {
+        Err(ErrorMessage::StaticString("Data is out of bounds."))
+    }
+    else {
+        Ok(())
+    }
+}
+
+/// Checks if data fits in the given tag.
+///
+/// Returns `Ok` if this is true or `Err` if not.
+///
+/// `size` is the size of the data, `at` is the offset of the data, `vec_size` is the size of the vector holding the data
+fn fits_extra_data(size: usize, at: usize, vec_size: usize) -> ErrorMessageResult<()> {
+    let data_end = match at.checked_add(size) {
+        Some(n) => n,
+        None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_architecture_limit_exceeded")))
+    };
+
+    if data_end > vec_size {
         Err(ErrorMessage::StaticString("Data is out of bounds."))
     }
     else {
@@ -464,7 +490,8 @@ impl TagSerialize for Data {
 
         // Does this array fit?
         let length = u32::from_tag(data, at + 0x0, struct_end, cursor)? as usize;
-        fits(length, *cursor, data.len(), data.len())?;
+
+        fits_extra_data(length, *cursor, data.len())?;
 
         // Ok, good!
         let end = *cursor + length;
@@ -485,6 +512,11 @@ impl TagSerialize for TagReference {
 
         // current path
         let path = self.get_path_without_extension();
+
+        // If it's empty, we do not need to write anything.
+        if self.group == TagGroup::_None && path.is_empty() {
+            return Ok(())
+        }
 
         // Write an empty ID
         (0xFFFFFFFFu32).into_tag(data, at + 0xC, struct_end)?;
@@ -524,7 +556,7 @@ impl TagSerialize for TagReference {
                 None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_architecture_limit_exceeded")))
             };
 
-            fits(real_length, *cursor, data.len(), data.len())?;
+            fits_extra_data(real_length, *cursor, data.len())?;
 
             // Ok, good!
             let end = *cursor + real_length;
@@ -599,7 +631,8 @@ impl<T: TagBlockFn + TagSerialize + Default> TagSerialize for Reflexive<T> {
             Some(n) => n,
             None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_architecture_limit_exceeded")))
         };
-        fits(total_size, *cursor, data.len(), data.len())?;
+
+        fits_extra_data(total_size, *cursor, data.len())?;
 
         // Initialize our block array
         let mut block_array = Self::default();

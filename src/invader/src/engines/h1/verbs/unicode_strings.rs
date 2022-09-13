@@ -13,7 +13,7 @@ use self::encoding::{Encoding, EncoderTrap};
 use self::encoding::all::WINDOWS_1252;
 use std::ffi::CString;
 
-pub fn unicode_strings_verb(verb: &crate::cmd::Verb, args: &[&str], executable: &str) -> ExitCode {
+pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> ExitCode {
     let parsed_args = try_parse_arguments!(args, &[], &[get_compiled_string!("arguments.specifier.tag_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags());
 
     let tags = Path::new(&parsed_args.named.get("tags").unwrap()[0]);

@@ -346,7 +346,7 @@ impl ParsedArguments {
                 }
             }
         }
-        if constraints.needs_tags {
+        if constraints.needs_data {
             check_if_exists!("data");
         }
 

@@ -11,6 +11,7 @@
     "arguments.tags.description_multi": "Specify a tags directory. Use multiple times to specify multiple tags directories. Default: \"tags\"",
     "arguments.tags.description_single": "Specify a tags directory. Default: \"tags\"",
 
+    "arguments.specifier.tag_batch_with_group": "tag*.group",
     "arguments.specifier.tag_without_group": "tag",
     "arguments.specifier.tag_with_group": "tag.group",
     "arguments.specifier.cache_file": "cache-file",
@@ -28,6 +29,13 @@
     "command_usage.error_verb_unsupported": "Verb \"{verb}\" is not supported by this tool.",
     "command_usage.warning_only_one_tags_dir_supported": "This verb takes only one tags directory - \"{dir}\" will be used.",
 
+    "engine.h1.verbs.strip.error_could_not_strip_tag": "Could not strip {tag}: {error}",
+    "engine.h1.verbs.strip.error_no_tags_stripped": "No tags were stripped due to {total} error(s).",
+    "engine.h1.verbs.strip.stripped_all_tags": "Stripped {count} tag(s).",
+    "engine.h1.verbs.strip.stripped_some_tags": "Stripped {count} / {total} tag(s).",
+    "engine.h1.verbs.strip.skipped_tag": "Skipped {tag} (tag is already clean)",
+    "engine.h1.verbs.strip.stripped_tag": "Stripped {tag}",
+
     "engine.h1.verbs.unicode-strings.error_creating_directories": "Error creating directories {dirs}: {error}",
     "engine.h1.verbs.unicode-strings.error_missing_end_string": "A string is missing an ###END-STRING### line.",
     "engine.h1.verbs.unicode-strings.error_parsing_file": "Error parsing file {file}: {error}",
@@ -35,6 +43,7 @@
 
     "engine.h1.types.tag.header.error": "Error parsing the tag header: {reason}",
     "engine.h1.types.tag.header.error_reason_blam_invalid": "Blam literal fourCC does not match (0x{blam:08X} expected, got 0x{other:08X} instead).",
+    "engine.h1.types.tag.header.error_reason_unparsable_group": "Unable to parse {group} tag files.",
     "engine.h1.types.tag.header.error_reason_wrong_group": "Expected a {group_expected} tag file, got a {group_actual} tag file instead.",
     "engine.h1.types.tag.header.error_reason_version_unsupported": "Version for {group} is unsupported ({version} expected, got {other} instead).",
 
@@ -61,6 +70,11 @@
     "file.error_opening_file_write": "Error opening file {file} for writing: {error}",
     "file.error_reading_file": "Error reading file {file}: {error}",
     "file.error_writing_file": "Error writing file {file}: {error}",
+    "file.error_reading_virtual_tags_directory": "Error reading virtual tags directory: {error}",
+    "file.error_non_utf8_path": "Unable to parse path \"{path}\" as UTF-8",
+    "file.error_no_tags_found": "No tags were found.",
+    "file.error_iterating_directory": "Error iterating directory \"{path}\": {error}",
+    "file.error_recursion_limit_reached": "Directory recursion limit reached! Possible infinite loop detected.",
 
     "terminal.warning_prefix": "Warning: ",
     "terminal.error_prefix": "Error: ",

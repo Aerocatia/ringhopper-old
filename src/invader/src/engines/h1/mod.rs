@@ -27,6 +27,7 @@ pub struct HaloCE {}
 impl EngineModuleFn for HaloCE {
     fn get_verb_function(&self, verb: Verb) -> Option<VerbFn> {
         match verb {
+            Verb::Strip => Some(self::verbs::strip::strip_verb),
             Verb::Strings => Some(self::verbs::strings::strings_verb),
             Verb::UnicodeStrings => Some(self::verbs::unicode_strings::unicode_strings_verb),
 
