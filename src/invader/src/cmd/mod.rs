@@ -30,7 +30,7 @@ fn print_usage(path: &str, lookup: &str, engine: &dyn engines::EngineModuleFn) {
     for v in &verb::ALL_VERBS {
         if engine.get_verb_function(v.verb).is_some() {
             verbs_listed += 1;
-            eprint!("    {: <15}  {: <3}  ", v.verb.get_name(), v.verb.get_shorthand());
+            eprint!("    {: <20}  ", v.verb.get_name());
             let pos = 4 + 15 + 2 + 3 + 2;
             print_word_wrap(v.verb.get_description(), pos, pos, OutputType::Stderr);
             eprintln!();
