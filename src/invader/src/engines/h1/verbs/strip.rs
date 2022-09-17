@@ -6,6 +6,21 @@ use crate::file::*;
 use crate::terminal::*;
 use crate::engines::h1::definitions::parse_tag_file;
 
+fn strip_tag(path: &std::path::Path) -> ErrorMessageResult<bool> {
+    let file_data = read_file(path)?;
+    let final_data = parse_tag_file(&file_data)?.data.into_tag_file()?;
+
+    // No need to eat your drive
+    if file_data == final_data {
+        Ok(false)
+    }
+    else {
+        // Write it
+        write_file(path, &final_data)?;
+        Ok(true)
+    }
+}
+
 pub fn strip_verb(verb: &Verb, args: &[&str], executable: &str) -> ExitCode {
     let parsed_args = try_parse_arguments!(args, &[], &[get_compiled_string!("arguments.specifier.tag_batch_with_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_tags().multiple_tags_directories());
 
@@ -13,21 +28,6 @@ pub fn strip_verb(verb: &Verb, args: &[&str], executable: &str) -> ExitCode {
         Ok(n) => n,
         Err(e) => panic!("{}", e)
     };
-
-    fn strip_tag(path: &std::path::Path) -> ErrorMessageResult<bool> {
-        let file_data = read_file(path)?;
-        let final_data = parse_tag_file(&read_file(path)?)?.data.into_tag_file()?;
-
-        // No need to eat your drive
-        if file_data == final_data {
-            Ok(false)
-        }
-        else {
-            // Write it
-            write_file(path, &final_data)?;
-            Ok(true)
-        }
-    }
 
     let mut count = 0usize;
     let total = tags.len();
