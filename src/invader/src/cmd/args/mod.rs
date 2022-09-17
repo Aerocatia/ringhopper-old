@@ -21,6 +21,9 @@ pub struct ArgumentConstraints {
     /// True if the tags dirs are needed.
     pub needs_tags: bool,
 
+    /// True if overwriting can be specified.
+    pub overwrite: bool,
+
     /// True if multiple tags directories are supported.
     pub multiple_tags_directories: bool
 }
@@ -48,6 +51,13 @@ impl ArgumentConstraints {
     pub fn needs_maps(self) -> ArgumentConstraints {
         let mut s = self;
         s.needs_maps = true;
+        s
+    }
+
+    /// Set overwrite to true.
+    pub fn can_overwrite(self) -> ArgumentConstraints {
+        let mut s = self;
+        s.overwrite = true;
         s
     }
 
@@ -90,17 +100,19 @@ pub struct Argument {
 }
 
 /// Arguments present in all commands
-const STANDARD_ARGUMENTS: [Argument; 5] = [
+const STANDARD_ARGUMENTS: [Argument; 6] = [
     Argument { long: "data", short: 'd', description: get_compiled_string!("arguments.data.description"), parameter: Some("dir"), multiple: false },
     Argument { long: "help", short: 'h', description: get_compiled_string!("arguments.help.description"), parameter: None, multiple: false },
     Argument { long: "maps", short: 'm', description: get_compiled_string!("arguments.maps.description"), parameter: Some("dir"), multiple: false },
     Argument { long: "tags", short: 't', description: get_compiled_string!("arguments.tags.description_multi"), parameter: Some("dir"), multiple: true },
-    Argument { long: "tags", short: 't', description: get_compiled_string!("arguments.tags.description_single"), parameter: Some("dir"), multiple: false }
+    Argument { long: "tags", short: 't', description: get_compiled_string!("arguments.tags.description_single"), parameter: Some("dir"), multiple: false },
+
+    Argument { long: "overwrite", short: 'o', description: get_compiled_string!("arguments.overwrite.description"), parameter: None, multiple: false }
 ];
 
 impl ParsedArguments {
     /// Parse the arguments from the input. The executable name/verb is put in usage_prefix.
-    ///
+    ///t
     /// The `data`, `tags`, and `maps` arguments will always be set to a default value if they are not provided here.
     pub fn parse_arguments(input: &[&str], arguments: &[Argument], extra_arguments: &[&str], usage_prefix: &str, description: &str, constraints: ArgumentConstraints) -> Option<ParsedArguments> {
         debug_assert!({
@@ -119,6 +131,16 @@ impl ParsedArguments {
             true
         });
 
+        // Concatenate all arguments
+        let mut available_arguments = STANDARD_ARGUMENTS.to_vec();
+        available_arguments.retain(|n| {
+            !(n.short == 'o' && !constraints.overwrite)
+
+            // note that we allow --data, --maps, and --tags in all verbs as these define important directories and might be passed in scripts, etc.,
+            // thus we can just ignore them if they aren't used
+        });
+        available_arguments.extend_from_slice(arguments);
+
         let mut parsed = ParsedArguments::default();
         parsed.extra.reserve_exact(extra_arguments.len());
 
@@ -135,12 +157,7 @@ impl ParsedArguments {
                     // Long parameter? (e.g. --help or --tags)
                     Some('-') => {
                         args_to_pass.push(|a| -> Option<Argument> {
-                            for i in STANDARD_ARGUMENTS {
-                                if i.long == a {
-                                    return Some(i);
-                                }
-                            }
-                            for i in arguments {
+                            for i in &available_arguments {
                                 if i.long == a {
                                     return Some(i.to_owned());
                                 }
@@ -156,12 +173,7 @@ impl ParsedArguments {
                     Some(_) => {
                         for c in (&input_param[1..]).chars() {
                             args_to_pass.push(|a| -> Option<Argument> {
-                                for i in STANDARD_ARGUMENTS {
-                                    if i.short == a {
-                                        return Some(i);
-                                    }
-                                }
-                                for i in arguments {
+                                for i in &available_arguments {
                                     if i.short == a {
                                         return Some(i.to_owned());
                                     }
@@ -250,32 +262,26 @@ impl ParsedArguments {
             );
 
             // Get all arguments and sort them.
-            let mut arguments_sorted = Vec::new();
-            arguments_sorted.reserve(STANDARD_ARGUMENTS.len() + arguments.len());
-            for i in STANDARD_ARGUMENTS {
-                if i.long == "data" && !constraints.needs_data {
-                    continue;
-                }
-                if i.long == "tags" && (!constraints.needs_tags || constraints.multiple_tags_directories != i.multiple) {
-                    continue
-                }
-                if i.long == "maps" && !constraints.needs_maps {
-                    continue;
-                }
-                arguments_sorted.push(i);
-            }
-            for &i in arguments {
-                arguments_sorted.push(i);
-            }
-            arguments_sorted.sort_by(|a, b| {
+            available_arguments.sort_by(|a, b| {
                 a.short.partial_cmp(&b.short).unwrap()
+            });
+
+            // Hide --data, --maps, --tags if unused
+            available_arguments.retain(|n| {
+                !(n.short == 't' && (
+                    !constraints.needs_tags ||
+                    (n.description == get_compiled_string!("arguments.tags.description_multi") && !constraints.multiple_tags_directories) ||
+                    (n.description == get_compiled_string!("arguments.tags.description_single") && constraints.multiple_tags_directories)
+                )) &&
+                !(n.short == 'd' && !constraints.needs_data) &&
+                !(n.short == 'm' && !constraints.needs_maps)
             });
 
             let argument_width = 29;
             let right_margin = 1;
             let left_side = argument_width + right_margin;
 
-            for a in arguments_sorted {
+            for a in available_arguments {
                 // Print the short and long
                 print!("  -{}, --{}", a.short, a.long);
                 let mut current_position = 2 + (1 + 1 + 1) + 1 + (2 + a.long.len());

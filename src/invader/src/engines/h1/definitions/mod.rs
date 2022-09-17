@@ -39,7 +39,7 @@ macro_rules! convert_model_geometry {
                 for i in geo.parts.blocks {
                     parts.push(i.into());
                 }
-                $to { flags: geo.flags, parts: Reflexive { blocks: parts } }
+                $to { flags: geo.flags, parts: Reflexive::new(parts) }
             }
         }
     }
@@ -129,21 +129,45 @@ impl From<Model> for GBXModel {
     }
 }
 
-impl From<ShaderTransparentChicagoExtended> for ShaderTransparentChicago {
-    fn from(shader: ShaderTransparentChicagoExtended) -> Self {
-        ShaderTransparentChicago {
-            base_struct: shader.base_struct,
-            numeric_counter_limit: shader.numeric_counter_limit,
-            first_map_type: shader.first_map_type,
-            shader_transparent_chicago_flags: shader.shader_transparent_chicago_extended_flags,
-            framebuffer_blend_function: shader.framebuffer_blend_function,
-            framebuffer_fade_mode: shader.framebuffer_fade_mode,
-            framebuffer_fade_source: shader.framebuffer_fade_source,
-            lens_flare_spacing: shader.lens_flare_spacing,
-            lens_flare: shader.lens_flare,
-            extra_layers: shader.extra_layers,
-            maps: shader.maps_4_stage,
-            extra_flags: shader.extra_flags
+macro_rules! shader_transparent_chicago_conversion {
+    ($from:tt, $to:tt, $maps_from:tt, $maps_to:tt, $flags_from:tt, $flags_to:tt) => {
+        impl From<$from> for $to {
+            fn from(shader: $from) -> Self {
+                let mut shader_to = $to::default();
+
+                shader_to.base_struct = shader.base_struct;
+                shader_to.numeric_counter_limit = shader.numeric_counter_limit;
+                shader_to.first_map_type = shader.first_map_type;
+                shader_to.$flags_to = shader.$flags_from;
+                shader_to.framebuffer_blend_function = shader.framebuffer_blend_function;
+                shader_to.framebuffer_fade_mode = shader.framebuffer_fade_mode;
+                shader_to.framebuffer_fade_source = shader.framebuffer_fade_source;
+                shader_to.lens_flare_spacing = shader.lens_flare_spacing;
+                shader_to.lens_flare = shader.lens_flare;
+                shader_to.extra_layers = shader.extra_layers;
+                shader_to.$maps_to = shader.$maps_from;
+                shader_to.extra_flags = shader.extra_flags;
+
+                shader_to
+            }
         }
     }
 }
+
+shader_transparent_chicago_conversion!(
+    ShaderTransparentChicagoExtended,
+    ShaderTransparentChicago,
+    maps_4_stage,
+    maps,
+    shader_transparent_chicago_extended_flags,
+    shader_transparent_chicago_flags
+);
+
+shader_transparent_chicago_conversion!(
+    ShaderTransparentChicago,
+    ShaderTransparentChicagoExtended,
+    maps,
+    maps_4_stage,
+    shader_transparent_chicago_flags,
+    shader_transparent_chicago_extended_flags
+);
