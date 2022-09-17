@@ -49,10 +49,16 @@ pub struct TagFile {
 impl TagFile {
     /// Get all tags located in a virtual tags directory.
     pub fn from_virtual_tags_directory(tags_directories: &[&Path]) -> ErrorMessageResult<Vec<TagFile>> {
+        if tags_directories.len() == 0 {
+            return Ok(Vec::new())
+        }
+
         let mut results = Vec::<ErrorMessageResult<Vec<TagFile>>>::new();
-        for i in 0..tags_directories.len() {
+
+        let tag_dir_count = tags_directories.len();
+        for i in 0..tag_dir_count {
             let dir = tags_directories[i].to_owned();
-            fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit: usize) -> ErrorMessageResult<Vec<TagFile>> {
+            fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit: usize, results: &mut Vec<TagFile>) -> ErrorMessageResult<()> {
                 if recursion_limit == 0 {
                     return Err(ErrorMessage::StaticString(get_compiled_string!("file.error_reading_virtual_tags_directory")))
                 }
@@ -62,7 +68,6 @@ impl TagFile {
                     Err(e) => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_iterating_directory"), path=directory.to_string_lossy(), error=e)))
                 };
 
-                let mut results = Vec::new();
                 for i in iterator {
                     let file = match i {
                         Ok(n) => n,
@@ -71,7 +76,7 @@ impl TagFile {
 
                     let file_path = file.path();
                     if file_path.is_dir() {
-                        results.extend(iterate_recursively(base_directory, &file_path, recursion_limit - 1)?)
+                        iterate_recursively(base_directory, &file_path, recursion_limit - 1, results)?;
                     }
                     else if file_path.is_file() {
                         let relative_path = file_path.strip_prefix(base_directory).unwrap();
@@ -85,29 +90,40 @@ impl TagFile {
                         }
                     }
                 }
-                Ok(results)
+                Ok(())
             }
-            results.push(iterate_recursively(&dir, &dir, 128))
+
+            let mut vec = Vec::new();
+            results.push(iterate_recursively(&dir, &dir, 128, &mut vec).map(|_| vec))
+        }
+
+        // Return what we got
+        if results.len() == 1 {
+            results.pop().unwrap()
         }
 
         // Go through everything!
-        let mut final_results = Vec::<TagFile>::new();
-        for i in results {
-            for p in i? {
-                let contained = (|| {
-                    for r in &final_results {
-                        if r.tag_path == p.tag_path {
-                            return true;
+        else {
+            // First move the first directory since it doesn't need to check past directories
+            let mut final_results = results.pop().unwrap()?;
+
+            for i in results {
+                for p in i? {
+                    let contained = (|| {
+                        for r in &final_results {
+                            if r.tag_path == p.tag_path {
+                                return true;
+                            }
                         }
+                        return false;
+                    })();
+                    if !contained {
+                        final_results.push(p);
                     }
-                    return false;
-                })();
-                if !contained {
-                    final_results.push(p);
                 }
             }
+            Ok(final_results)
         }
-        Ok(final_results)
     }
 
     /// Search `tags_directories` for a `tag_reference`.

@@ -30,12 +30,14 @@ pub fn strip_verb(verb: &Verb, args: &[&str], executable: &str) -> ExitCode {
     };
 
     let mut count = 0usize;
+    let mut processed = 0usize;
     let total = tags.len();
     for i in tags {
         match strip_tag(&i.file_path) {
             Ok(written) => {
                 if written {
                     println_success!(get_compiled_string!("engine.h1.verbs.strip.stripped_tag"), tag=i.tag_path);
+                    processed += 1;
                 }
                 else {
                     println!(get_compiled_string!("engine.h1.verbs.strip.skipped_tag"), tag=i.tag_path);
@@ -48,21 +50,18 @@ pub fn strip_verb(verb: &Verb, args: &[&str], executable: &str) -> ExitCode {
 
     if total == 0 {
         eprintln_error_pre!(get_compiled_string!("file.error_no_tags_found"));
+        ExitCode::FAILURE
     }
     else if count == 0 {
-        eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.strip.error_no_tags_stripped"), total=total);
+        eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.strip.error_no_tags_stripped"), total=total - processed);
+        ExitCode::FAILURE
     }
     else if count != total {
-        println_warn!(get_compiled_string!("engine.h1.verbs.strip.stripped_some_tags"), count=count, total=total);
-    }
-    else {
-        println_success!(get_compiled_string!("engine.h1.verbs.strip.stripped_all_tags"), count=count);
-    }
-
-    if count > 0 {
-        ExitCode::SUCCESS
-    }
-    else {
+        println_warn!(get_compiled_string!("engine.h1.verbs.strip.stripped_some_tags"), count=processed, total=total);
         ExitCode::FAILURE
+    }
+    else {
+        println_success!(get_compiled_string!("engine.h1.verbs.strip.stripped_all_tags"), count=processed);
+        ExitCode::SUCCESS
     }
 }
