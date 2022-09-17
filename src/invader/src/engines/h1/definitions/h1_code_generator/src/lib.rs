@@ -240,9 +240,12 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                     let mut write_serialization_code = |type_suffix: &str| {
                         //from_tag_code += &format!("println!(\"...reading {field_name_written} - {field_type_struct}, AT: 0x{{at:08X}} -> 0x{{local_cursor:08X}} / SE: 0x{{struct_end:08X}} / SZ: 0x{{size:08X}}\", at=at, local_cursor=local_cursor, struct_end=struct_end, size=data.len());");
 
-                        // If it is cache only, we read it from the tag but don't keep it
+                        // If it is cache only, if it is inconsequential (i.e. does not advance the data cursor), we ignore it. Otherwise, we read it from the tag but don't keep it.
+                        // Either way, we do not generate any code to put it in a tag file.
                         if cache_only {
-                            from_tag_code += &format!("let _ = {field_type_written_expression}::from_tag{swapped}(data, local_cursor, struct_end, cursor)?;");
+                            if field_type == "TagReference" || field_type == "Data" || field_type == "Reflexive" {
+                                from_tag_code += &format!("{field_type_written_expression}::from_tag{swapped}(data, local_cursor, struct_end, cursor)?;");
+                            }
                         }
 
                         // Otherwise we serialize it normally
