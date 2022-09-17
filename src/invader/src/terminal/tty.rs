@@ -51,7 +51,6 @@ impl TTYMetadata {
                 let is_terminal = unsafe { Console::GetConsoleScreenBufferInfo(handle, &mut w as *mut Console::CONSOLE_SCREEN_BUFFER_INFO) }.as_bool();
 
                 if !is_terminal {
-                    eprintln!("Cannot determine if a terminal...");
                     return None
                 }
 
