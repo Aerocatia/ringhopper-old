@@ -72,8 +72,6 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                 stream.extend(format!("pub type {object_name} = u16;").parse::<TokenStream>().unwrap());
             }
             else if object_type == "bitfield" {
-                // stream.extend(format!("pub type {object_name} = u{width};", width = object.get("width").unwrap().as_u64().unwrap()).parse::<TokenStream>().unwrap());
-
                 let width = object.get("width").unwrap().as_u64().unwrap();
                 let width_bytes = width / 8;
                 let mut fields = String::new();
@@ -168,12 +166,12 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                     Some(n) => {
                         let inherited_object = n.as_str().unwrap();
                         all_fields_defined += &format!("pub base_struct: {inherited_object},");
-                        from_tag_code = format!("new_object.base_struct = {inherited_object}::from_tag(data, at, struct_end, cursor)?; let mut local_cursor = {inherited_object}::tag_size();");
-                        into_tag_code = format!("self.base_struct.into_tag(data, at, struct_end)?; let mut local_cursor = {inherited_object}::tag_size();");
+                        from_tag_code = format!("new_object.base_struct = {inherited_object}::from_tag(data, at, struct_end, cursor)?; let mut local_cursor = at + {inherited_object}::tag_size();");
+                        into_tag_code = format!("self.base_struct.into_tag(data, at, struct_end)?; let mut local_cursor = at + {inherited_object}::tag_size();");
                     },
                     None => {
-                        from_tag_code = format!("let mut local_cursor = 0usize;");
-                        into_tag_code = format!("let mut local_cursor = 0usize;");
+                        from_tag_code = format!("let mut local_cursor = at;");
+                        into_tag_code = format!("let mut local_cursor = at;");
                     }
                 }
 
@@ -227,7 +225,48 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                         _ => format!("[{field_type_data_type}; {count}]")
                     };
 
+                    // Is this swapped?
+                    let swapped = match f.get("little_endian").unwrap_or(&Value::Bool(false)).as_bool().unwrap() {
+                        true => "_swapped",
+                        false => ""
+                    };
+
+                    // Is this cache only?
+                    let cache_only = f.get("cache_only").unwrap_or(&Value::Bool(false)).as_bool().unwrap();
+
                     let mut doc = f.get("comment").unwrap_or(&Value::String(String::new())).as_str().unwrap().to_owned();
+
+                    // Write the serialization code
+                    let mut write_serialization_code = |type_suffix: &str| {
+                        //from_tag_code += &format!("println!(\"...reading {field_name_written} - {field_type_struct}, AT: 0x{{at:08X}} -> 0x{{local_cursor:08X}} / SE: 0x{{struct_end:08X}} / SZ: 0x{{size:08X}}\", at=at, local_cursor=local_cursor, struct_end=struct_end, size=data.len());");
+
+                        // If it is cache only, we read it from the tag but don't keep it
+                        if cache_only {
+                            from_tag_code += &format!("let _ = {field_type_written_expression}::from_tag{swapped}(data, local_cursor, struct_end, cursor)?;");
+                        }
+
+                        // Otherwise we serialize it normally
+                        else {
+                            into_tag_code += &format!("self.{field_name_written}{type_suffix}.into_tag{swapped}(data, local_cursor, struct_end)?;");
+                            from_tag_code += &format!("new_object.{field_name_written}{type_suffix} = {field_type_written_expression}::from_tag{swapped}(data, local_cursor, struct_end, cursor)?;");
+                        }
+
+                        let cursor_increment = format!("local_cursor += {field_type_written_expression}::tag_size();");
+                        from_tag_code += &cursor_increment;
+                        into_tag_code += &cursor_increment;
+                    };
+
+                    // One object, not an array
+                    if count == 1 {
+                        write_serialization_code("");
+                    }
+
+                    // Array
+                    else {
+                        for i in 0..count {
+                            write_serialization_code(&format!("[{i}]"));
+                        }
+                    }
 
                     if field_type_struct == "TagReference" {
                         if !doc.is_empty() {
@@ -270,7 +309,7 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                             let mut add_comma = false;
 
                             // Format groups into matching their equivalent group name
-                            for g in groups {
+                            for g in &groups {
                                 let new_group = tag_group_extension_to_struct(&g);
 
                                 match add_comma {
@@ -278,12 +317,25 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                                     false => add_comma = true
                                 };
 
-                                doc += &format!("[{new_group}](crate::engines::h1::TagGroup::{new_group})");
+                                doc += &format!("[{new_group}](TagGroup::{new_group})");
                             }
                             doc += "\n";
                         }
+
+                        let default_group = if groups == ["*"] {
+                            "TagCollection".to_owned()
+                        }
+                        else {
+                            tag_group_extension_to_struct(&groups[0])
+                        };
+
+                        // Default the group
+                        if !cache_only {
+                            from_tag_code += &format!("if new_object.{field_name_written}.group == TagGroup::_None {{ new_object.{field_name_written}.group = TagGroup::{default_group}; }}");
+                        }
                     }
 
+                    // Put the doc in the struct
                     if doc != "" {
                         doc = doc.replace("\"", "\\\"");
                         all_fields_defined += &format!("#[doc=\"{doc}\"] ")
@@ -291,46 +343,6 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
 
                     // Put it in the struct
                     all_fields_defined += &format!("pub {field_name_written}: {field_type_struct},");
-
-                    // Is this swapped?
-                    let swapped = match f.get("little_endian").unwrap_or(&Value::Bool(false)).as_bool().unwrap() {
-                        true => "_swapped",
-                        false => ""
-                    };
-
-                    // Is this cache only?
-                    let cache_only = f.get("cache_only").unwrap_or(&Value::Bool(false)).as_bool().unwrap();
-
-                    let mut write_serialization_code = |type_suffix: &str| {
-                        //from_tag_code += &format!("println!(\"...reading {field_name_written} - {field_type_struct}, AT: 0x{{at:08X}} + 0x{{local_cursor:08X}} / SE: 0x{{struct_end:08X}} / SZ: 0x{{size:08X}}\", at=at, local_cursor=local_cursor, struct_end=struct_end, size=data.len());");
-
-                        // If it is cache only, we read it from the tag but don't keep it
-                        if cache_only {
-                            from_tag_code += &format!("let _ = {field_type_written_expression}::from_tag{swapped}(data, at + local_cursor, struct_end, cursor)?;");
-                        }
-
-                        // Otherwise we serialize it normally
-                        else {
-                            into_tag_code += &format!("self.{field_name_written}{type_suffix}.into_tag{swapped}(data, at + local_cursor, struct_end)?;");
-                            from_tag_code += &format!("new_object.{field_name_written}{type_suffix} = {field_type_written_expression}::from_tag{swapped}(data, at + local_cursor, struct_end, cursor)?;");
-                        }
-
-                        let cursor_increment = format!("local_cursor += {field_type_written_expression}::tag_size();");
-                        from_tag_code += &cursor_increment;
-                        into_tag_code += &cursor_increment;
-                    };
-
-                    // One object, not an array
-                    if count == 1 {
-                        write_serialization_code("");
-                    }
-
-                    // Array
-                    else {
-                        for i in 0..count {
-                            write_serialization_code(&format!("[{i}]"));
-                        }
-                    }
                 }
 
                 // Define the struct
@@ -352,13 +364,13 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                     }}
                     fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {{
                         {into_tag_code}
-                        debug_assert_eq!({tag_size}, local_cursor);
+                        debug_assert_eq!(at + {tag_size}, local_cursor, \"Size for {object_name} is wrong\");
                         Ok(())
                     }}
                     fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<{object_name}> {{
                         let mut new_object = {object_name}::default();
                         {from_tag_code}
-                        debug_assert_eq!({tag_size}, local_cursor);
+                        debug_assert_eq!(at + {tag_size}, local_cursor, \"Size for {object_name} is wrong\");
                         Ok(new_object)
                     }}
                 }}");
