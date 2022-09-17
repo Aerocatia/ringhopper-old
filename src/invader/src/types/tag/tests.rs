@@ -52,8 +52,8 @@ impl TagBlockFn for MyTagBlock {
 fn test_access() {
     let mut block = MyTagBlock {
         some_field: Vector3D { x: 0.0, y: 1.0, z: 2.0 },
-        another_field: Reflexive {
-            blocks: vec! [
+        another_field: Reflexive::new(
+            vec! [
                 MyTagBlock {
                     some_field: Vector3D { x: 3.0, y: 4.0, z: 5.0 },
                     another_field: Reflexive::default(),
@@ -62,8 +62,8 @@ fn test_access() {
                 },
                 MyTagBlock {
                     some_field: Vector3D { x: 6.0, y: 7.0, z: 8.0 },
-                    another_field: Reflexive {
-                        blocks: vec![
+                    another_field: Reflexive::new(
+                        vec![
                             MyTagBlock {
                                 some_field: Vector3D { x: 9.0, y: 10.0, z: 11.0 },
                                 another_field: Reflexive::default(),
@@ -71,12 +71,12 @@ fn test_access() {
                                 some_bounds: Bounds { lower: 100, upper: 250 }
                             }
                         ]
-                    },
+                    ),
                     useless_field: 79341,
                     some_bounds: Bounds { lower: 10, upper: 11 }
                 }
             ]
-        },
+        ),
         useless_field: 53122,
         some_bounds: Bounds { lower: -1, upper: 1 }
     };

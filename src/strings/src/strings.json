@@ -29,6 +29,14 @@
     "command_usage.error_verb_unsupported": "Verb \"{verb}\" is not supported by this tool.",
     "command_usage.warning_only_one_tags_dir_supported": "This verb takes only one tags directory - \"{dir}\" will be used.",
 
+    "engine.h1.verbs.convert.error_could_not_convert_tag": "Could not convert {tag}: {error}",
+    "engine.h1.verbs.convert.error_no_tags_converted": "No tags were converted due to {total} error(s).",
+    "engine.h1.verbs.convert.converted_all_tags": "Converted {count} tag(s).",
+    "engine.h1.verbs.convert.converted_some_tags": "Converted {count} / {total} tag(s).",
+    "engine.h1.verbs.convert.skipped_tag": "Skipped {tag} (tag already exists)",
+    "engine.h1.verbs.convert.converted_tag": "Converted {tag}",
+    "engine.h1.verbs.convert.unable_to_convert_tag": "Can't convert {input_group} to {output_group}",
+
     "engine.h1.verbs.strip.error_could_not_strip_tag": "Could not strip {tag}: {error}",
     "engine.h1.verbs.strip.error_no_tags_stripped": "No tags were stripped due to {total} error(s).",
     "engine.h1.verbs.strip.stripped_all_tags": "Stripped {count} tag(s).",
@@ -40,6 +48,8 @@
     "engine.h1.verbs.unicode-strings.error_missing_end_string": "A string is missing an ###END-STRING### line.",
     "engine.h1.verbs.unicode-strings.error_parsing_file": "Error parsing file {file}: {error}",
     "engine.h1.verbs.unicode-strings.saved_file": "Saved {file}",
+
+    "engine.h1.types.gbxmodel.error_invalid_local_nodes": "The model's local nodes are invalid.",
 
     "engine.h1.types.tag.header.error": "Error parsing the tag header: {reason}",
     "engine.h1.types.tag.header.error_reason_blam_invalid": "Blam literal fourCC does not match (0x{blam:08X} expected, got 0x{other:08X} instead).",

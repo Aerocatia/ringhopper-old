@@ -357,6 +357,33 @@ pub struct Reflexive<T: TagBlockFn> {
     pub blocks: Vec<T>
 }
 
+use std::vec::IntoIter;
+use std::slice::{Iter, IterMut};
+
+impl<T: TagBlockFn> IntoIterator for Reflexive<T> {
+    type Item = T;
+    type IntoIter = IntoIter<T>;
+    fn into_iter(self) -> IntoIter<T> {
+        self.blocks.into_iter()
+    }
+}
+
+impl<'a, T: TagBlockFn> IntoIterator for &'a Reflexive<T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+    fn into_iter(self) -> Iter<'a, T> {
+        self.blocks.iter()
+    }
+}
+
+impl<'a, T: TagBlockFn> IntoIterator for &'a mut Reflexive<T> {
+    type Item = &'a mut T;
+    type IntoIter = IterMut<'a, T>;
+    fn into_iter(self) -> IterMut<'a, T> {
+        self.blocks.iter_mut()
+    }
+}
+
 impl<T: TagBlockFn + PartialEq> PartialEq for Reflexive<T> {
     fn eq(&self, rhs: &Self) -> bool {
         self.blocks == rhs.blocks
@@ -385,5 +412,12 @@ impl<T: TagBlockFn> Index<usize> for Reflexive<T> {
 impl<T: TagBlockFn> IndexMut<usize> for Reflexive<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.blocks[index]
+    }
+}
+
+impl<T: TagBlockFn> Reflexive<T> {
+    /// Construct a new `Reflexive` with a vector of blocks.
+    pub fn new(vec: Vec<T>) -> Reflexive<T> {
+        Reflexive { blocks: vec }
     }
 }
