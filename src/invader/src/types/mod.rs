@@ -270,34 +270,39 @@ impl<T: TagGroupFn> TagReference<T> {
     ///
     /// If the path is invalid for a `TagReference`, an [`Err`] is returned.
     pub fn set_path_without_extension(&mut self, path: &str) -> ErrorMessageResult<()> {
-        let mut new_path = path.to_owned();
+        let mut new_path = path.as_bytes().to_owned();
 
-        // Paths must be ASCII
-        if !new_path.is_ascii() {
-            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_not_ascii"), new_path=new_path)))
+        for c in &mut new_path {
+            let character = *c as char;
+
+            // Allow any lowercase characters or numeric characters
+            if character.is_ascii_lowercase() || character.is_ascii_digit() {
+                continue;
+            }
+
+            // Make uppercase characters lowercase
+            else if character.is_ascii_uppercase() {
+                *c = c.to_ascii_lowercase();
+            }
+
+            // Convert path separators
+            else if character == std::path::MAIN_SEPARATOR || character == '\\' || character == '/' {
+                *c = '\\' as u8;
+            }
+
+            // Ban non-ascii
+            else if !character.is_ascii() {
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_not_ascii"), new_path=path)))
+            }
+
+            // Ban these characters
+            else if ['<', '>', ':', '"', '/', '|', '?', '*'].contains(&character) {
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_has_restricted_character"), new_path=path, character=character)))
+            }
         }
-
-        // Replace native path separators with Windows path separators
-        if std::path::MAIN_SEPARATOR != '\\' {
-            new_path = new_path.replace(std::path::MAIN_SEPARATOR, "\\");
-        }
-
-        // If the native path separator is not a forward slash, also replace forward slashes.
-        if std::path::MAIN_SEPARATOR != '/' {
-            new_path = new_path.replace('/', "\\");
-        }
-
-        // Check for forbidden characters
-        let restricted_characters = ['<', '>', ':', '"', '/', '|', '?', '*'];
-        if let Some(n) = new_path.find(&restricted_characters[..]) {
-            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_has_restricted_character"), new_path=new_path, character=new_path.as_bytes()[n])))
-        }
-
-        // Make it lowercase
-        new_path.make_ascii_lowercase();
 
         // Set it
-        self.path = new_path;
+        self.path = String::from_utf8(new_path).unwrap();
 
         Ok(())
     }
@@ -311,13 +316,13 @@ impl<T: TagGroupFn> TagReference<T> {
             None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_missing_extension"), path=path)))
         };
 
-        let potential_group = &path[pos+1..];
-        let group = match T::from_str(potential_group) {
+        let (path_without_group, extension) = path.split_at(pos);
+        let group = match T::from_str(&extension[1..]) {
             Some(n) => n,
-            None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_group_invalid"), potential_group=potential_group)))
+            None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_group_invalid"), potential_group=extension)))
         };
 
-        TagReference::from_path_and_group(&path[..pos], group)
+        TagReference::from_path_and_group(path_without_group, group)
     }
 
     /// Create a `TagReference` from a path and group.

@@ -1,6 +1,9 @@
 extern crate strings;
 extern crate invader_macros;
 
+#[cfg(target_os = "windows")]
+extern crate windows;
+
 pub mod error;
 pub mod cmd;
 pub mod crc;

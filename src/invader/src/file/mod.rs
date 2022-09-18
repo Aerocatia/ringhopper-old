@@ -50,6 +50,107 @@ pub struct TagFile {
     pub file_path: PathBuf
 }
 
+#[cfg(target_os = "windows")]
+fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit: usize, results: &mut Vec<TagFile>) -> ErrorMessageResult<()> {
+    use windows::Win32::Storage::FileSystem::*;
+    use windows::Win32::Foundation::CHAR;
+    use windows::core::PCSTR;
+
+    if recursion_limit == 0 {
+        return Err(ErrorMessage::StaticString(get_compiled_string!("file.error_reading_virtual_tags_directory")))
+    }
+
+    let mut find_data = WIN32_FIND_DATAA::default();
+    let path_str = directory.to_str().unwrap();
+    let mut path_bytes = Vec::<u8>::new();
+    path_bytes.reserve_exact(path_str.len() + 3);
+    path_bytes.extend_from_slice(path_str.as_bytes());
+    path_bytes.extend_from_slice(b"\\*\x00");
+
+    if let Ok(file) = unsafe { FindFirstFileA(PCSTR(path_bytes.as_ptr()), &mut find_data) } {
+        // Do it!
+        let result = (|| {
+            loop {
+                let file_name_str_slice = unsafe { &*std::ptr::slice_from_raw_parts(&find_data.cFileName as *const CHAR as *const u8, find_data.cFileName.len()) };
+                let mut file_name_str_len = 0usize;
+                for &c in file_name_str_slice {
+                    if c == 0 {
+                        break;
+                    }
+                    file_name_str_len += 1;
+                }
+                let file_name_str = unsafe { std::str::from_utf8_unchecked(&file_name_str_slice[..file_name_str_len]) };
+
+                if file_name_str != "." && file_name_str != ".." {
+                    let file_path = directory.join(file_name_str);
+                    if find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY.0 != 0 {
+                        iterate_recursively(base_directory, &file_path, recursion_limit - 1, results)?;
+                    }
+                    else {
+                        let relative_path = file_path.strip_prefix(base_directory).unwrap();
+                        let path_str = match relative_path.to_str() {
+                            Some(n) => n,
+                            None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_non_utf8_path"), path=relative_path.to_string_lossy())))
+                        };
+                        match TagReference::from_path_with_extension(path_str) {
+                            Ok(tag_path) => results.push(TagFile { tag_path, file_path }),
+                            Err(_) => ()
+                        }
+                    }
+                }
+                if unsafe { !FindNextFileA(file, &mut find_data) }.as_bool() {
+                    break;
+                }
+            }
+            Ok(())
+        })();
+
+        // Close the handle
+        unsafe { FindClose(file); }
+
+        // If this failed, exit the function with an error.
+        result?;
+    }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit: usize, results: &mut Vec<TagFile>) -> ErrorMessageResult<()> {
+    if recursion_limit == 0 {
+        return Err(ErrorMessage::StaticString(get_compiled_string!("file.error_reading_virtual_tags_directory")))
+    }
+
+    let iterator = match std::fs::read_dir(directory) {
+        Ok(n) => n,
+        Err(e) => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_iterating_directory"), path=directory.to_string_lossy(), error=e)))
+    };
+
+    for i in iterator {
+        let file = match i {
+            Ok(n) => n,
+            Err(e) => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_iterating_directory"), path=directory.to_string_lossy(), error=e)))
+        };
+
+        let file_path = file.path();
+        if file_path.is_dir() {
+            iterate_recursively(base_directory, &file_path, recursion_limit - 1, results)?;
+        }
+        else if file_path.is_file() {
+            let relative_path = file_path.strip_prefix(base_directory).unwrap();
+            let path_str = match relative_path.to_str() {
+                Some(n) => n,
+                None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_non_utf8_path"), path=relative_path.to_string_lossy())))
+            };
+            match TagReference::from_path_with_extension(path_str) {
+                Ok(tag_path) => results.push(TagFile { tag_path, file_path }),
+                Err(_) => continue
+            }
+        }
+    }
+    Ok(())
+}
+
 impl TagFile {
     /// Get all tags located in a virtual tags directory.
     pub fn from_virtual_tags_directory(tags_directories: &[&Path]) -> ErrorMessageResult<Vec<TagFile>> {
@@ -62,40 +163,6 @@ impl TagFile {
         let tag_dir_count = tags_directories.len();
         for i in 0..tag_dir_count {
             let dir = tags_directories[i].to_owned();
-            fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit: usize, results: &mut Vec<TagFile>) -> ErrorMessageResult<()> {
-                if recursion_limit == 0 {
-                    return Err(ErrorMessage::StaticString(get_compiled_string!("file.error_reading_virtual_tags_directory")))
-                }
-
-                let iterator = match std::fs::read_dir(directory) {
-                    Ok(n) => n,
-                    Err(e) => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_iterating_directory"), path=directory.to_string_lossy(), error=e)))
-                };
-
-                for i in iterator {
-                    let file = match i {
-                        Ok(n) => n,
-                        Err(e) => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_iterating_directory"), path=directory.to_string_lossy(), error=e)))
-                    };
-
-                    let file_path = file.path();
-                    if file_path.is_dir() {
-                        iterate_recursively(base_directory, &file_path, recursion_limit - 1, results)?;
-                    }
-                    else if file_path.is_file() {
-                        let relative_path = file_path.strip_prefix(base_directory).unwrap();
-                        let path_str = match relative_path.to_str() {
-                            Some(n) => n,
-                            None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_non_utf8_path"), path=relative_path.to_string_lossy())))
-                        };
-                        match TagReference::from_path_with_extension(path_str) {
-                            Ok(tag_path) => results.push(TagFile { tag_path, file_path }),
-                            Err(_) => continue
-                        }
-                    }
-                }
-                Ok(())
-            }
 
             let mut vec = Vec::new();
             results.push(iterate_recursively(&dir, &dir, 128, &mut vec).map(|_| vec))
