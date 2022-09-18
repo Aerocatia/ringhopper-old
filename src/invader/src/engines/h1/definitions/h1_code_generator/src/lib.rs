@@ -280,25 +280,41 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                         let mut groups = Vec::<String>::new();
 
                         for g in groups_arr {
-                            let group = g.as_str().unwrap();
-                            let mut appended_group = match group {
-                                "unit" => vec!["biped".to_owned(), "vehicle".to_owned()],
-                                "item" => vec!["weapon".to_owned(), "equipment".to_owned(), "garbage".to_owned()],
-                                "model" => vec!["gbxmodel".to_owned(), "model".to_owned()],
-                                "shader" => vec![
-                                    "shader_environment".to_owned(),
-                                    "shader_model".to_owned(),
-                                    "shader_transparent_chicago_extended".to_owned(),
-                                    "shader_transparent_chicago".to_owned(),
-                                    "shader_transparent_generic".to_owned(),
-                                    "shader_transparent_glass".to_owned(),
-                                    "shader_transparent_meter".to_owned(),
-                                    "shader_transparent_plasma".to_owned(),
-                                    "shader_transparent_water".to_owned()
+                            let appended_group: &'static [&'static str] = match g.as_str().unwrap() {
+                                "unit"   => &["biped", "vehicle"],
+                                "item"   => &["weapon", "equipment", "garbage"],
+                                "device" => &["device_machine", "device_light_fixture", "device_control"],
+                                "object" => &["biped", "vehicle",
+                                              "weapon", "equipment", "garbage",
+                                              "scenery",
+                                              "device_machine", "device_light_fixture", "device_control",
+                                              "placeholder",
+                                              "sound_scenery"],
+
+                                "model"  => &["gbxmodel", "model"],
+
+                                "shader" => &[
+                                    "shader_environment",
+                                    "shader_model",
+                                    "shader_transparent_chicago_extended",
+                                    "shader_transparent_chicago",
+                                    "shader_transparent_generic",
+                                    "shader_transparent_glass",
+                                    "shader_transparent_meter",
+                                    "shader_transparent_plasma",
+                                    "shader_transparent_water"
                                 ],
-                                n => vec![n.to_owned()]
+
+                                n => {
+                                    groups.push(n.to_owned());
+                                    &[]
+                                }
                             };
-                            groups.append(&mut appended_group);
+
+                            groups.reserve(appended_group.len());
+                            for &i in appended_group {
+                                groups.push(i.to_owned());
+                            }
                         }
 
                         groups.dedup();
@@ -325,8 +341,12 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                             doc += "\n";
                         }
 
+                        // Allow default_group to be specified
                         let default_group = if groups == ["*"] {
                             "TagCollection".to_owned()
+                        }
+                        else if groups_arr[0].as_str().unwrap() == "model" {
+                            "Model".to_owned()
                         }
                         else {
                             tag_group_extension_to_struct(&groups[0])
