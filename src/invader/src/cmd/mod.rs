@@ -3,7 +3,7 @@
 use std::process::ExitCode;
 use crate::engines;
 use engines::EngineModuleFn;
-use terminal::*;
+use invader_macros::terminal::*;
 
 use strings::get_compiled_string;
 
@@ -64,7 +64,17 @@ pub fn main_fn<E: EngineModuleFn>(engine: &E) -> ExitCode {
     // Try to match an argument then!
     else if let Some(v) = verb::Verb::from_input(args_ref[1]) {
         if let Some(f) = engine.get_verb_function(v) {
-            f(&v, &args_ref[2..], &format!("{} {}", args_ref[0], v.get_name()))
+            match f(&v, &args_ref[2..], &format!("{} {}", args_ref[0], v.get_name())) {
+                Ok(n) => n,
+                Err(e) => {
+                    let string = e.to_string();
+                    if !string.is_empty() {
+                        eprintln_error_pre!("{string}");
+                    }
+
+                    ExitCode::FAILURE
+                }
+            }
         }
         else {
             eprintln_error_pre!(get_compiled_string!("command_usage.error_verb_unsupported"), verb=v.get_name());

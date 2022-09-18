@@ -35,8 +35,8 @@ fn argument_parsing() {
     assert_eq!(&["some arg", "another arg", "one more arg"], &result.named.get("cool-arg").unwrap()[..]);
 
     // If we forget the parameter for one and it doesn't work
-    assert!(ParsedArguments::parse_arguments(&["--an-arg", "some arg", "--boring-arg", "--cool-arg"], &test_arguments, &[], "", "", ArgumentConstraints::new()).is_none());
-    assert!(ParsedArguments::parse_arguments(&["-abc", "some arg"], &test_arguments, &[], "", "", ArgumentConstraints::new()).is_none());
+    assert!(ParsedArguments::parse_arguments(&["--an-arg", "some arg", "--boring-arg", "--cool-arg"], &test_arguments, &[], "", "", ArgumentConstraints::new()).is_err());
+    assert!(ParsedArguments::parse_arguments(&["-abc", "some arg"], &test_arguments, &[], "", "", ArgumentConstraints::new()).is_err());
 
     // If we forget the parameter for one and it works (be careful!)
     let result = ParsedArguments::parse_arguments(&["--an-arg", "--boring-arg", "--cool-arg", "another arg"], &test_arguments, &[], "", "", ArgumentConstraints::new()).unwrap();
@@ -49,10 +49,10 @@ fn argument_parsing() {
     assert_eq!("hello", result.extra[0]);
 
     // Extra arguments cannot start with hyphens.
-    assert!(ParsedArguments::parse_arguments(&["-"], &test_arguments, &["extra"], "", "", ArgumentConstraints::new()).is_none());
-    assert!(ParsedArguments::parse_arguments(&["--"], &test_arguments, &["extra"], "", "", ArgumentConstraints::new()).is_none());
-    assert!(ParsedArguments::parse_arguments(&["-a"], &test_arguments, &["extra"], "", "", ArgumentConstraints::new()).is_none());
-    assert!(ParsedArguments::parse_arguments(&["--a"], &test_arguments, &["extra"], "", "", ArgumentConstraints::new()).is_none());
+    assert!(ParsedArguments::parse_arguments(&["-"], &test_arguments, &["extra"], "", "", ArgumentConstraints::new()).is_err());
+    assert!(ParsedArguments::parse_arguments(&["--"], &test_arguments, &["extra"], "", "", ArgumentConstraints::new()).is_err());
+    assert!(ParsedArguments::parse_arguments(&["-a"], &test_arguments, &["extra"], "", "", ArgumentConstraints::new()).is_err());
+    assert!(ParsedArguments::parse_arguments(&["--a"], &test_arguments, &["extra"], "", "", ArgumentConstraints::new()).is_err());
 
     // Extra arguments do not care about position.
     let result = ParsedArguments::parse_arguments(&["--an-arg", "some arg", "hello", "--boring-arg", "--cool-arg", "another arg"], &test_arguments, &["extra"], "", "", ArgumentConstraints::new()).unwrap();

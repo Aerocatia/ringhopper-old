@@ -13,7 +13,7 @@ use crate::types::tag::TagGroupFn;
 /// Read all bytes of a file.
 ///
 /// Return the bytes read or an error if failed.
-pub fn read_file(path: &Path) -> ErrorMessageResult<Vec<u8>> {
+pub(crate) fn read_file(path: &Path) -> ErrorMessageResult<Vec<u8>> {
     let mut file = match std::fs::File::open(path.to_owned()) {
         Ok(n) => n,
         Err(error) => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_opening_file_read"), error=error, file=path.display())))
@@ -29,7 +29,7 @@ pub fn read_file(path: &Path) -> ErrorMessageResult<Vec<u8>> {
 /// Write all bytes to a file, overwriting it.
 ///
 /// Return the bytes read or an error if failed.
-pub fn write_file(path: &Path, data: &[u8]) -> ErrorMessageResult<()> {
+pub(crate) fn write_file(path: &Path, data: &[u8]) -> ErrorMessageResult<()> {
     let mut file = match std::fs::File::create(path.to_owned()) {
         Ok(n) => n,
         Err(error) => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_opening_file_write"), error=error, file=path.display())))
@@ -41,8 +41,12 @@ pub fn write_file(path: &Path, data: &[u8]) -> ErrorMessageResult<()> {
     }
 }
 
+/// Struct used to associate a tag to a file.
 pub struct TagFile {
+    /// Internal tag path in the virtual tags directory.
     pub tag_path: TagReference,
+
+    /// Filesystem path.
     pub file_path: PathBuf
 }
 

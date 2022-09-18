@@ -1,10 +1,11 @@
 /// Argument parsing module.
 
-use terminal::*;
+use invader_macros::terminal::*;
 use std::collections::HashMap;
 use std::path::Path;
 
 use strings::get_compiled_string;
+use crate::error::*;
 
 #[cfg(test)]
 mod tests;
@@ -114,261 +115,240 @@ impl ParsedArguments {
     /// Parse the arguments from the input. The executable name/verb is put in usage_prefix.
     ///t
     /// The `data`, `tags`, and `maps` arguments will always be set to a default value if they are not provided here.
-    pub fn parse_arguments(input: &[&str], arguments: &[Argument], extra_arguments: &[&str], usage_prefix: &str, description: &str, constraints: ArgumentConstraints) -> Option<ParsedArguments> {
-        debug_assert!({
-            let argument_count = arguments.len();
-            for i in 0..argument_count {
-                for j in 0..i {
-                    assert_ne!(arguments[j].long, arguments[i].long, "{} conflicts with another argument {}'s long parameter", arguments[i].long, arguments[j].long);
-                    assert_ne!(arguments[j].short, arguments[i].short, "{} conflicts with another argument {}'s long parameter", arguments[i].long, arguments[j].long);
+    pub fn parse_arguments(input: &[&str], arguments: &[Argument], extra_arguments: &[&str], usage_prefix: &str, description: &str, constraints: ArgumentConstraints) -> ErrorMessageResult<ParsedArguments> {
+        (|| {
+            debug_assert!({
+                let argument_count = arguments.len();
+                for i in 0..argument_count {
+                    for j in 0..i {
+                        assert_ne!(arguments[j].long, arguments[i].long, "{} conflicts with another argument {}'s long parameter", arguments[i].long, arguments[j].long);
+                        assert_ne!(arguments[j].short, arguments[i].short, "{} conflicts with another argument {}'s long parameter", arguments[i].long, arguments[j].long);
+                    }
+                    for s in STANDARD_ARGUMENTS {
+                        assert_ne!(s.long, arguments[i].long, "{} conflicts with standard argument {}'s long parameter", arguments[i].long, s.long);
+                        assert_ne!(s.short, arguments[i].short, "{} conflicts with standard argument {}'s short parameter", arguments[i].long, s.long);
+                    }
+                    assert!(!(arguments[i].parameter.is_none() && arguments[i].multiple), "{} takes no parameter but can be used multiple times", arguments[i].long);
                 }
-                for s in STANDARD_ARGUMENTS {
-                    assert_ne!(s.long, arguments[i].long, "{} conflicts with standard argument {}'s long parameter", arguments[i].long, s.long);
-                    assert_ne!(s.short, arguments[i].short, "{} conflicts with standard argument {}'s short parameter", arguments[i].long, s.long);
-                }
-                assert!(!(arguments[i].parameter.is_none() && arguments[i].multiple), "{} takes no parameter but can be used multiple times", arguments[i].long);
-            }
-            true
-        });
+                true
+            });
 
-        // Concatenate all arguments
-        let mut available_arguments = STANDARD_ARGUMENTS.to_vec();
-        available_arguments.retain(|n| {
-            !(n.short == 'o' && !constraints.overwrite)
+            // Concatenate all arguments
+            let mut available_arguments = STANDARD_ARGUMENTS.to_vec();
+            available_arguments.retain(|n| {
+                !(n.short == 'o' && !constraints.overwrite)
 
-            // note that we allow --data, --maps, and --tags in all verbs as these define important directories and might be passed in scripts, etc.,
-            // thus we can just ignore them if they aren't used
-        });
-        available_arguments.extend_from_slice(arguments);
+                // note that we allow --data, --maps, and --tags in all verbs as these define important directories and might be passed in scripts, etc.,
+                // thus we can just ignore them if they aren't used
+            });
+            available_arguments.extend_from_slice(arguments);
 
-        let mut parsed = ParsedArguments::default();
-        parsed.extra.reserve_exact(extra_arguments.len());
+            let mut parsed = ParsedArguments::default();
+            parsed.extra.reserve_exact(extra_arguments.len());
 
-        let mut input_index = 0usize;
-        while input_index < input.len() {
-            let input_param = input[input_index];
-            input_index += 1;
+            let mut input_index = 0usize;
+            while input_index < input.len() {
+                let input_param = input[input_index];
+                input_index += 1;
 
-            // Parameter?
-            if let Some('-') = input_param.chars().nth(0) {
-                let mut args_to_pass: Vec<Argument> = Vec::new();
+                // Parameter?
+                if let Some('-') = input_param.chars().nth(0) {
+                    let mut args_to_pass: Vec<Argument> = Vec::new();
 
-                match input_param.chars().nth(1) {
-                    // Long parameter? (e.g. --help or --tags)
-                    Some('-') => {
-                        args_to_pass.push(|a| -> Option<Argument> {
-                            for i in &available_arguments {
-                                if i.long == a {
-                                    return Some(i.to_owned());
-                                }
-                            }
-                            eprintln_error_pre!(get_compiled_string!("command_usage.error_argument_unknown"), prefix="--", arg=a);
-                            eprintln_error!(get_compiled_string!("arguments.error_use_help"));
-                            return None
-                        }(&input_param[2..])?);
-                        Some(())
-                    },
-
-                    // Short parameter? (e.g. -a or -abcd)
-                    Some(_) => {
-                        for c in (&input_param[1..]).chars() {
-                            args_to_pass.push(|a| -> Option<Argument> {
+                    match input_param.chars().nth(1) {
+                        // Long parameter? (e.g. --help or --tags)
+                        Some('-') => {
+                            args_to_pass.push(|a| -> ErrorMessageResult<Argument> {
                                 for i in &available_arguments {
-                                    if i.short == a {
-                                        return Some(i.to_owned());
+                                    if i.long == a {
+                                        return Ok(i.to_owned());
                                     }
                                 }
-                                eprintln_error_pre!(get_compiled_string!("command_usage.error_argument_unknown"), prefix="-", arg=a);
-                                eprintln_error!(get_compiled_string!("arguments.error_use_help"));
-                                return None
-                            }(c)?)
-                        }
-
-                        Some(())
-                    }
-
-                    // They just put "-" there?
-                    None => {
-                        eprintln_error_pre!(get_compiled_string!("command_usage.error_argument_unknown"), prefix="", arg=input_param);
-                        eprintln_error!(get_compiled_string!("arguments.error_use_help"));
-                        None
-                    }
-                }?;
-
-                for a in args_to_pass {
-                    // Check if we already have this
-                    let v = match parsed.named.get_mut(&a.long) {
-                        Some(n) => {
-                            if !a.multiple {
-                                eprintln_error_pre!(get_compiled_string!("command_usage.error_argument_only_usable_once"), arg=a.long);
-                                eprintln_error!(get_compiled_string!("arguments.error_use_help"));
-                                return None
-                            }
-                            n
+                                Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("command_usage.error_argument_unknown"), prefix="--", arg=a)))
+                            }(&input_param[2..])?);
+                            Ok(())
                         },
-                        None => {
-                            parsed.named.insert(a.long, Vec::new());
-                            parsed.named.get_mut(&a.long).unwrap()
-                        }
-                    };
 
-                    // We take a parameter but we don't have any left!
-                    if a.parameter.is_some() {
-                        if input_index == input.len() {
-                            eprintln_error_pre!(get_compiled_string!("command_usage.error_argument_takes_a_parameter"), arg=a.long);
-                            eprintln_error!(get_compiled_string!("arguments.error_use_help"));
-                            return None
-                        }
-                        v.push(input[input_index].to_owned());
-                        input_index += 1;
-                        continue;
-                    }
-                }
-            }
-
-            // OK
-            else {
-                // Did we hit the end?
-                if parsed.extra.len() == extra_arguments.len() {
-                    eprintln_error_pre!(get_compiled_string!("command_usage.error_argument_unexpected"), arg=input_param);
-                    eprintln_error!(get_compiled_string!("arguments.error_use_help"));
-                    return None
-                }
-
-                // No? Good!
-                parsed.extra.push(input_param.to_owned());
-            }
-        }
-
-        // Did we put --help? If so... yay.
-        if let Some(_) = parsed.named.get("help") {
-            print!(
-                "Usage: {usage_prefix} [options]{extra_arguments}\n\n{description}\n\nOptions:\n",
-                extra_arguments={
-                    match extra_arguments.len() {
-                        0 => String::new(),
-                        1 => format!(" <{}>", extra_arguments[0]),
-                        _ => {
-                            let mut a = String::new();
-
-                            for e in extra_arguments {
-                                a += &format!(" <{}>", e);
+                        // Short parameter? (e.g. -a or -abcd)
+                        Some(_) => {
+                            for c in (&input_param[1..]).chars() {
+                                args_to_pass.push(|a| -> ErrorMessageResult<Argument> {
+                                    for i in &available_arguments {
+                                        if i.short == a {
+                                            return Ok(i.to_owned());
+                                        }
+                                    }
+                                Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("command_usage.error_argument_unknown"), prefix="-", arg=a)))
+                                }(c)?)
                             }
 
-                            a
+                            Ok(())
+                        }
+
+                        // They just put "-" there?
+                        None => {
+                            Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("command_usage.error_argument_unknown"), prefix="", arg=input_param)))
+                        }
+                    }?;
+
+                    for a in args_to_pass {
+                        // Check if we already have this
+                        let v = match parsed.named.get_mut(&a.long) {
+                            Some(n) => {
+                                if !a.multiple {
+                                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("command_usage.error_argument_only_usable_once"), arg=a.long)));
+                                }
+                                n
+                            },
+                            None => {
+                                parsed.named.insert(a.long, Vec::new());
+                                parsed.named.get_mut(&a.long).unwrap()
+                            }
+                        };
+
+                        // We take a parameter but we don't have any left!
+                        if a.parameter.is_some() {
+                            if input_index == input.len() {
+                                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("command_usage.error_argument_takes_a_parameter"), arg=a.long)));
+                            }
+                            v.push(input[input_index].to_owned());
+                            input_index += 1;
+                            continue;
                         }
                     }
                 }
-            );
 
-            // Get all arguments and sort them.
-            available_arguments.sort_by(|a, b| {
-                a.short.partial_cmp(&b.short).unwrap()
-            });
+                // OK
+                else {
+                    // Did we hit the end?
+                    if parsed.extra.len() == extra_arguments.len() {
+                        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("command_usage.error_argument_unexpected"), arg=input_param)));
+                    }
 
-            // Hide --data, --maps, --tags if unused
-            available_arguments.retain(|n| {
-                !(n.short == 't' && (
-                    !constraints.needs_tags ||
-                    (n.description == get_compiled_string!("arguments.tags.description_multi") && !constraints.multiple_tags_directories) ||
-                    (n.description == get_compiled_string!("arguments.tags.description_single") && constraints.multiple_tags_directories)
-                )) &&
-                !(n.short == 'd' && !constraints.needs_data) &&
-                !(n.short == 'm' && !constraints.needs_maps)
-            });
-
-            let argument_width = 29;
-            let right_margin = 1;
-            let left_side = argument_width + right_margin;
-
-            for a in available_arguments {
-                // Print the short and long
-                print!("  -{}, --{}", a.short, a.long);
-                let mut current_position = 2 + (1 + 1 + 1) + 1 + (2 + a.long.len());
-
-                // Any argument?
-                if let Some(n) = a.parameter {
-                    print!(" <{}>", n);
-                    current_position += 1 + (1 + n.len() + 1);
-                }
-
-                // Did we overflow?
-                debug_assert!(current_position < (left_side - right_margin), "Left side for --{} overflowed!", a.long);
-
-                // Print it!
-                print_word_wrap(a.description, left_side, current_position, OutputType::Stdout);
-
-                // Done
-                println!();
-            }
-
-            return None
-        }
-
-        // Are we missing arguments?
-        if extra_arguments.len() > parsed.extra.len() {
-            eprintln_error_pre!(get_compiled_string!("command_usage.error_arguments_missing"));
-            for &e in extra_arguments {
-                eprintln_error!(" - {e}");
-            }
-            eprintln_error!(get_compiled_string!("arguments.error_use_help"));
-            return None
-        }
-
-        macro_rules! check_if_exists {
-            ($key:expr) => {
-                // Check if we supplied the directory. If not, add a default.
-                if !parsed.named.contains_key($key) {
-                    parsed.named.insert($key, vec![$key.to_owned()]);
-                }
-
-                // Now let's check if it exists.
-                let dir: &Path = Path::new(&parsed.named.get($key).unwrap()[0]);
-                if !dir.exists() {
-                    eprintln_error_pre!(get_compiled_string!("arguments.error_directory_missing"), dir=dir.display());
-                    eprintln_error!(get_compiled_string!("arguments.error_use_help"));
-                    return None;
-                }
-                if !dir.is_dir() {
-                    eprintln_error_pre!(get_compiled_string!("arguments.error_directory_not_directory"), dir=dir.display());
-                    eprintln_error!(get_compiled_string!("arguments.error_use_help"));
-                    return None;
+                    // No? Good!
+                    parsed.extra.push(input_param.to_owned());
                 }
             }
-        }
 
-        // Verify everything exists.
-        if constraints.needs_maps {
-            check_if_exists!("maps");
-        }
-        if constraints.needs_tags {
-            check_if_exists!("tags");
+            // Did we put --help? If so... yay.
+            if let Some(_) = parsed.named.get("help") {
+                print!(
+                    "Usage: {usage_prefix} [options]{extra_arguments}\n\n{description}\n\nOptions:\n",
+                    extra_arguments={
+                        match extra_arguments.len() {
+                            0 => String::new(),
+                            1 => format!(" <{}>", extra_arguments[0]),
+                            _ => {
+                                let mut a = String::new();
 
-            if !constraints.multiple_tags_directories {
-                let dm = parsed.named.get_mut("tags").unwrap();
-                if dm.len() > 1 {
-                    dm.resize(1, String::new());
-                    eprintln_warn_pre!(get_compiled_string!("command_usage.warning_only_one_tags_dir_supported"), dir=&dm[0]);
+                                for e in extra_arguments {
+                                    a += &format!(" <{}>", e);
+                                }
+
+                                a
+                            }
+                        }
+                    }
+                );
+
+                // Get all arguments and sort them.
+                available_arguments.sort_by(|a, b| {
+                    a.short.partial_cmp(&b.short).unwrap()
+                });
+
+                // Hide --data, --maps, --tags if unused
+                available_arguments.retain(|n| {
+                    !(n.short == 't' && (
+                        !constraints.needs_tags ||
+                        (n.description == get_compiled_string!("arguments.tags.description_multi") && !constraints.multiple_tags_directories) ||
+                        (n.description == get_compiled_string!("arguments.tags.description_single") && constraints.multiple_tags_directories)
+                    )) &&
+                    !(n.short == 'd' && !constraints.needs_data) &&
+                    !(n.short == 'm' && !constraints.needs_maps)
+                });
+
+                let argument_width = 29;
+                let right_margin = 1;
+                let left_side = argument_width + right_margin;
+
+                for a in available_arguments {
+                    // Print the short and long
+                    print!("  -{}, --{}", a.short, a.long);
+                    let mut current_position = 2 + (1 + 1 + 1) + 1 + (2 + a.long.len());
+
+                    // Any argument?
+                    if let Some(n) = a.parameter {
+                        print!(" <{}>", n);
+                        current_position += 1 + (1 + n.len() + 1);
+                    }
+
+                    // Did we overflow?
+                    debug_assert!(current_position < (left_side - right_margin), "Left side for --{} overflowed!", a.long);
+
+                    // Print it!
+                    print_word_wrap(a.description, left_side, current_position, OutputType::Stdout);
+
+                    // Done
+                    println!();
+                }
+
+                return Err(ErrorMessage::StaticString(""));
+            }
+
+            // Are we missing arguments?
+            if extra_arguments.len() > parsed.extra.len() {
+                let mut missing_things = get_compiled_string!("command_usage.error_arguments_missing").to_owned();
+                for &e in extra_arguments {
+                    missing_things += &format!("\n - {e}");
+                }
+                return Err(ErrorMessage::AllocatedString(missing_things));
+            }
+
+            macro_rules! check_if_exists {
+                ($key:expr) => {
+                    // Check if we supplied the directory. If not, add a default.
+                    if !parsed.named.contains_key($key) {
+                        parsed.named.insert($key, vec![$key.to_owned()]);
+                    }
+
+                    // Now let's check if it exists.
+                    let dir: &Path = Path::new(&parsed.named.get($key).unwrap()[0]);
+                    if !dir.exists() {
+                        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("arguments.error_directory_missing"), dir=dir.display())));
+                    }
+                    if !dir.is_dir() {
+                        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("arguments.error_directory_not_directory"), dir=dir.display())));
+                    }
                 }
             }
-        }
-        if constraints.needs_data {
-            check_if_exists!("data");
-        }
 
-        Some(parsed)
+            // Verify everything exists.
+            if constraints.needs_maps {
+                check_if_exists!("maps");
+            }
+            if constraints.needs_tags {
+                check_if_exists!("tags");
+
+                if !constraints.multiple_tags_directories {
+                    let dm = parsed.named.get_mut("tags").unwrap();
+                    if dm.len() > 1 {
+                        dm.resize(1, String::new());
+                        eprintln_warn_pre!(get_compiled_string!("command_usage.warning_only_one_tags_dir_supported"), dir=&dm[0]);
+                    }
+                }
+            }
+            if constraints.needs_data {
+                check_if_exists!("data");
+            }
+
+            Ok(parsed)
+        })().map_err(|e| {
+            if e == ErrorMessage::StaticString("") { // empty error message (used with --help so we don't print extra text)
+                e
+            }
+            else {
+                ErrorMessage::AllocatedString(format!("{e}\n{help}", help=get_compiled_string!("arguments.error_use_help")))
+            }
+        })
     }
 }
-
-#[macro_export]
-/// Attempt to parse the arguments, returning [None] on failure.
-macro_rules! try_parse_arguments {
-    ($input:expr, $arguments:expr, $extra_arguments:expr, $usage_prefix:expr, $description:expr, $constraints:expr) => {
-        match ParsedArguments::parse_arguments($input, $arguments, $extra_arguments, $usage_prefix, $description, $constraints) {
-            Some(n) => n,
-            None => return std::process::ExitCode::from(1)
-        }
-    }
-}
-
-pub use try_parse_arguments;

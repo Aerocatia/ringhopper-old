@@ -3,9 +3,10 @@
 pub mod h1;
 use std::process::ExitCode;
 use crate::cmd::Verb;
+use crate::error::ErrorMessageResult;
 
 /// Execute the verb with the given arguments, returning the exit code.
-pub type VerbFn = fn (verb: &Verb, args: &[&str], executable: &str) -> ExitCode;
+pub type VerbFn = fn (verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode>;
 
 /// Engine modules define engines supported by the driver.
 #[allow(unused)]

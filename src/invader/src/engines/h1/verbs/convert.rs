@@ -5,7 +5,7 @@ use crate::engines::h1::TagGroup;
 use crate::engines::h1::definitions::*;
 use crate::error::ErrorMessage;
 use crate::file::*;
-use crate::terminal::*;
+use invader_macros::terminal::*;
 use crate::error::ErrorMessageResult;
 use crate::engines::h1::{TagFileSerializeFn, ObjectSuperFn, ItemSuperFn, UnitSuperFn, DeviceSuperFn};
 use crate::types::tag::TagGroupFn;
@@ -115,8 +115,8 @@ fn convert_tag(path: &std::path::Path, output_group: TagGroup, overwrite: bool) 
     Ok(true)
 }
 
-pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ExitCode {
-    let parsed_args = try_parse_arguments!(args, &[], &[get_compiled_string!("arguments.specifier.tag_batch_with_group"), "new-group"], executable, verb.get_description(), ArgumentConstraints::new().needs_tags().multiple_tags_directories().can_overwrite());
+pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode> {
+    let parsed_args = ParsedArguments::parse_arguments(args, &[], &[get_compiled_string!("arguments.specifier.tag_batch_with_group"), "new-group"], executable, verb.get_description(), ArgumentConstraints::new().needs_tags().multiple_tags_directories().can_overwrite())?;
 
     let overwrite = parsed_args.named.get("overwrite").is_some();
 
@@ -128,8 +128,7 @@ pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ExitCode {
     let group = match TagGroup::from_str(&parsed_args.extra[1]) {
         Some(n) => n,
         None => {
-            eprintln_error!(get_compiled_string!("engine.types.error_path_group_invalid"), potential_group=parsed_args.extra[1]);
-            return ExitCode::FAILURE;
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_group_invalid"), potential_group=parsed_args.extra[1])));
         }
     };
 
@@ -153,19 +152,17 @@ pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ExitCode {
     }
 
     if total == 0 {
-        eprintln_error_pre!(get_compiled_string!("file.error_no_tags_found"));
-        ExitCode::FAILURE
+        Err(ErrorMessage::StaticString(get_compiled_string!("file.error_no_tags_found")))
     }
     else if count == 0 {
-        eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.convert.error_no_tags_converted"), total=total - converted);
-        ExitCode::FAILURE
+        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.convert.error_no_tags_converted"), total=total - converted)))
     }
     else if count != total {
         println_warn!(get_compiled_string!("engine.h1.verbs.convert.converted_some_tags"), count=converted, total=total);
-        ExitCode::FAILURE
+        Ok(ExitCode::FAILURE)
     }
     else {
         println_success!(get_compiled_string!("engine.h1.verbs.convert.converted_all_tags"), count=converted);
-        ExitCode::SUCCESS
+        Ok(ExitCode::SUCCESS)
     }
 }

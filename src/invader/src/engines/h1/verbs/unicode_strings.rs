@@ -4,8 +4,9 @@ use crate::engines::h1::definitions::{UnicodeStringList, UnicodeStringListString
 use crate::engines::h1::types::TagGroup;
 use crate::engines::h1::ParsedTagFile;
 use crate::cmd::*;
-use crate::terminal::*;
+use invader_macros::terminal::*;
 use crate::file::*;
+use crate::error::{ErrorMessage, ErrorMessageResult};
 use strings::get_compiled_string;
 
 extern crate encoding;
@@ -13,19 +14,18 @@ use self::encoding::{Encoding, EncoderTrap};
 use self::encoding::all::WINDOWS_1252;
 use std::ffi::CString;
 
-pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> ExitCode {
-    let parsed_args = try_parse_arguments!(args, &[], &[get_compiled_string!("arguments.specifier.tag_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags());
+pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode> {
+    let parsed_args = ParsedArguments::parse_arguments(args, &[], &[get_compiled_string!("arguments.specifier.tag_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags())?;
 
     let tags = Path::new(&parsed_args.named.get("tags").unwrap()[0]);
     let data = Path::new(&parsed_args.named.get("data").unwrap()[0]);
     let internal_path = &parsed_args.extra[0];
     let internal_path_path = Path::new(&internal_path).to_owned();
     let data_path = data.join(internal_path_path.clone()).with_extension("txt");
-    let file_data = resolve_error_message_result_or_exit!(read_file(&data_path));
+    let file_data = read_file(&data_path)?;
 
     if file_data.len() < 2 {
-        eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error="cannot determine encoding of input", file=data_path.display());
-        return ExitCode::FAILURE;
+        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error="cannot determine encoding of input", file=data_path.display())));
     }
 
     // If we're making regular 8-bit strings, parse as 1252
@@ -33,8 +33,7 @@ pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> Exi
         match WINDOWS_1252.decode(&file_data, encoding::DecoderTrap::Strict) {
             Ok(n) => n,
             Err(error) => {
-                eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display());
-                return ExitCode::FAILURE;
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display())));
             }
         }
     }
@@ -44,8 +43,7 @@ pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> Exi
         let mut string_data_as_16 = Vec::<u16>::new();
 
         if file_data.len() % 2 != 0 {
-            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error="invalid UTF-16 input", file=data_path.display());
-            return ExitCode::FAILURE;
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error="invalid UTF-16 input", file=data_path.display())));
         }
 
         // Get which function we need to use to read the bytes
@@ -68,8 +66,7 @@ pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> Exi
         match String::from_utf16(&string_data_as_16) {
             Ok(n) => n,
             Err(e) => {
-                eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=e, file=data_path.display());
-                return ExitCode::FAILURE;
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=e, file=data_path.display())));
             }
         }
     }
@@ -79,8 +76,7 @@ pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> Exi
         match std::str::from_utf8(&file_data) {
             Ok(n) => n.to_owned(),
             Err(error) => {
-                eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display());
-                return ExitCode::FAILURE;
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display())));
             }
         }
     };
@@ -106,15 +102,13 @@ pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> Exi
 
     // If we started a string without an ###END-STRING### to close it, this is an error.
     if current_string.is_some() {
-        eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_missing_end_string"));
-        return ExitCode::FAILURE;
+        return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.unicode-strings.error_missing_end_string")));
     }
 
     match std::fs::create_dir_all(tags.parent().unwrap()) {
         Ok(_) => (),
         Err(error) => {
-            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_creating_directories"), error=error, dirs=tags.parent().unwrap().display());
-            return ExitCode::FAILURE;
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_creating_directories"), error=error, dirs=tags.parent().unwrap().display())));
         }
     }
 
@@ -148,8 +142,7 @@ pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> Exi
                         match WINDOWS_1252.encode(&s, EncoderTrap::Strict) {
                             Ok(n) => n,
                             Err(e) => {
-                                eprintln_error_pre!(get_compiled_string!("engine.types.error_string_unable_to_encode_into_1252"), error=e);
-                                return ExitCode::FAILURE;
+                                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_string_unable_to_encode_into_1252"), error=e)));
                             }
                         }
                     ).unwrap().into_bytes_with_nul()
@@ -159,17 +152,10 @@ pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> Exi
         _ => unreachable!()
     }
 
-    let output_tag = match ParsedTagFile::into_tag(&list, group_to_output) {
-        Ok(n) => n,
-        Err(e) => {
-            eprintln!("{}", e);
-            return ExitCode::FAILURE;
-        }
-    };
-
+    let output_tag = ParsedTagFile::into_tag(&list, group_to_output)?;
     let tag_path = tags.join(internal_path_path.clone()).with_extension(group_to_output.to_string());
-    resolve_error_message_result_or_exit!(write_file(&tag_path, &output_tag));
+    write_file(&tag_path, &output_tag)?;
 
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=tag_path.display());
-    ExitCode::SUCCESS
+    Ok(ExitCode::SUCCESS)
 }

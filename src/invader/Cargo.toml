@@ -12,6 +12,7 @@ doc = true
 strings = { path = "../strings" }
 encoding = "0.2"
 h1_code_generator = { path = "src/engines/h1/definitions/h1_code_generator" }
+invader_macros = { path = "src/invader_macros" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
