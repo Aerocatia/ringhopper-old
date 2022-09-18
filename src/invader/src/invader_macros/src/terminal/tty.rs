@@ -48,7 +48,7 @@ impl TTYMetadata {
 
                 let mut w = Console::CONSOLE_SCREEN_BUFFER_INFO::default();
                 let handle = unsafe { Console::GetStdHandle(match output { OutputType::Stdout => Console::STD_OUTPUT_HANDLE, OutputType::Stderr => Console::STD_ERROR_HANDLE }).unwrap() };
-                let is_terminal = unsafe { Console::GetConsoleScreenBufferInfo(handle, &mut w as *mut Console::CONSOLE_SCREEN_BUFFER_INFO) }.as_bool();
+                let is_terminal = unsafe { Console::GetConsoleScreenBufferInfo(handle, &mut w) }.as_bool();
 
                 if !is_terminal {
                     return None
@@ -56,7 +56,7 @@ impl TTYMetadata {
 
                 // Now check if color is supported
                 let mut console_mode = Console::CONSOLE_MODE::default();
-                let color_support = if unsafe { Console::GetConsoleMode(handle, &mut console_mode as *mut Console::CONSOLE_MODE).as_bool() } {
+                let color_support = if unsafe { Console::GetConsoleMode(handle, &mut console_mode).as_bool() } {
                     if (console_mode & Console::ENABLE_VIRTUAL_TERMINAL_PROCESSING).0 != 0 {
                         // We already have color support
                         true

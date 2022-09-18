@@ -18,7 +18,7 @@ invader_macros = { path = "src/invader_macros" }
 libc = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies.windows]
-version = "0.39"
+version = "0.40"
 features = [
     "Win32_Foundation",
     "Win32_Storage_FileSystem"

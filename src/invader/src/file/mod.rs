@@ -50,8 +50,11 @@ pub struct TagFile {
     pub file_path: PathBuf
 }
 
+/// Iterate a directory recursively for tags.
 #[cfg(target_os = "windows")]
 fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit: usize, results: &mut Vec<TagFile>) -> ErrorMessageResult<()> {
+    // This version uses the Win32 API directly. This is drastically faster than Rust's [`std::fs`] functions on Windows, although note that some unsafe code is needed to do this.
+
     use windows::Win32::Storage::FileSystem::*;
     use windows::Win32::Foundation::CHAR;
     use windows::core::PCSTR;
@@ -115,8 +118,11 @@ fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit:
     Ok(())
 }
 
+/// Iterate a directory recursively for tags.
 #[cfg(not(target_os = "windows"))]
 fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit: usize, results: &mut Vec<TagFile>) -> ErrorMessageResult<()> {
+    // This version uses the [`std::fs`] module and is cross-platform, but there is a separate implementation just for Windows for better performance.
+
     if recursion_limit == 0 {
         return Err(ErrorMessage::StaticString(get_compiled_string!("file.error_reading_virtual_tags_directory")))
     }
