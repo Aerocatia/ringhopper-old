@@ -31,7 +31,7 @@ impl EngineModuleFn for HaloCE {
             Verb::Collection => Some(collection::collection_verb),
             Verb::Convert => Some(convert::convert_verb),
             Verb::Strip => Some(strip::strip_verb),
-            Verb::Strings => Some(strings::strings_verb),
+            Verb::Strings => Some(unicode_strings::unicode_strings_verb),
             Verb::UnicodeStrings => Some(unicode_strings::unicode_strings_verb),
 
             _ => None
