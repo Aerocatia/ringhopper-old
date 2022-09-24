@@ -222,7 +222,7 @@ pub fn match_pattern(string: &str, pattern: &str) -> bool {
 /// Tag reference that describes a tag.
 ///
 /// For all functions that set a path, the path must be a valid path for Windows. The following characters are
-/// restricted:
+/// restricted by Windows:
 ///
 /// - `/`    (forward slash - will be replaced with `\`)
 /// - `<`    (less than)
@@ -235,13 +235,27 @@ pub fn match_pattern(string: &str, pattern: &str) -> bool {
 /// - `\x00` (null terminator for C strings)
 /// - Non ASCII characters
 ///
-/// If an invalid path is used, the string will not be written, and an [Err] will be returned with a message.
+/// In addition, these paths are not allowed:
+///
+/// - Paths consisting of only directory separators (e.g. `\\\\\.weapon`)
+///   - The HEK is inconsistent with how it handles these paths, and Invader removes paths that begin with path
+///     separators, thus these paths cannot be handled sanely.
+/// - Paths containing directories named `.` or `..`
+///   - While valid as paths, these present a security issue where files outside a tags directory can be referenced
+///     without a user creating symbolic links, mount points, etc., and they are less predictable for virtual tags
+///     directories. Invader supports using multiple tags directories simultaneously, so that feature should be used,
+///     instead.
 ///
 /// Also, all characters will be made lowercase, and the native path separator will be replaced with a backslash (`\`).
+/// Paths with consecutive directory separators will also have these separators deduped, and paths that start with a
+/// directory separator will have these separators removed.
+///
+/// If an invalid path is used, the string will not be written, and an [`Err`] will be returned with a message.
 ///
 /// Note that the [`to_string`](std::string::ToString::to_string) function and [`Display`](std::fmt::Display) will
 /// display native path separators. Use [`get_path_with_extension`](TagReference::get_path_with_extension) if you want
-/// to get a non-OS dependent path.
+/// to get a non-OS dependent path, or use [`get_path_without_extension`](TagReference::get_path_without_extension) if
+/// the extension is unneeded, as this avoids allocating a new string.
 #[derive(Clone, Default, PartialEq)]
 pub struct TagReference<T: TagGroupFn> {
     pub group: T,
