@@ -134,6 +134,7 @@ pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessag
 
     let mut count = 0usize;
     let mut converted = 0usize;
+    let mut error_count = 0usize;
     let total = tags.len();
     for i in tags {
         match convert_tag(&i.file_path, group, overwrite) {
@@ -147,7 +148,10 @@ pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessag
                 }
                 count += 1;
             },
-            Err(e) => eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.convert.error_could_not_convert_tag"), tag=i.tag_path, error=e)
+            Err(e) => {
+                eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.convert.error_could_not_convert_tag"), tag=i.tag_path, error=e);
+                error_count += 1;
+            }
         }
     }
 
@@ -155,10 +159,10 @@ pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessag
         Err(ErrorMessage::StaticString(get_compiled_string!("file.error_no_tags_found")))
     }
     else if count == 0 {
-        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.convert.error_no_tags_converted"), total=total - converted)))
+        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.convert.error_no_tags_converted"), error=error_count)))
     }
     else if count != total {
-        println_warn!(get_compiled_string!("engine.h1.verbs.convert.converted_some_tags"), count=converted, total=total);
+        println_warn!(get_compiled_string!("engine.h1.verbs.convert.converted_some_tags_with_errors"), count=converted, error=error_count);
         Ok(ExitCode::FAILURE)
     }
     else {

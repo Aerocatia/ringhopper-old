@@ -31,6 +31,7 @@ pub fn strip_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
 
     let mut count = 0usize;
     let mut processed = 0usize;
+    let mut error_count = 0usize;
     let total = tags.len();
     for i in tags {
         match strip_tag(&i.file_path) {
@@ -44,7 +45,10 @@ pub fn strip_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
                 }
                 count += 1;
             },
-            Err(e) => eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.strip.error_could_not_strip_tag"), tag=i.tag_path, error=e)
+            Err(e) => {
+                eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.strip.error_could_not_strip_tag"), tag=i.tag_path, error=e);
+                error_count += 1;
+            }
         }
     }
 
@@ -52,10 +56,10 @@ pub fn strip_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
         Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_no_tags_found"))))
     }
     else if count == 0 {
-        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.strip.error_no_tags_stripped"), total=total - processed)))
+        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.strip.error_no_tags_stripped"), error=error_count)))
     }
     else if count != total {
-        println_warn!(get_compiled_string!("engine.h1.verbs.strip.stripped_some_tags"), count=processed, total=total);
+        println_warn!(get_compiled_string!("engine.h1.verbs.strip.stripped_some_tags_with_errors"), count=processed, error=error_count);
         Ok(ExitCode::FAILURE)
     }
     else {

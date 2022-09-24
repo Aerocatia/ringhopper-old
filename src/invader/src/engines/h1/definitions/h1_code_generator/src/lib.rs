@@ -354,7 +354,7 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
 
                         // Default the group
                         if !cache_only {
-                            from_tag_code += &format!("if new_object.{field_name_written}.group == TagGroup::_None {{ new_object.{field_name_written}.group = TagGroup::{default_group}; }}");
+                            from_tag_code += &format!("if new_object.{field_name_written}.get_group() == TagGroup::_None {{ new_object.{field_name_written}.set_group(TagGroup::{default_group}); }}");
                         }
                     }
 

@@ -512,9 +512,10 @@ impl TagSerialize for TagReference {
 
         // current path
         let path = self.get_path_without_extension();
+        let group = self.get_group();
 
         // If it's empty, we do not need to write anything.
-        if self.group == TagGroup::_None && path.is_empty() {
+        if group == TagGroup::_None && path.is_empty() {
             return Ok(())
         }
 
@@ -522,7 +523,7 @@ impl TagSerialize for TagReference {
         (0xFFFFFFFFu32).into_tag(data, at + 0xC, struct_end)?;
 
         if path.is_empty() {
-            (self.group.as_fourcc()).into_tag(data, at + 0x0, struct_end)
+            (group.as_fourcc()).into_tag(data, at + 0x0, struct_end)
         }
         else {
             // internally this is stored as a 32-bit signed integer
@@ -534,7 +535,7 @@ impl TagSerialize for TagReference {
 
             data.extend_from_slice(path.as_bytes());
             data.push(0); // null terminator
-            (self.group.as_fourcc()).into_tag(data, at + 0x0, struct_end)?;
+            (group.as_fourcc()).into_tag(data, at + 0x0, struct_end)?;
             (path.len() as u32).into_tag(data, at + 0x8, struct_end)
         }
     }
@@ -571,9 +572,7 @@ impl TagSerialize for TagReference {
             }
         }
         else {
-            let mut result = TagReference::default();
-            result.group = TagGroup::from_fourcc(u32::from_tag(data, at + 0x0, struct_end, cursor)?).unwrap_or(TagGroup::_None);
-            Ok(result)
+            Ok(TagReference::from_path_and_group("", TagGroup::from_fourcc(u32::from_tag(data, at + 0x0, struct_end, cursor)?).unwrap_or(TagGroup::_None)).unwrap())
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::types::tag::*;
+use crate::types::*;
 
 #[derive(Default)]
 struct MyTagBlock {
@@ -198,4 +198,52 @@ fn test_access() {
     assert_eq!(Bounds { lower: 2, upper: 5 }, block.another_field[0].some_bounds);
     assert_eq!(Bounds { lower: 265, upper: 11 }, block.another_field[1].some_bounds);
     assert_eq!(Bounds { lower: 105, upper: 250 }, block.another_field[1].another_field[0].some_bounds);
+}
+
+#[test]
+fn test_tag_references() {
+    use crate::engines::h1::{TagReference, TagGroup};
+
+    // Paths with only slashes are banned
+    assert!(TagReference::from_full_path("\\.weapon").is_err());
+    assert!(TagReference::from_full_path("/.weapon").is_err());
+    assert!(TagReference::from_path_and_group("\\", TagGroup::Weapon).is_err());
+    assert!(TagReference::from_path_and_group("/", TagGroup::Weapon).is_err());
+
+    // Paths with "." and ".." directories are banned
+    assert!(TagReference::from_full_path("weapons\\..\\weapons\\tags\\pistol\\pistol.weapon").is_err());
+    assert!(TagReference::from_full_path("weapons\\.\\pistol\\pistol.weapon").is_err());
+    assert!(TagReference::from_full_path("weapons/../weapons/tags/pistol/pistol.weapon").is_err());
+    assert!(TagReference::from_full_path("weapons/./pistol/pistol.weapon").is_err());
+
+    // Invalid characters are banned
+    assert!(TagReference::from_full_path("weapons\\pistol\\pistol<.weapon").is_err());
+    assert!(TagReference::from_full_path("weapons\\pistol\\pistol>.weapon").is_err());
+    assert!(TagReference::from_full_path("weapons\\pistol\\pistol:.weapon").is_err());
+    assert!(TagReference::from_full_path("weapons\\pistol\\pistol\".weapon").is_err());
+    assert!(TagReference::from_full_path("weapons\\pistol\\pistol|.weapon").is_err());
+    assert!(TagReference::from_full_path("weapons\\pistol\\pistol?.weapon").is_err());
+    assert!(TagReference::from_full_path("weapons\\pistol\\pistol*.weapon").is_err());
+    assert!(TagReference::from_full_path("weapons\\pistol\\pistol\x00.weapon").is_err());
+
+    // Resolve consecutive slashes into single slashes
+    assert_eq!("weapons\\pistol\\pistol.weapon", TagReference::from_full_path("weapons//pistol\\\\pistol.weapon").unwrap().get_path_with_extension());
+    assert_eq!("weapons\\pistol\\pistol.weapon", TagReference::from_full_path("weapons/pistol/pistol.weapon").unwrap().get_path_with_extension());
+
+    // If a path starts with a slash, the slash is removed
+    assert_eq!("weapons\\pistol\\pistol.weapon", TagReference::from_full_path("\\weapons//pistol\\\\pistol.weapon").unwrap().get_path_with_extension());
+    assert_eq!("weapons\\pistol\\pistol.weapon", TagReference::from_full_path("/weapons/pistol/pistol.weapon").unwrap().get_path_with_extension());
+
+    // Uppercase characters are lowercased
+    assert_eq!("weapons\\pistol\\pistol.weapon", TagReference::from_full_path("WEAPONS\\PISTOL\\PISTOL.weapon").unwrap().get_path_with_extension());
+
+    // from_path_and_group and from_full_path produce the same result
+    assert_eq!(TagReference::from_full_path("weapons\\pistol\\pistol.weapon").unwrap(), TagReference::from_path_and_group("weapons\\pistol\\pistol", TagGroup::Weapon).unwrap());
+    assert_eq!(TagReference::from_full_path("weapons/pistol/pistol.weapon").unwrap(), TagReference::from_path_and_group("weapons/pistol/pistol", TagGroup::Weapon).unwrap());
+    assert_eq!(TagReference::from_full_path("weapons///pistol///pistol.weapon").unwrap(), TagReference::from_path_and_group("weapons///pistol///pistol", TagGroup::Weapon).unwrap());
+    assert_eq!(TagReference::from_full_path("\\weapons///pistol///pistol.weapon").unwrap(), TagReference::from_path_and_group("\\weapons///pistol///pistol", TagGroup::Weapon).unwrap());
+
+    // It's a weapon, right?
+    assert_eq!(TagGroup::Weapon, TagReference::from_path_and_group("weapons\\pistol\\pistol", TagGroup::Weapon).unwrap().get_group());
+    assert_eq!(TagGroup::Weapon, TagReference::from_full_path("weapons\\pistol\\pistol.weapon").unwrap().get_group());
 }

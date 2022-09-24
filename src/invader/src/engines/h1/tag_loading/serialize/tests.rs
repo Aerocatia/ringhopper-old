@@ -2,7 +2,6 @@ use engines::h1::definitions::{parse_tag_file, UnicodeStringList};
 use super::{TagSerialize, TagFileSerializeFn, ParsedTagFile};
 use crate::*;
 use crate::types::*;
-use crate::types::tag::*;
 use crate::error::*;
 
 const BYTES_NEGATIVE: [u8;4] = [0xBF, 0x80, 0x00, 0x00];
@@ -188,7 +187,7 @@ fn test_serialize_tag_reference() {
 
     // Is it correct?
     assert_eq!("weapons\\pistol\\pistol", data.get_path_without_extension());
-    assert_eq!(engines::h1::types::TagGroup::Weapon, data.group);
+    assert_eq!(engines::h1::types::TagGroup::Weapon, data.get_group());
 
     // Now convert it back into bytes and see what happens
     let mut v = Vec::new();

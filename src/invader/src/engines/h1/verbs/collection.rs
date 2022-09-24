@@ -24,7 +24,7 @@ fn make_collection_tag(file_data: &[u8], data_path: &Path) -> ErrorMessageResult
     for l in string.lines() {
         if l.is_empty() { continue }
         collection.tags.blocks.push(TagCollectionTag {
-            reference: TagReference::from_path_with_extension(l)?
+            reference: TagReference::from_full_path(l)?
         });
     }
 

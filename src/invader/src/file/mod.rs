@@ -95,7 +95,7 @@ fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit:
                             Some(n) => n,
                             None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_non_utf8_path"), path=relative_path.to_string_lossy())))
                         };
-                        match TagReference::from_path_with_extension(path_str) {
+                        match TagReference::from_full_path(path_str) {
                             Ok(tag_path) => results.push(TagFile { tag_path, file_path }),
                             Err(_) => ()
                         }
@@ -148,7 +148,7 @@ fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit:
                 Some(n) => n,
                 None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_non_utf8_path"), path=relative_path.to_string_lossy())))
             };
-            match TagReference::from_path_with_extension(path_str) {
+            match TagReference::from_full_path(path_str) {
                 Ok(tag_path) => results.push(TagFile { tag_path, file_path }),
                 Err(_) => continue
             }
@@ -235,7 +235,7 @@ impl TagFile {
 
         // Check if we don't actually need to do any batching.
         if !pattern.contains(&['*', '?']) {
-            let reference = TagReference::from_path_with_extension(&tag_path_to_search)?;
+            let reference = TagReference::from_full_path(&tag_path_to_search)?;
             return match TagFile::from_tag_ref(tags_directories, &reference) {
                 Some(n) => Ok(vec![n]),
                 None => Ok(vec![])
