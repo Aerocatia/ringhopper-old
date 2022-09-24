@@ -24,6 +24,11 @@ pub type FourCC = u32;
 /// A block of data that doesn't have any fields directly attributed to it.
 pub type Data = Vec<u8>;
 
+/// Halo directory separator used in tag paths.
+///
+/// This corresponds to a Windows path separator.
+pub const HALO_DIRECTORY_SEPARATOR: char = '\\';
+
 /// String with a maximum character length of 31 characters plus a null terminator.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct String32 {
@@ -172,7 +177,7 @@ fn match_pattern_bytes(string: &[u8], pattern: &[u8]) -> bool {
         let s = string[string_index] as char;
 
         // Match single character (? matches anything, / matches path separators)
-        if (p == s && p != '*') || p == '?' || ((p == '/' || p == '\\' || p == std::path::MAIN_SEPARATOR) && (s == '/' || s == '\\' || s == std::path::MAIN_SEPARATOR)) {
+        if (p == s && p != '*') || p == '?' || ((p == '/' || p == HALO_DIRECTORY_SEPARATOR || p == std::path::MAIN_SEPARATOR) && (s == '/' || s == HALO_DIRECTORY_SEPARATOR || s == std::path::MAIN_SEPARATOR)) {
             pattern_index += 1;
             string_index += 1;
         }
@@ -219,14 +224,15 @@ pub fn match_pattern(string: &str, pattern: &str) -> bool {
 /// For all functions that set a path, the path must be a valid path for Windows. The following characters are
 /// restricted:
 ///
-/// - `<` (less than)
-/// - `>` (greater than)
-/// - `:` (colon)
-/// - `"` (double quote)
-/// - `/` (forward slash - will be replaced with `\`)
-/// - `|` (vertical bar or pipe)
-/// - `?` (question mark)
-/// - `*` (asterisk)
+/// - `/`    (forward slash - will be replaced with `\`)
+/// - `<`    (less than)
+/// - `>`    (greater than)
+/// - `:`    (colon)
+/// - `"`    (double quote)
+/// - `|`    (vertical bar or pipe)
+/// - `?`    (question mark)
+/// - `*`    (asterisk)
+/// - `\x00` (null terminator for C strings)
 /// - Non ASCII characters
 ///
 /// If an invalid path is used, the string will not be written, and an [Err] will be returned with a message.
@@ -270,24 +276,51 @@ impl<T: TagGroupFn> TagReference<T> {
     ///
     /// If the path is invalid for a `TagReference`, an [`Err`] is returned.
     pub fn set_path_without_extension(&mut self, path: &str) -> ErrorMessageResult<()> {
-        let mut new_path = path.as_bytes().to_owned();
+        let path_bytes = path.as_bytes();
+        let mut new_path = String::new();
+        new_path.reserve(path_bytes.len());
 
-        for c in &mut new_path {
-            let character = *c as char;
+        let mut last_character = None;
+        for c in path.as_bytes() {
+            let mut character = *c as char;
 
             // Allow any lowercase characters or numeric characters
             if character.is_ascii_lowercase() || character.is_ascii_digit() {
-                continue;
+                ()
+            }
+
+            // Convert path separators
+            else if character == std::path::MAIN_SEPARATOR || character == HALO_DIRECTORY_SEPARATOR || character == '/' {
+                // Strip double path separators
+                if last_character == Some(HALO_DIRECTORY_SEPARATOR) {
+                    continue
+                }
+
+                // Strip leading path separator too
+                else if last_character == None {
+                    continue
+                }
+
+                // Also check that the last directory is not "." or ".."
+                else if new_path.ends_with("\\.") {
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_invalid_directory"), new_path=path, directory=".")))
+                }
+                else if new_path.ends_with("\\..") {
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_invalid_directory"), new_path=path, directory="..")))
+                }
+
+                // Otherwise, Halo uses backslashes as its path separator
+                character = HALO_DIRECTORY_SEPARATOR;
             }
 
             // Make uppercase characters lowercase
             else if character.is_ascii_uppercase() {
-                *c = c.to_ascii_lowercase();
+                character = character.to_ascii_lowercase();
             }
 
-            // Convert path separators
-            else if character == std::path::MAIN_SEPARATOR || character == '\\' || character == '/' {
-                *c = '\\' as u8;
+            // Ban these characters
+            else if ['<', '>', ':', '"', /*'/',*/ '|', '?', '*', '\x00'].contains(&character) {
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_has_restricted_character"), new_path=path, character=character)))
             }
 
             // Ban non-ascii
@@ -295,14 +328,25 @@ impl<T: TagGroupFn> TagReference<T> {
                 return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_not_ascii"), new_path=path)))
             }
 
-            // Ban these characters
-            else if ['<', '>', ':', '"', '/', '|', '?', '*'].contains(&character) {
-                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_has_restricted_character"), new_path=path, character=character)))
-            }
+            new_path.push(character);
+            last_character = Some(character);
+        }
+
+        // Check if the path starts with '.\' or '..\'
+        if new_path.starts_with(".\\") {
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_invalid_directory"), new_path=path, directory=".")))
+        }
+        else if new_path.starts_with("..\\") {
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_invalid_directory"), new_path=path, directory="..")))
+        }
+
+        // If the new path is empty, but we had text before that, we just broke the reference when we cleaned it, and this is an error.
+        if new_path.is_empty() && !path.is_empty() {
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_empty_when_non_empty"), new_path=path)));
         }
 
         // Set it
-        self.path = String::from_utf8(new_path).unwrap();
+        self.path = new_path;
 
         Ok(())
     }
@@ -346,7 +390,7 @@ impl<T: TagGroupFn> fmt::Display for TagReference<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         for c in self.path.chars() {
             let mut character = c;
-            if c == '\\' {
+            if c == HALO_DIRECTORY_SEPARATOR {
                 character = std::path::MAIN_SEPARATOR;
             }
             f.write_str(std::str::from_utf8(&[character as u8]).unwrap())?;

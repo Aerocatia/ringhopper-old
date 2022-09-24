@@ -68,8 +68,10 @@
     "engine.h1.types.serialize.error_path_not_utf8": "Path is not valid UTF-8.",
     "engine.h1.types.serialize.error_tag_leftover_data": "Tag contains leftover data and may be corrupt (0x{read:08X} / 0x{total:08X} bytes read).",
 
+    "engine.types.error_path_empty_when_non_empty": "Path \"{new_path}\" resolves to an empty path.",
     "engine.types.error_path_group_invalid": "Extension \"{potential_group}\" does not correspond to a tag group.",
     "engine.types.error_path_has_restricted_character": "Path \"{new_path}\" contains restricted character '{character}'.",
+    "engine.types.error_path_invalid_directory": "Path \"{new_path}\" contains an invalid directory \"{directory}\".",
     "engine.types.error_path_missing_extension": "Path \"{path}\" does not have a file extension.",
     "engine.types.error_path_not_ascii": "Path \"{new_path}\" is non-ASCII.",
     "engine.types.error_string_exceeds_limit": "String data exceeds {limit} bytes. {len} > {limit}",
