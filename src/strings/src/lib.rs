@@ -1,4 +1,4 @@
-/// Crate for getting strings used in Invader output.
+/// Crate for getting strings used in Ringhopper's output.
 ///
 /// These strings are compile-time and can be used in `format!`.
 

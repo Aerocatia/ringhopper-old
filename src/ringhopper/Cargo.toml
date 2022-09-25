@@ -1,0 +1,25 @@
+[package]
+name = "ringhopper"
+version = "0.1.0"
+description = "Library for modding Halo: Combat Evolved"
+license = "GPL-3.0-only"
+
+[lib]
+name = "ringhopper"
+doc = true
+
+[dependencies]
+strings = { path = "../strings" }
+macros = { path = "../macros" }
+encoding = "0.2"
+h1_code_generator = { path = "src/engines/h1/definitions/h1_code_generator" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "windows")'.dependencies.windows]
+version = "0.40"
+features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem"
+]

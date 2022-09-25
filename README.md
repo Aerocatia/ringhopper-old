@@ -8,6 +8,14 @@ Invader is licensed under version 3 of the GNU General Public License. See
 LICENSE.txt for more information.
 
 
+## Structure
+
+All source code is located in the `src` folder.
+
+- `src/invader` - Command line frontend
+- `src/ringhopper` - Rust library for modding Halo: Combat Evolved.
+
+
 ## Why is Invader being rewritten?
 
 Invader has become very difficult to maintain for me, and the original version

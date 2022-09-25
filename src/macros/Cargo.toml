@@ -1,0 +1,19 @@
+[package]
+name = "macros"
+version = "0.1.0"
+description = "Macros for Ringhopper"
+license = "GPL-3.0-only"
+
+[lib]
+name = "macros"
+doc = false
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "windows")'.dependencies.windows]
+version = "0.40"
+features = [
+    "Win32_Foundation",
+    "Win32_System_Console"
+]

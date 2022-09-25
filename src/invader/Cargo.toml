@@ -1,25 +1,21 @@
 [package]
 name = "invader"
 version = "0.1.0"
+autobins = false
 description = "The free Halo: Combat Evolved modding toolkit"
 license = "GPL-3.0-only"
-
-[lib]
-name = "invader"
-doc = true
+build = "build.rs"
 
 [dependencies]
+ringhopper = { path = "../ringhopper" }
+macros = { path = "../macros" }
 strings = { path = "../strings" }
 encoding = "0.2"
-h1_code_generator = { path = "src/engines/h1/definitions/h1_code_generator" }
-invader_macros = { path = "src/invader_macros" }
 
-[target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2"
+[[bin]]
+name = "invader"
+path = "src/main.rs"
+doc = false
 
-[target.'cfg(target_os = "windows")'.dependencies.windows]
-version = "0.40"
-features = [
-    "Win32_Foundation",
-    "Win32_Storage_FileSystem"
-]
+[build-dependencies]
+embed-resource = "1.7"

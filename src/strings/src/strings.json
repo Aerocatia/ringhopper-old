@@ -1,5 +1,5 @@
 {
-    "format_invader_version": "{project} {version}.r{commit_count}.{commit_hash})",
+    "format_RINGHOPPER_VERSION": "{project} {version}.r{commit_count}.{commit_hash})",
 
     "arguments.error_directory_missing": "Directory \"{dir}\" does not exist.",
     "arguments.error_directory_not_directory": "Path \"{dir}\" does not point to a valid directory.",
@@ -123,5 +123,5 @@
     "verb.strip.description": "Remove unused data from tags.",
     "verb.strings.description": "Generate string_list tags.",
     "verb.unicode-strings.description": "Generate unicode_string_list tags.",
-    "verb.version.description": "Get invader's version."
+    "verb.version.description": "Get the version."
 }

@@ -1,7 +1,7 @@
 [package]
 name = "strings"
 version = "0.1.0"
-description = "Strings used in Invader's text output"
+description = "Strings used in Ringhopper's text output"
 license = "GPL-3.0-only"
 
 [lib]
