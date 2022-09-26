@@ -144,12 +144,7 @@ pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> Err
 
     let output_tag = ParsedTagFile::into_tag(&list, group)?;
     let tag_path = tags.join(internal_path_path.clone()).with_extension(group.as_str());
-    match std::fs::create_dir_all(tag_path.parent().unwrap()) {
-        Ok(_) => (),
-        Err(error) => {
-            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_creating_directories"), error=error, dirs=tags.parent().unwrap().display())));
-        }
-    }
+    make_parent_directories(&tag_path)?;
     write_file(&tag_path, &output_tag)?;
 
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=tag_path.display());

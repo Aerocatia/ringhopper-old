@@ -74,7 +74,7 @@ macro_rules! copy_model {
                 let mut geometries = Vec::new();
                 geometries.reserve($from_obj.geometries.blocks.len());
                 for i in $from_obj.geometries.blocks {
-                    geometries.push(i.to_owned().into());
+                    geometries.push(i.into());
                 }
                 Reflexive::new(geometries)
             },
@@ -171,3 +171,36 @@ shader_transparent_chicago_conversion!(
     shader_transparent_chicago_flags,
     shader_transparent_chicago_extended_flags
 );
+
+pub trait ModelMarkerRepair {
+    /// Check if the model was improperly extracted.
+    ///
+    /// This can cause issues with loading the model.
+    fn check_runtime_model_markers(&self) -> ErrorMessageResult<()>;
+
+    /// Repair the runtime markers in the model.
+    fn repair_runtime_model_markers(&mut self) -> ErrorMessageResult<()>;
+}
+
+macro_rules! generate_repair_model_marker_code {
+    ($t:ty) => {
+        impl ModelMarkerRepair for $t {
+            fn check_runtime_model_markers(&self) -> ErrorMessageResult<()> {
+                // Check if the model was improperly extracted
+                if !self.markers.blocks.is_empty() {
+                    Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.error_improperly_extracted_model")))
+                }
+                else {
+                    Ok(())
+                }
+            }
+
+            fn repair_runtime_model_markers(&mut self) -> ErrorMessageResult<()> {
+                todo!()
+            }
+        }
+    }
+}
+
+generate_repair_model_marker_code!(Model);
+generate_repair_model_marker_code!(GBXModel);

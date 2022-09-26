@@ -9,6 +9,8 @@ pub use self::p8::*;
 mod tag_loading;
 pub use self::tag_loading::*;
 
+pub mod jms;
+
 pub mod definitions;
 
 /// Maximum array length for arrays in Halo: CE.

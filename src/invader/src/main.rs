@@ -21,6 +21,7 @@ impl EngineModuleFn for HaloCE {
         match verb {
             Verb::Collection => Some(collection::collection_verb),
             Verb::Convert => Some(convert::convert_verb),
+            Verb::Recover => Some(recover::recover_verb),
             Verb::Strip => Some(strip::strip_verb),
             Verb::Strings => Some(unicode_strings::unicode_strings_verb),
             Verb::UnicodeStrings => Some(unicode_strings::unicode_strings_verb),

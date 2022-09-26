@@ -74,46 +74,59 @@ const CONVERSION_FUNCTION_GROUPS: &'static [(TagGroup, &'static [ConversionFunct
     add_object_conversion_functions!(Placeholder, convert_object_to_object, convert_object_to_object, convert_object_to_object),
     add_object_conversion_functions!(SoundScenery, convert_object_to_object, convert_object_to_object, convert_object_to_object),
 
-    (TagGroup::Model, &[(TagGroup::GBXModel, |data| { GBXModel::from(*Model::from_tag_file(data)?.data).into_tag_file() })]),
-    (TagGroup::GBXModel, &[(TagGroup::Model, |data| { Model::try_from(*GBXModel::from_tag_file(data)?.data)?.into_tag_file() })]),
+    (TagGroup::Model, &[(TagGroup::GBXModel, |data| {
+        let model = *Model::from_tag_file(data)?.data;
+        model.check_runtime_model_markers()?;
+        GBXModel::from(model).into_tag_file()
+    })]),
+    (TagGroup::GBXModel, &[(TagGroup::Model, |data| {
+        let model = *GBXModel::from_tag_file(data)?.data;
+        model.check_runtime_model_markers()?;
+        Model::try_from(model)?.into_tag_file()
+    })]),
 
     (TagGroup::ShaderTransparentChicagoExtended, &[(TagGroup::ShaderTransparentChicago, |data| { ShaderTransparentChicago::from(*ShaderTransparentChicagoExtended::from_tag_file(data)?.data).into_tag_file() })]),
     (TagGroup::ShaderTransparentChicago, &[(TagGroup::ShaderTransparentChicagoExtended, |data| { ShaderTransparentChicagoExtended::from(*ShaderTransparentChicago::from_tag_file(data)?.data).into_tag_file() })])
 ];
 
-fn convert_tag(path: &std::path::Path, output_group: TagGroup, overwrite: bool) -> ErrorMessageResult<bool> {
-    let mut output_path = path.to_owned();
+enum ConversionResult {
+    Converted,
+    AlreadyExists,
+    CannotConvert
+}
+
+// Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.convert.unable_to_convert_tag"), input_group=input_group, output_group=output_group)))
+
+fn convert_tag(tag: &TagFile, output_group: TagGroup, overwrite: bool) -> ErrorMessageResult<ConversionResult> {
+    let mut output_path = tag.file_path.to_owned();
     output_path.set_extension(output_group.as_str());
 
     // Does our output already exist?
     if output_path.exists() && !overwrite {
-        return Ok(false)
+        return Ok(ConversionResult::AlreadyExists)
     }
 
-    let file_data = read_file(path)?;
-    let input_group = TagGroup::from_str(path.extension().unwrap().to_str().unwrap()).unwrap();
+    let file_data = read_file(&tag.file_path)?;
+    let input_group = tag.tag_path.get_group();
 
     // We cannot convert one group to the same group.
     if input_group == output_group {
-        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.convert.unable_to_convert_tag"), input_group=input_group, output_group=output_group)))
+        return Ok(ConversionResult::CannotConvert)
     }
 
-    let result = (|| {
-        for fg in CONVERSION_FUNCTION_GROUPS {
-            if fg.0 == input_group {
-                for f in fg.1 {
-                    if f.0 == output_group {
-                        return f.1(&file_data);
-                    }
+    for fg in CONVERSION_FUNCTION_GROUPS {
+        if fg.0 == input_group {
+            for f in fg.1 {
+                if f.0 == output_group {
+                    let result = f.1(&file_data)?;
+                    write_file(&output_path, &result)?;
+                    return Ok(ConversionResult::Converted);
                 }
-                break
             }
+            break
         }
-        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.convert.unable_to_convert_tag"), input_group=input_group, output_group=output_group)))
-    })()?;
-
-    write_file(&output_path, &result)?;
-    Ok(true)
+    }
+    Ok(ConversionResult::CannotConvert)
 }
 
 pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode> {
@@ -133,21 +146,31 @@ pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessag
         }
     };
 
+    let total = tags.len();
+    let mut convertible = total;
     let mut count = 0usize;
     let mut converted = 0usize;
     let mut error_count = 0usize;
-    let total = tags.len();
     for i in tags {
-        match convert_tag(&i.file_path, group, overwrite) {
-            Ok(written) => {
-                if written {
-                    println_success!(get_compiled_string!("engine.h1.verbs.convert.converted_tag"), tag=i.tag_path);
-                    converted += 1;
+        match convert_tag(&i, group, overwrite) {
+            Ok(result) => {
+                match result {
+                    ConversionResult::Converted => {
+                        println_success!(get_compiled_string!("engine.h1.verbs.convert.converted_tag"), tag=i.tag_path);
+                        converted += 1;
+                        count += 1;
+                    },
+                    ConversionResult::AlreadyExists => {
+                        println!(get_compiled_string!("engine.h1.verbs.convert.skipped_tag"), tag=i.tag_path);
+                        count += 1;
+                    },
+                    ConversionResult::CannotConvert => {
+                        if total == 1 {
+                            println!(get_compiled_string!("engine.h1.verbs.convert.unable_to_convert_tag"), tag=i.tag_path, output_group=group);
+                        }
+                        convertible -= 1;
+                    }
                 }
-                else {
-                    println!(get_compiled_string!("engine.h1.verbs.convert.skipped_tag"), tag=i.tag_path);
-                }
-                count += 1;
             },
             Err(e) => {
                 eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.convert.error_could_not_convert_tag"), tag=i.tag_path, error=e);
@@ -156,13 +179,13 @@ pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessag
         }
     }
 
-    if total == 0 {
-        Err(ErrorMessage::StaticString(get_compiled_string!("file.error_no_tags_found")))
+    if convertible == 0 {
+        Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.convert.error_no_tags_found")))
     }
     else if count == 0 {
         Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.convert.error_no_tags_converted"), error=error_count)))
     }
-    else if count != total {
+    else if error_count > 0 {
         println_warn!(get_compiled_string!("engine.h1.verbs.convert.converted_some_tags_with_errors"), count=converted, error=error_count);
         Ok(ExitCode::FAILURE)
     }

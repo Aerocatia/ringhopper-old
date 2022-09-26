@@ -32,11 +32,11 @@ fn format_tag_field_name(string: &str) -> String {
     };
 
     // Number-only bitfields
-    if field_name_written.chars().next().unwrap().is_alphabetic() {
-        field_name_written
+    if field_name_written.chars().next().unwrap().is_numeric() {
+        format!("_{field_name_written}")
     }
     else {
-        format!("_{field_name_written}")
+        field_name_written
     }
 }
 

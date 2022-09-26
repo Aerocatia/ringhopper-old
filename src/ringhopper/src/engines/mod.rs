@@ -17,3 +17,47 @@ pub trait EngineModuleFn {
     /// Get the version of the engine module.
     fn get_version(&self) -> &'static str;
 }
+
+/// Message types for [`HUDMessageTextElement`] elements.
+pub const HUD_MESSAGE_ELEMENT_TYPES: &'static [&'static str] = &[
+    "a-button",
+    "b-button",
+    "x-button",
+    "y-button",
+    "black-button",
+    "white-button",
+    "left-trigger",
+    "right-trigger",
+    "dpad-up",
+    "dpad-down",
+    "dpad-left",
+    "dpad-right",
+    "start-button",
+    "back-button",
+    "left-thumb",
+    "right-thumb",
+    "left-stick",
+    "right-stick",
+    "action",
+    "throw-grenade",
+    "primary-trigger",
+    "integrated-light",
+    "jump",
+    "use-equipment",
+    "rotate-weapons",
+    "rotate-grenades",
+    "zoom",
+    "crouch",
+    "accept",
+    "back",
+    "move",
+    "look",
+    "custom-1",
+    "custom-2",
+    "custom-3",
+    "custom-4",
+    "custom-5",
+    "custom-6",
+    "custom-7",
+    "custom-8"
+];

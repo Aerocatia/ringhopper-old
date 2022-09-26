@@ -37,6 +37,11 @@ impl Point2D {
 
         x*x + y*y
     }
+
+    /// Scale the vector and return the result.
+    pub fn scale(&self, by: f32) -> Point2D {
+        Point2D { x: self.x * by, y: self.y * by }
+    }
 }
 
 /// Vector used for referencing a point in 3D space.
@@ -73,6 +78,11 @@ impl Point3D {
         let z = self.z - point.z;
 
         x*x + y*y + z*z
+    }
+
+    /// Scale the vector and return the result.
+    pub fn scale(&self, by: f32) -> Point3D {
+        Point3D { x: self.x * by, y: self.y * by, z: self.z * by }
     }
 }
 

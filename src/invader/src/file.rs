@@ -45,3 +45,16 @@ pub fn write_file(path: &Path, data: &[u8]) -> ErrorMessageResult<()> {
         Err(e) =>  Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_writing_file"), error=e, file=path.display())))
     }
 }
+
+/// Make directories for the file if necessary.
+pub fn make_directories(path: &Path) -> ErrorMessageResult<()> {
+    match std::fs::create_dir_all(path) {
+        Ok(_) => Ok(()),
+        Err(error) => Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_creating_directories"), error=error, dirs=path.display())))
+    }
+}
+
+/// Make parent directories for the file if necessary.
+pub fn make_parent_directories(path: &Path) -> ErrorMessageResult<()> {
+    make_directories(&path.parent().unwrap())
+}

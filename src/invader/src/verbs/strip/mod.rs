@@ -59,7 +59,7 @@ pub fn strip_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
     else if count == 0 {
         Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.strip.error_no_tags_stripped"), error=error_count)))
     }
-    else if count != total {
+    else if error_count > 0 {
         println_warn!(get_compiled_string!("engine.h1.verbs.strip.stripped_some_tags_with_errors"), count=processed, error=error_count);
         Ok(ExitCode::FAILURE)
     }

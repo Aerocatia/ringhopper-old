@@ -46,6 +46,7 @@ pub fn collection_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMes
     // Done
     let output_tag = collection.into_tag_file()?;
     let tag_path = tags.join(internal_path_path.clone()).with_extension(TagGroup::TagCollection.as_str());
+    make_parent_directories(&tag_path)?;
     write_file(&tag_path, &output_tag)?;
 
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=tag_path.display());
