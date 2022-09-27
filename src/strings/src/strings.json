@@ -30,11 +30,14 @@
     "command_usage.error_verb_unsupported": "Verb \"{verb}\" is not supported by this tool.",
     "command_usage.warning_only_one_tags_dir_supported": "This verb takes only one tags directory - \"{dir}\" will be used.",
 
-    "engine.h1.error_improperly_extracted_model": "The model tag contains runtime markers and needs repaired for this operation.",
+    "engine.h1.error_improperly_extracted_model_markers": "The model tag contains runtime markers and needs repaired for this operation.",
+    "engine.h1.error_improperly_extracted_model_vertices_compressed": "The model tag is missing compressed vertices and needs repaired for this operation.",
+    "engine.h1.error_improperly_extracted_model_vertices_uncompressed": "The model tag is missing uncompressed vertices and needs repaired for this operation.",
 
     "engine.h1.jms.error_could_not_parse_jms": "Could not parse JMS at {line}:{column}: {error}",
     "engine.h1.jms.error_expected_token": "Expected token. Reached EOF instead.",
     "engine.h1.jms.error_expected_token_end": "Expected end of token. Reached EOF instead.",
+    "engine.h1.jms.error_integer_outside_range": "Expected a 32-bit integer. Got {token} instead.",
     "engine.h1.jms.error_unexpected_token": "Expected EOF. Found more tokens instead.",
     "engine.h1.jms.error_verify_fail_infinite_loop": "Infinite loop of nodes detected!",
     "engine.h1.jms.error_verify_fail_out_of_bounds_material": "Triangle #{triangle} has an out-of-bounds material ({material} >= {material_count})",
@@ -61,6 +64,7 @@
     "engine.h1.verbs.recover.error_hud_messages_out_of_bounds_element": "Element #{message_index} has an out-of-bounds range.",
     "engine.h1.verbs.recover.error_no_tags_recovered": "No tags were recovered due to {error} error(s).",
     "engine.h1.verbs.recover.error_no_tags_found": "No recoverable tags were found.",
+    "engine.h1.verbs.recover.error_parent_dir_incorrect": "Parent directory does not match the file name of the tag.",
     "engine.h1.verbs.recover.no_source_data": "Tag does not contain any source data to recover.",
     "engine.h1.verbs.recover.recovered_all_tags": "Recovered {count} tag(s).",
     "engine.h1.verbs.recover.recovered_some_tags_with_errors": "Recovered {count} tag(s) with {error} error(s).",
@@ -99,6 +103,9 @@
     "engine.h1.types.serialize.error_path_not_utf8": "Path is not valid UTF-8.",
     "engine.h1.types.serialize.error_tag_leftover_data": "Tag contains leftover data and may be corrupt (0x{read:08X} / 0x{total:08X} bytes read).",
 
+    "engine.types.error_null_index_unwrap": "Tried to use a null index where one isn't allowed.",
+    "engine.types.error_null_index": "Tried to access a null index of an array where a null index isn't allowed ({size} of {item_type})",
+    "engine.types.error_out_of_bounds_index": "Tried to access an out-of-bounds index of an array of type ({index} >= {size} of {item_type})",
     "engine.types.error_path_empty_when_non_empty": "Path \"{new_path}\" resolves to an empty path.",
     "engine.types.error_path_group_invalid": "Extension \"{potential_group}\" does not correspond to a tag group.",
     "engine.types.error_path_has_restricted_character": "Path \"{new_path}\" contains restricted character '{character}'.",

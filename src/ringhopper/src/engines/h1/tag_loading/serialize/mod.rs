@@ -4,7 +4,7 @@ mod tests;
 use crate::error::*;
 use crate::types::*;
 use crate::types::tag::TagGroupFn;
-use crate::engines::h1::types::{TagGroup, TagReference};
+use crate::engines::h1::types::{TagGroup, TagReference, Index};
 use crate::types::tag::TagBlockFn;
 use strings::get_compiled_string;
 
@@ -763,3 +763,22 @@ pub trait TagFileSerializeFn: Any + TagBlockFn + TagSerialize {
     fn into_tag_file(&self) -> ErrorMessageResult<Vec<u8>>;
 }
 
+impl TagSerialize for Index {
+    /// Get the size of the data
+    fn tag_size() -> usize where Self: Sized {
+        u16::tag_size()
+    }
+
+    /// Serialize the data into tag format, returning an error on failure (except for out-of-bounds and allocation errors which will panic).
+    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
+        self.unwrap_or(65535).into_tag(data, at, struct_end)
+    }
+
+    /// Deserialize the data from tag format, returning an error on failure (except for allocation errors which will panic).
+    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> {
+        match u16::from_tag(data, at, struct_end, cursor)? {
+            65535 => Ok(None),
+            n => Ok(Some(n))
+        }
+    }
+}

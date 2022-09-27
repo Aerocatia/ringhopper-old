@@ -10,6 +10,7 @@ use ringhopper::error::ErrorMessageResult;
 use std::path::Path;
 
 mod hud_message_text;
+mod model;
 mod scenario;
 mod string_list;
 
@@ -20,9 +21,9 @@ pub enum RecoverResult {
 }
 
 const RECOVER_FUNCTION_GROUPS: &'static [(TagGroup, fn (tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, overwrite: bool) -> ErrorMessageResult<RecoverResult>)] = &[
-    //(TagGroup::GBXModel, model::recover_gbxmodels),
+    (TagGroup::GBXModel, model::recover_gbxmodels),
     (TagGroup::HUDMessageText, hud_message_text::recover_hud_messages),
-    //(TagGroup::Model, model::recover_models),
+    (TagGroup::Model, model::recover_models),
     (TagGroup::Scenario, scenario::recover_scripts),
     (TagGroup::StringList, string_list::recover_string_list),
     (TagGroup::UnicodeStringList, string_list::recover_unicode_string_list)

@@ -8,7 +8,7 @@ use ringhopper::file::*;
 use crate::file::*;
 use macros::terminal::*;
 use ringhopper::error::ErrorMessageResult;
-use ringhopper::engines::h1::{TagFileSerializeFn, ObjectSuperFn, ItemSuperFn, UnitSuperFn, DeviceSuperFn};
+use ringhopper::engines::h1::*;
 use ringhopper::types::tag::TagGroupFn;
 use std::convert::{From, TryFrom};
 
@@ -76,12 +76,12 @@ const CONVERSION_FUNCTION_GROUPS: &'static [(TagGroup, &'static [ConversionFunct
 
     (TagGroup::Model, &[(TagGroup::GBXModel, |data| {
         let model = *Model::from_tag_file(data)?.data;
-        model.check_runtime_model_markers()?;
+        model.check_for_extraction_bugs()?;
         GBXModel::from(model).into_tag_file()
     })]),
     (TagGroup::GBXModel, &[(TagGroup::Model, |data| {
         let model = *GBXModel::from_tag_file(data)?.data;
-        model.check_runtime_model_markers()?;
+        model.check_for_extraction_bugs()?;
         Model::try_from(model)?.into_tag_file()
     })]),
 

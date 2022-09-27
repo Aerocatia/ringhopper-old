@@ -39,7 +39,7 @@ pub fn recover_hud_messages(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path
         let message = &tag.messages[i];
         output_data.extend(format!("{}=", message.name.to_str()).encode_utf16());
 
-        let first_index = message.start_index_of_message_block as usize;
+        let first_index = message.start_index_of_message_block.try_unwrap_index()?;
         let count = message.panel_count as usize;
         let end_index = first_index + count;
         if end_index > element_count {
@@ -47,7 +47,7 @@ pub fn recover_hud_messages(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path
         }
 
         // Go through each element
-        let mut cursor = message.start_index_into_text_blob as usize;
+        let mut cursor = message.start_index_into_text_blob.try_unwrap_index()?;
         for e in first_index..end_index {
             let element = &tag.message_elements[e];
 

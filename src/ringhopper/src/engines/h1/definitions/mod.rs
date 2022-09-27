@@ -100,13 +100,13 @@ impl TryFrom<GBXModel> for Model {
                         None => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.gbxmodel.error_invalid_local_nodes")))
                     };
 
-                    let convert_index = |index: u16| {
-                        if index == 0xFFFF {
-                            return Ok(0xFFFF) // null indices are passed through
+                    let convert_index = |index: Index| {
+                        if index.is_none() {
+                            return Ok(None) // null indices are passed through
                         };
 
-                        match all_indices.get(index as usize) {
-                            Some(&n) => Ok(n as u16),
+                        match all_indices.get(index.unwrap() as usize) {
+                            Some(&n) => Ok(Some(n as u16)),
                             None => Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.gbxmodel.error_invalid_local_nodes")))
                         }
                     };
@@ -171,36 +171,3 @@ shader_transparent_chicago_conversion!(
     shader_transparent_chicago_flags,
     shader_transparent_chicago_extended_flags
 );
-
-pub trait ModelMarkerRepair {
-    /// Check if the model was improperly extracted.
-    ///
-    /// This can cause issues with loading the model.
-    fn check_runtime_model_markers(&self) -> ErrorMessageResult<()>;
-
-    /// Repair the runtime markers in the model.
-    fn repair_runtime_model_markers(&mut self) -> ErrorMessageResult<()>;
-}
-
-macro_rules! generate_repair_model_marker_code {
-    ($t:ty) => {
-        impl ModelMarkerRepair for $t {
-            fn check_runtime_model_markers(&self) -> ErrorMessageResult<()> {
-                // Check if the model was improperly extracted
-                if !self.markers.blocks.is_empty() {
-                    Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.error_improperly_extracted_model")))
-                }
-                else {
-                    Ok(())
-                }
-            }
-
-            fn repair_runtime_model_markers(&mut self) -> ErrorMessageResult<()> {
-                todo!()
-            }
-        }
-    }
-}
-
-generate_repair_model_marker_code!(Model);
-generate_repair_model_marker_code!(GBXModel);

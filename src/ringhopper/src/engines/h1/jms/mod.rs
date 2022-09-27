@@ -1,5 +1,6 @@
 use crate::types::*;
 use crate::error::*;
+use std::convert::TryInto;
 use std::str::FromStr;
 use std::fmt::Display;
 use strings::*;
@@ -79,7 +80,6 @@ macro_rules! define_parsers {
     }
 }
 
-define_parsers!(u16);
 define_parsers!(usize);
 define_parsers!(f32);
 
@@ -92,17 +92,30 @@ impl JMSParser for String {
     }
 }
 
+impl JMSParser for i32 {
+    fn from_jms_string(string: &str, offset: &mut usize) -> ErrorMessageResult<i32> {
+        let token = parse_str_token::<i64>(string, offset)?;
+
+        if (token >= i32::MIN as i64 && token <= i32::MAX as i64) || (token >= u32::MIN as i64 && token <= u32::MAX as i64) {
+            Ok(token as i32)
+        }
+        else {
+            Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.jms.error_integer_outside_range"), token=token)))
+        }
+    }
+    fn to_jms_string(&self) -> String {
+        format!("{}\r\n", self)
+    }
+}
+
 impl JMSParser for Option<u16> {
     fn from_jms_string(string: &str, offset: &mut usize) -> ErrorMessageResult<Option<u16>> {
-        let token = read_str_token(string, offset)?;
-        if token == "-1" || token == "65535" {
+        let token = parse_str_token::<i64>(string, offset)?;
+        if token == -1 || token == 65535 {
             Ok(None)
         }
         else {
-            match u16::from_str(token) {
-                Ok(n) => Ok(Some(n)),
-                Err(e) => Err(ErrorMessage::AllocatedString(e.to_string()))
-            }
+            Ok(Some(token.try_into().map_err(|e| ErrorMessage::AllocatedString(format!("{e}")))?))
         }
     }
     fn to_jms_string(&self) -> String {
@@ -342,7 +355,7 @@ impl JMSParser for Triangle {
 
 #[derive(Default, Clone, PartialEq, Debug)]
 pub struct JMS {
-    pub node_list_checksum: usize,
+    pub node_list_checksum: i32,
     pub nodes: Vec<Node>,
     pub materials: Vec<Material>,
     pub markers: Vec<Marker>,
@@ -356,7 +369,7 @@ impl JMSParser for JMS {
         let version = parse_str_token::<u16>(string, offset)?;
         if version == JMS_VERSION {
             let jms = Ok(JMS {
-                node_list_checksum: usize::from_jms_string(string, offset)?,
+                node_list_checksum: i32::from_jms_string(string, offset)?,
                 nodes: Vec::<Node>::from_jms_string(string, offset)?,
                 materials: Vec::<Material>::from_jms_string(string, offset)?,
                 markers: Vec::<Marker>::from_jms_string(string, offset)?,
@@ -377,7 +390,7 @@ impl JMSParser for JMS {
         }
     }
     fn to_jms_string(&self) -> String {
-        JMS_VERSION.to_jms_string()
+        Some(JMS_VERSION).to_jms_string()
         + &self.node_list_checksum.to_jms_string()
         + &self.nodes.to_jms_string()
         + &self.materials.to_jms_string()
