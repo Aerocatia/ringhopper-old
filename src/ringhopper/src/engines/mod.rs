@@ -18,7 +18,7 @@ pub trait EngineModuleFn {
     fn get_version(&self) -> &'static str;
 }
 
-/// Message types for [`HUDMessageTextElement`] elements.
+/// Message types for [`HUDMessageTextElement`](crate::engines::h1::definitions::HUDMessageTextElement) elements.
 pub const HUD_MESSAGE_ELEMENT_TYPES: &'static [&'static str] = &[
     "a-button",
     "b-button",

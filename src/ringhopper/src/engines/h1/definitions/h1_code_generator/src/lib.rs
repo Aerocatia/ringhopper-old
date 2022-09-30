@@ -149,6 +149,9 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                 stream.extend(parsing_code.parse::<TokenStream>().unwrap());
             }
             else if object_type == "struct" {
+                // Check if we implement copy
+                let mut implements_copy = true;
+
                 // Generate Rust code to define our struct and implementation
                 let tag_size = object.get("size").unwrap().as_u64().unwrap();
                 let mut all_fields_defined = String::new();
@@ -164,6 +167,8 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                 let mut into_tag_code;
                 match object.get("inherits") {
                     Some(n) => {
+                        implements_copy = false; // can't determine this
+
                         let inherited_object = n.as_str().unwrap();
                         all_fields_defined += &format!("pub base_struct: {inherited_object},");
                         from_tag_code = format!("new_object.base_struct = {inherited_object}::from_tag(data, at, struct_end, cursor)?; let mut local_cursor = at + {inherited_object}::tag_size();");
@@ -189,6 +194,10 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                     // Otherwise, let's do this
                     let field_name = f.get("name").unwrap().as_str().unwrap();
                     let field_name_written = format_tag_field_name(&field_name);
+
+                    if field_type == "Reflexive" || field_type == "Data" || field_type == "TagReference" {
+                        implements_copy = false;
+                    }
 
                     let field_type_data_type = match field_type {
                         "Reflexive" => format!("Reflexive<{}>", f.get("struct").unwrap().as_str().unwrap()),
@@ -369,7 +378,7 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                 }
 
                 // Define the struct
-                stream.extend(format!("#[derive(Default, Clone, PartialEq)] pub struct {object_name} {{ {all_fields_defined} }}").parse::<TokenStream>().unwrap());
+                stream.extend(format!("#[derive(Default{}, Clone, PartialEq)] pub struct {object_name} {{ {all_fields_defined} }}", match implements_copy { true => ", Copy", false => "" } ).parse::<TokenStream>().unwrap());
 
                 // Define parsing it too
                 stream.extend(format!("

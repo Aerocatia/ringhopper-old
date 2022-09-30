@@ -13,7 +13,7 @@ use std::any::Any;
 /// FourCC "blam" used for tag file headers.
 pub const BLAM_FOURCC: u32 = 0x626C616D;
 
-/// Header used for tag files
+/// Header used for tag files.
 pub struct TagFileHeader {
     /// Old tag ID. Unread.
     pub old_tag_id: u32,

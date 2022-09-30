@@ -194,14 +194,14 @@ fn make_jms(model: &Model, permutation: &str, lod: usize) -> ErrorMessageResult<
                     let triangle_indices = &indices[..triangle_count];
                     triangles.reserve(triangle_count);
 
-                    let mut flipped_normal = true;
+                    let mut flipped_normal = false;
                     for t in 0..triangle_indices.len() {
                         // Get the vertex indices
                         let triangle = &indices[t..];
                         let a = triangle[0];
                         let (b, c) = match flipped_normal {
-                            true => (triangle[2], triangle[1]),
-                            false => (triangle[1], triangle[2])
+                            true => (triangle[1], triangle[2]),
+                            false => (triangle[2], triangle[1])
                         };
 
                         // Flip the normal

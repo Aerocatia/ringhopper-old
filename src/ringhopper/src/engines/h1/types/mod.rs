@@ -41,6 +41,7 @@ impl IndexFn for Index {
     }
 }
 
+/// Trait for accessing a [`Reflexive`] with an [`Index`].
 pub trait ReflexiveIndexFn {
     type Item;
 

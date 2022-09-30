@@ -49,6 +49,25 @@
     "engine.h1.jms.error_verify_fail_out_of_bounds_vertex": "Triangle #{triangle} has an out-of-bounds vertex ({vertex} >= {vertex_count})",
     "engine.h1.jms.error_version_mismatch": "Version mismatch (expected {version_expected} got {version_read})",
 
+    "engine.h1.types.gbxmodel.error_invalid_local_nodes": "The model's local nodes are invalid.",
+    "engine.h1.types.gbxmodel.error_cannot_regenerate_compressed_vertices_local_nodes": "Cannot generate compressed vertices due to having too many nodes. This is valid, but the model won't work on Xbox ({node_count} > {limit})",
+
+    "engine.h1.types.tag.header.error": "Error parsing the tag header: {reason}",
+    "engine.h1.types.tag.header.error_reason_blam_invalid": "Blam literal fourCC does not match (0x{blam:08X} expected, got 0x{other:08X} instead).",
+    "engine.h1.types.tag.header.error_reason_unparsable_group": "Unable to parse {group} tag files.",
+    "engine.h1.types.tag.header.error_reason_wrong_group": "Expected a {group_expected} tag file, got a {group_actual} tag file instead.",
+    "engine.h1.types.tag.header.error_reason_version_unsupported": "Version for {group} is unsupported ({version} expected, got {other} instead).",
+
+    "engine.h1.types.serialize.error_architecture_limit_exceeded": "Data is out of bounds. (Architecture size limit exceeded!)",
+    "engine.h1.types.serialize.error_array_limit_exceeded": "Array exceeds the maximum number of entries and cannot be written to a tag ({size} > {limit}).",
+    "engine.h1.types.serialize.error_byte_array_limit_exceeded": "Data exceeds the maximum number of bytes and cannot be written to a tag (0x{size:08X} > 0x{limit:08X}).",
+    "engine.h1.types.serialize.error_data_cursor_inside_struct": "Data cursor is inside the struct instead of outside. This is a bug!",
+    "engine.h1.types.serialize.error_data_not_zeroed_out": "Data not zeroed out at offset 0x{:08X}. This is a bug!",
+    "engine.h1.types.serialize.error_fourcc_invalid": "0x{fourcc:08X} does not correspond to a valid FourCC.",
+    "engine.h1.types.serialize.error_max_path_limit": "Path exceeds the maximum number of characters and cannot be written to a tag ({size} > {limit}).",
+    "engine.h1.types.serialize.error_path_not_utf8": "Path is not valid UTF-8.",
+    "engine.h1.types.serialize.error_tag_leftover_data": "Tag contains leftover data and may be corrupt (0x{read:08X} / 0x{total:08X} bytes read).",
+
     "engine.h1.verbs.convert.error_could_not_convert_tag": "Could not convert {tag}: {error}",
     "engine.h1.verbs.convert.error_no_tags_converted": "No tags were converted due to {error} error(s).",
     "engine.h1.verbs.convert.error_no_tags_found": "No convertible tags were found.",
@@ -84,24 +103,6 @@
     "engine.h1.verbs.unicode-strings.error_missing_end_string": "A string is missing an ###END-STRING### line.",
     "engine.h1.verbs.unicode-strings.error_parsing_file": "Error parsing file {file}: {error}",
     "engine.h1.verbs.unicode-strings.saved_file": "Saved {file}",
-
-    "engine.h1.types.gbxmodel.error_invalid_local_nodes": "The model's local nodes are invalid.",
-
-    "engine.h1.types.tag.header.error": "Error parsing the tag header: {reason}",
-    "engine.h1.types.tag.header.error_reason_blam_invalid": "Blam literal fourCC does not match (0x{blam:08X} expected, got 0x{other:08X} instead).",
-    "engine.h1.types.tag.header.error_reason_unparsable_group": "Unable to parse {group} tag files.",
-    "engine.h1.types.tag.header.error_reason_wrong_group": "Expected a {group_expected} tag file, got a {group_actual} tag file instead.",
-    "engine.h1.types.tag.header.error_reason_version_unsupported": "Version for {group} is unsupported ({version} expected, got {other} instead).",
-
-    "engine.h1.types.serialize.error_architecture_limit_exceeded": "Data is out of bounds. (Architecture size limit exceeded!)",
-    "engine.h1.types.serialize.error_array_limit_exceeded": "Array exceeds the maximum number of entries and cannot be written to a tag ({size} > {limit}).",
-    "engine.h1.types.serialize.error_byte_array_limit_exceeded": "Data exceeds the maximum number of bytes and cannot be written to a tag (0x{size:08X} > 0x{limit:08X}).",
-    "engine.h1.types.serialize.error_data_cursor_inside_struct": "Data cursor is inside the struct instead of outside. This is a bug!",
-    "engine.h1.types.serialize.error_data_not_zeroed_out": "Data not zeroed out at offset 0x{:08X}. This is a bug!",
-    "engine.h1.types.serialize.error_fourcc_invalid": "0x{fourcc:08X} does not correspond to a valid FourCC.",
-    "engine.h1.types.serialize.error_max_path_limit": "Path exceeds the maximum number of characters and cannot be written to a tag ({size} > {limit}).",
-    "engine.h1.types.serialize.error_path_not_utf8": "Path is not valid UTF-8.",
-    "engine.h1.types.serialize.error_tag_leftover_data": "Tag contains leftover data and may be corrupt (0x{read:08X} / 0x{total:08X} bytes read).",
 
     "engine.types.error_null_index_unwrap": "Tried to use a null index where one isn't allowed.",
     "engine.types.error_null_index": "Tried to access a null index of an array where a null index isn't allowed ({size} of {item_type})",

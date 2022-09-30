@@ -1,3 +1,5 @@
+//! JMS file parsing module.
+
 use crate::types::*;
 use crate::error::*;
 use std::convert::TryInto;
