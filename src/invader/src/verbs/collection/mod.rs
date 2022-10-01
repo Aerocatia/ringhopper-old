@@ -1,6 +1,6 @@
 use std::process::ExitCode;
 use std::path::Path;
-use ringhopper::engines::h1::definitions::{TagCollection, TagCollectionTag};
+use ringhopper::engines::h1::definitions::{TagCollection, TagCollectionTag, UIWidgetCollection};
 use ringhopper::engines::h1::*;
 use ringhopper::cmd::*;
 use ringhopper::types::tag::TagGroupFn;
@@ -9,25 +9,20 @@ use crate::file::*;
 use ringhopper::error::{ErrorMessage, ErrorMessageResult};
 use strings::get_compiled_string;
 
-fn make_collection_tag(file_data: &[u8], data_path: &Path) -> ErrorMessageResult<TagCollection> {
-    // Parse as UTF-8
-    let string = match std::str::from_utf8(&file_data) {
-        Ok(n) => n.to_owned(),
-        Err(error) => {
-            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display())));
+macro_rules! make_collection_tag {
+    ($parser:ty, $input:expr) => {{
+        let input = $input;
+
+        // Put it together
+        let mut collection = <$parser>::default();
+        for l in input.lines() {
+            if l.is_empty() { continue }
+            collection.tags.blocks.push(TagCollectionTag {
+                reference: TagReference::from_full_path(l)?
+            });
         }
-    };
-
-    // Put it together
-    let mut collection = TagCollection::default();
-    for l in string.lines() {
-        if l.is_empty() { continue }
-        collection.tags.blocks.push(TagCollectionTag {
-            reference: TagReference::from_full_path(l)?
-        });
-    }
-
-    Ok(collection)
+        Ok(collection)
+    }}
 }
 
 pub fn collection_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode> {
@@ -40,12 +35,23 @@ pub fn collection_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMes
     let data_path = data.join(internal_path_path.clone()).with_extension("txt");
     let file_data = read_file(&data_path)?;
 
+    // Parse as UTF-8
+    let input = match std::str::from_utf8(&file_data) {
+        Ok(n) => n.to_owned(),
+        Err(error) => {
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.unicode-strings.error_parsing_file"), error=error, file=data_path.display())));
+        }
+    };
+
     // Make the tag collection tag
-    let collection = make_collection_tag(&file_data, &data_path)?;
+    let (output_extension, output_tag) = match *verb {
+        Verb::TagCollection => (TagGroup::TagCollection.as_str(), make_collection_tag!(TagCollection, &input)?.into_tag_file()?),
+        Verb::UICollection => (TagGroup::UIWidgetCollection.as_str(), make_collection_tag!(UIWidgetCollection, &input)?.into_tag_file()?),
+        _ => unreachable!()
+    };
 
     // Done
-    let output_tag = collection.into_tag_file()?;
-    let tag_path = tags.join(internal_path_path.clone()).with_extension(TagGroup::TagCollection.as_str());
+    let tag_path = tags.join(internal_path_path.clone()).with_extension(output_extension);
     make_parent_directories(&tag_path)?;
     write_file(&tag_path, &output_tag)?;
 
@@ -55,20 +61,32 @@ pub fn collection_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMes
 
 #[cfg(test)]
 mod tests {
+    use ringhopper::engines::h1::definitions::*;
+    use ringhopper::engines::h1::*;
+    use ringhopper::error::ErrorMessageResult;
+
     #[test]
     fn test_make_tag_collection_tag() {
         // Input should handle forward slashes, backslashes, mixed slashes, and empty lines.
-        let input = b"
+        let input = "
 weapons/pistol/pistol.weapon
 levels\\test\\bloodgulch\\bloodgulch.scenario
 
 weapons/assault rifle\\assault rifle.weapon";
-        let collection = super::make_collection_tag(input, std::path::Path::new("some_input.txt")).unwrap();
+
+        let collection = (|| -> ErrorMessageResult<TagCollection> {
+            make_collection_tag!(TagCollection, input)
+        })().unwrap();
+
         assert_eq!(3, collection.tags.blocks.len());
         assert_eq!("weapons\\pistol\\pistol.weapon", collection.tags[0].reference.get_path_with_extension());
         assert_eq!("levels\\test\\bloodgulch\\bloodgulch.scenario", collection.tags[1].reference.get_path_with_extension());
         assert_eq!("weapons\\assault rifle\\assault rifle.weapon", collection.tags[2].reference.get_path_with_extension());
 
-        assert!(super::make_collection_tag(b"this input is invalid", std::path::Path::new("bad_input.txt")).is_err());
+        let collection_error = (|| -> ErrorMessageResult<TagCollection> {
+            make_collection_tag!(TagCollection, "this input is invalid")
+        })();
+
+        assert!(collection_error.is_err());
     }
 }

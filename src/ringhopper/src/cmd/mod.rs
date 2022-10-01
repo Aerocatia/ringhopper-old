@@ -27,7 +27,7 @@ fn print_usage(path: &str, lookup: &str, engine: &dyn engines::EngineModuleFn) {
     eprintln!(get_compiled_string!("command_usage.error_available_verbs"));
 
     let mut verbs_listed = 0usize;
-    for v in &verb::ALL_VERBS {
+    for v in verb::ALL_VERBS {
         if engine.get_verb_function(v.verb).is_some() {
             verbs_listed += 1;
             eprint!("    {: <20}  ", v.verb.get_name());

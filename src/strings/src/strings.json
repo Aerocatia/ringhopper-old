@@ -138,7 +138,6 @@
     "verb.bsp.description": "Generate structure_structure_bsp tags.",
     "verb.build.description": "Generate cache files.",
     "verb.camera-track.description": "Generate camera_track tags.",
-    "verb.collection.description": "Generate tag_collection tags.",
     "verb.collision.description": "Generate model_collision_geometry tags.",
     "verb.compare.description": "Compare sets of tags.",
     "verb.convert.description": "Convert tags to other groups.",
@@ -162,6 +161,8 @@
     "verb.sound.description": "Generate sound tags.",
     "verb.strip.description": "Remove unused data from tags.",
     "verb.strings.description": "Generate string_list tags.",
+    "verb.tag-collection.description": "Generate tag_collection tags.",
+    "verb.ui-collection.description": "Generate ui_widget_collection tags.",
     "verb.unicode-strings.description": "Generate unicode_string_list tags.",
     "verb.version.description": "Get the version."
 }

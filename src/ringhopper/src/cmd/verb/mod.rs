@@ -9,7 +9,6 @@ pub enum Verb {
     BSP,
     Build,
     CameraTrack,
-    Collection,
     Collision,
     Compare,
     Convert,
@@ -33,6 +32,8 @@ pub enum Verb {
     Sound,
     Strip,
     Strings,
+    TagCollection,
+    UICollection,
     UnicodeStrings,
     Version
 }
@@ -52,14 +53,13 @@ impl VerbInfo {
     }
 }
 
-pub(crate) static ALL_VERBS: [VerbInfo; 32] = [
+pub(crate) static ALL_VERBS: &'static [VerbInfo] = &[
     VerbInfo::new(Verb::Archive, "archive", get_compiled_string!("verb.archive.description")),
     VerbInfo::new(Verb::Bitmap, "bitmap", get_compiled_string!("verb.bitmap.description")),
     VerbInfo::new(Verb::Bludgeon, "bludgeon", get_compiled_string!("verb.bludgeon.description")),
     VerbInfo::new(Verb::BSP, "bsp", get_compiled_string!("verb.bsp.description")),
     VerbInfo::new(Verb::Build, "build", get_compiled_string!("verb.build.description")),
     VerbInfo::new(Verb::CameraTrack, "camera-track", get_compiled_string!("verb.camera-track.description")),
-    VerbInfo::new(Verb::Collection, "collection", get_compiled_string!("verb.collection.description")),
     VerbInfo::new(Verb::Collision, "collision", get_compiled_string!("verb.collision.description")),
     VerbInfo::new(Verb::Compare, "compare", get_compiled_string!("verb.compare.description")),
     VerbInfo::new(Verb::Convert, "convert", get_compiled_string!("verb.convert.description")),
@@ -83,6 +83,8 @@ pub(crate) static ALL_VERBS: [VerbInfo; 32] = [
     VerbInfo::new(Verb::Sound, "sound", get_compiled_string!("verb.sound.description")),
     VerbInfo::new(Verb::Strip, "strip",  get_compiled_string!("verb.strip.description")),
     VerbInfo::new(Verb::Strings, "strings", get_compiled_string!("verb.strings.description")),
+    VerbInfo::new(Verb::TagCollection, "tag-collection", get_compiled_string!("verb.tag-collection.description")),
+    VerbInfo::new(Verb::UICollection, "ui-collection", get_compiled_string!("verb.ui-collection.description")),
     VerbInfo::new(Verb::UnicodeStrings, "unicode-strings", get_compiled_string!("verb.unicode-strings.description")),
     VerbInfo::new(Verb::Version, "version", get_compiled_string!("verb.version.description"))
 ];
@@ -90,7 +92,7 @@ pub(crate) static ALL_VERBS: [VerbInfo; 32] = [
 impl Verb {
     /// Get metadata for the verb
     pub fn get_entry(&self) -> &'static VerbInfo {
-        for v in &ALL_VERBS {
+        for v in ALL_VERBS {
             if v.verb == *self {
                 return v
             }
@@ -110,7 +112,7 @@ impl Verb {
 
     /// Attempt to get a verb from a given name or shorthand
     pub fn from_input(input: &str) -> Option<Self> {
-        for v in &ALL_VERBS {
+        for v in ALL_VERBS {
             if input.eq_ignore_ascii_case(v.name) {
                 return Some(v.verb)
             }
