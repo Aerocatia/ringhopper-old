@@ -1,7 +1,7 @@
 use strings::get_compiled_string;
 
 /// Verbs define different actions that can be called by the driver for an engine module.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, PartialOrd)]
 pub enum Verb {
     Archive,
     Bitmap,
@@ -24,18 +24,17 @@ pub enum Verb {
     Physics,
     Plate,
     Recover,
-    Repair,
     Refactor,
+    Repair,
     Resource,
     Scan,
     Script,
     Sound,
-    Strip,
     Strings,
+    Strip,
     TagCollection,
     UICollection,
-    UnicodeStrings,
-    Version
+    UnicodeStrings
 }
 
 /// Info for a verb, including the name, aliases, and description.
@@ -81,48 +80,64 @@ pub(crate) static ALL_VERBS: &'static [VerbInfo] = &[
     VerbInfo::new(Verb::Scan, "scan", get_compiled_string!("verb.scan.description")),
     VerbInfo::new(Verb::Script, "script", get_compiled_string!("verb.script.description")),
     VerbInfo::new(Verb::Sound, "sound", get_compiled_string!("verb.sound.description")),
-    VerbInfo::new(Verb::Strip, "strip",  get_compiled_string!("verb.strip.description")),
     VerbInfo::new(Verb::Strings, "strings", get_compiled_string!("verb.strings.description")),
+    VerbInfo::new(Verb::Strip, "strip",  get_compiled_string!("verb.strip.description")),
     VerbInfo::new(Verb::TagCollection, "tag-collection", get_compiled_string!("verb.tag-collection.description")),
     VerbInfo::new(Verb::UICollection, "ui-collection", get_compiled_string!("verb.ui-collection.description")),
-    VerbInfo::new(Verb::UnicodeStrings, "unicode-strings", get_compiled_string!("verb.unicode-strings.description")),
-    VerbInfo::new(Verb::Version, "version", get_compiled_string!("verb.version.description"))
+    VerbInfo::new(Verb::UnicodeStrings, "unicode-strings", get_compiled_string!("verb.unicode-strings.description"))
 ];
 
 impl Verb {
     /// Get metadata for the verb
-    pub fn get_entry(&self) -> &'static VerbInfo {
-        for v in ALL_VERBS {
-            if v.verb == *self {
-                return v
-            }
-        }
-        unreachable!()
+    pub fn get_info(&self) -> &'static VerbInfo {
+        &ALL_VERBS[*self as usize]
     }
 
     /// Get the name of the verb
     pub fn get_name(&self) -> &'static str {
-        return self.get_entry().name
+        return self.get_info().name
     }
 
     /// Get the description of the verb
     pub fn get_description(&self) -> &'static str {
-        return self.get_entry().description
+        return self.get_info().description
     }
 
-    /// Attempt to get a verb from a given name or shorthand
+    /// Attempt to get a verb from a given name
     pub fn from_input(input: &str) -> Option<Self> {
-        for v in ALL_VERBS {
-            if input.eq_ignore_ascii_case(v.name) {
-                return Some(v.verb)
-            }
-        }
-        None
+        ALL_VERBS.binary_search_by(|f| f.name.cmp(input))
+                 .ok()
+                 .map(|index| ALL_VERBS[index].verb)
     }
 }
 
 impl std::fmt::Display for Verb {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         fmt.write_str(self.get_name())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_verbs_array_valid() {
+        // Make sure it's sorted
+        for i in 0..ALL_VERBS.len()-1 {
+            assert!(ALL_VERBS[i].name < ALL_VERBS[i + 1].name, "{} < {} name failed", ALL_VERBS[i].verb, ALL_VERBS[i + 1].verb);
+            assert!(ALL_VERBS[i].verb < ALL_VERBS[i + 1].verb, "{} < {} verb failed", ALL_VERBS[i].verb, ALL_VERBS[i + 1].verb);
+        }
+
+        // Make sure that using get_info() on a VerbInfo's verb returns the same exact VerbInfo
+        for i in ALL_VERBS {
+            assert_eq!(i as *const VerbInfo, i.verb.get_info() as *const VerbInfo, "VerbInfo {} address does not correspond to itself", i.verb);
+        }
+
+        // Make sure Verb is the same too
+        for i in 0..ALL_VERBS.len() {
+            let verb = &ALL_VERBS[i];
+            assert_eq!(i, verb.verb as usize, "VerbInfo {} verb enum does not correspond to itself", verb.name);
+        }
     }
 }

@@ -163,6 +163,5 @@
     "verb.strings.description": "Generate string_list tags.",
     "verb.tag-collection.description": "Generate tag_collection tags.",
     "verb.ui-collection.description": "Generate ui_widget_collection tags.",
-    "verb.unicode-strings.description": "Generate unicode_string_list tags.",
-    "verb.version.description": "Get the version."
+    "verb.unicode-strings.description": "Generate unicode_string_list tags."
 }
