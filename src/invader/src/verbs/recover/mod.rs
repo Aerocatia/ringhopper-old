@@ -14,6 +14,7 @@ mod hud_message_text;
 mod model;
 mod scenario;
 mod string_list;
+mod tag_collection;
 
 pub enum RecoverResult {
     Recovered,
@@ -28,6 +29,8 @@ const RECOVER_FUNCTION_GROUPS: &'static [(TagGroup, fn (tag_data: &[u8], tag_fil
     (TagGroup::Model, model::recover_models),
     (TagGroup::Scenario, scenario::recover_scripts),
     (TagGroup::StringList, string_list::recover_string_list),
+    (TagGroup::TagCollection, tag_collection::recover_tag_collection),
+    (TagGroup::UIWidgetCollection, tag_collection::recover_ui_widget_collection),
     (TagGroup::UnicodeStringList, string_list::recover_unicode_string_list)
 ];
 
