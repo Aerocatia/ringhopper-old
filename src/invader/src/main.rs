@@ -4,6 +4,8 @@ use ringhopper::cmd::*;
 
 extern crate strings;
 extern crate macros;
+extern crate flate2;
+extern crate tiff;
 
 mod verbs;
 use verbs::*;

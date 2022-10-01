@@ -9,6 +9,7 @@ use macros::terminal::*;
 use ringhopper::error::ErrorMessageResult;
 use std::path::Path;
 
+mod bitmap;
 mod hud_message_text;
 mod model;
 mod scenario;
@@ -21,6 +22,7 @@ pub enum RecoverResult {
 }
 
 const RECOVER_FUNCTION_GROUPS: &'static [(TagGroup, fn (tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, overwrite: bool) -> ErrorMessageResult<RecoverResult>)] = &[
+    (TagGroup::Bitmap, bitmap::recover_bitmaps),
     (TagGroup::GBXModel, model::recover_gbxmodels),
     (TagGroup::HUDMessageText, hud_message_text::recover_hud_messages),
     (TagGroup::Model, model::recover_models),

@@ -77,6 +77,7 @@
     "engine.h1.verbs.convert.converted_tag": "Converted {tag}",
     "engine.h1.verbs.convert.unable_to_convert_tag": "Can't convert {tag} to {output_group}",
 
+    "engine.h1.verbs.recover.error_bitmap_color_plate_data_invalid": "Compressed color plate data is invalid.",
     "engine.h1.verbs.recover.error_could_not_recover_tag": "Could not recover {tag}: {error}",
     "engine.h1.verbs.recover.error_hud_messages_not_valid_utf16": "String data is not valid UTF-16.",
     "engine.h1.verbs.recover.error_hud_messages_out_of_bounds_message": "Message #{message_index} ({message_name}) has an out-of-bounds range.",

@@ -11,6 +11,8 @@ ringhopper = { path = "../ringhopper" }
 macros = { path = "../macros" }
 strings = { path = "../strings" }
 encoding = "0.2"
+tiff = "0.7"
+flate2 = "1.0"
 
 [[bin]]
 name = "invader"
