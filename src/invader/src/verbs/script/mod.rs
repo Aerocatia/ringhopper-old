@@ -250,7 +250,7 @@ pub fn script_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         match compile_scripts_for_tag(&i, Path::new(&data_dir), &hud_globals, &tags_dirs, parsed_args.engine_target.unwrap(), &mut all_tags, &options) {
             Ok(info) => {
                 if info.script_count != 0 || info.global_count != 0 {
-                    println_success!(get_compiled_string!("engine.h1.verbs.script.compiled_scripts"), tag=i.tag_path, global_count=info.script_count, script_count=info.script_count);
+                    println_success!(get_compiled_string!("engine.h1.verbs.script.compiled_scripts"), tag=i.tag_path, global_count=info.global_count, script_count=info.script_count);
                 }
                 else {
                     println_success!(get_compiled_string!("engine.h1.verbs.script.cleared_scripts"), tag=i.tag_path);

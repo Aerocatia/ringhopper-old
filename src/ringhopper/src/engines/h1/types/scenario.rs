@@ -22,7 +22,7 @@ fn generate_script_node_id(index: Option<usize>) -> u32 {
     match index {
         None => u32::MAX,
         Some(n) if n > u16::MAX as usize => panic!("Tried to generate an ID with an index that exceeds a 16-bit signed integer. THIS IS A BUG!"),
-        Some(n) => ((0x6373u16.overflowing_add(n as u16).0 as u32) << 8) | (n as u32)
+        Some(n) => ((0x6373u16.overflowing_add(n as u16).0 as u32) << 16) | (n as u32) | 0x80000000
     }
 }
 
@@ -50,8 +50,8 @@ fn handle_node<'a, F>(scenario: &Scenario,
                 PrimitiveType::Global => flags.is_global = true
             }
         },
-        NodeType::FunctionCall(script) => {
-            flags.is_script_call = script;
+        NodeType::FunctionCall(engine_function) => {
+            flags.is_script_call = !engine_function;
         }
     };
 
