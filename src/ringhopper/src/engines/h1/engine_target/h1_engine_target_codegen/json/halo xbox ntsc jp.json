@@ -1,0 +1,8 @@
+{
+    "name": "Halo: Combat Evolved (Xbox NTSC-JP)",
+    "version": "halo xbox 01.03.14.0009 Mar 15 2002 13:28:47",
+    "derives": "halo xbox pal.json",
+    "shorthand": "xbox-jp",
+    "build": "01.03.14.0009",
+    "max_tag_space": "0x1648000"
+}

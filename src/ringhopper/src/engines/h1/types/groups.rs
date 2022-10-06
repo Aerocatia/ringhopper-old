@@ -332,3 +332,25 @@ mod tests {
         }
     }
 }
+
+impl TagGroup {
+    /// Return true if the tag group corresponds to an object tag's group.
+    pub fn is_object(&self) -> bool {
+        *self == TagGroup::Biped ||
+        *self == TagGroup::Vehicle ||
+        *self == TagGroup::Weapon ||
+        *self == TagGroup::Equipment ||
+        *self == TagGroup::Garbage ||
+        *self == TagGroup::Projectile ||
+        *self == TagGroup::Scenery ||
+        *self == TagGroup::DeviceMachine ||
+        *self == TagGroup::DeviceControl ||
+        *self == TagGroup::DeviceLightFixture ||
+        *self == TagGroup::Placeholder ||
+        *self == TagGroup::SoundScenery ||
+        *self == TagGroup::Object ||
+        *self == TagGroup::Unit ||
+        *self == TagGroup::Item ||
+        *self == TagGroup::Device
+    }
+}

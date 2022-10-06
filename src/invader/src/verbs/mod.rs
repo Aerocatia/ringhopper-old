@@ -1,5 +1,7 @@
 pub mod collection;
 pub mod convert;
+pub mod list_engines;
 pub mod recover;
+pub mod script;
 pub mod strip;
 pub mod unicode_strings;

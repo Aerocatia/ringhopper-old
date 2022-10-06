@@ -159,7 +159,7 @@ fn fits(size: usize, at: usize, struct_end: usize, vec_size: usize) -> ErrorMess
 
     // If we're outside of the data bounds, fail.
     if end > vec_size {
-        Err(ErrorMessage::StaticString("Data is out of bounds."))
+        Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_corrupt_tag")))
     }
     else {
         Ok(())
@@ -178,7 +178,7 @@ fn fits_extra_data(size: usize, at: usize, vec_size: usize) -> ErrorMessageResul
     };
 
     if data_end > vec_size {
-        Err(ErrorMessage::StaticString("Data is out of bounds."))
+        Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.serialize.error_corrupt_tag")))
     }
     else {
         Ok(())

@@ -1,0 +1,7 @@
+{
+    "name": "Halo Demo (Xbox NTSC-US)",
+    "version": "halo xbox untracked version Feb 25 2002 17:14:05",
+    "derives": "halo xbox pal.json",
+    "shorthand": "xbox-demo",
+    "build": ""
+}

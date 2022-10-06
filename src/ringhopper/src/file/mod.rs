@@ -210,7 +210,7 @@ impl TagFile {
         }
 
         let mut everything = TagFile::from_virtual_tags_directory(tags_directories)?;
-        everything.retain(|i| i.tag_path.matches_pattern(pattern));
+        everything.retain(|i| i.tag_path.matches_pattern(&tag_path_to_search));
         Ok(everything)
     }
 }

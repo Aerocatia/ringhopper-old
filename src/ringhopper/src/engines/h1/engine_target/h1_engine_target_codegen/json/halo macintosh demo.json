@@ -1,0 +1,8 @@
+{
+    "name": "Halo Demo (Mac)",
+    "version": "Halo macintosh 01.00.00.0579 Jun 11 2005 12:15:14",
+    "derives": "halo pc demo.json",
+    "shorthand": "mac-demo",
+    "build": "01.00.00.0579",
+    "script_compile_target": "gbx-retail"
+}

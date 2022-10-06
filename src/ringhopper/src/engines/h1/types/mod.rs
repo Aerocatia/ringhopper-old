@@ -9,6 +9,9 @@ pub use self::supergroups::*;
 mod model;
 pub use self::model::*;
 
+mod scenario;
+pub use self::scenario::*;
+
 use crate::error::*;
 use crate::engines::h1::tag_loading::TagSerialize;
 use crate::types::Reflexive;

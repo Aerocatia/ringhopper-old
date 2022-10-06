@@ -1,0 +1,12 @@
+{
+    "name": "Halo: Combat Evolved (Xbox PAL)",
+    "version": "halo xbox 01.01.14.2342 Jan 14 2002 13:03:45",
+    "derives": "halo xbox.json",
+    "shorthand": "xbox-pal",
+    "build": "01.01.14.2342",
+    "required_tags": {
+        "all": [
+            "ui\\shell\\strings\\temp_strings.unicode_string_list"
+        ]
+    }
+}

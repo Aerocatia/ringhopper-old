@@ -3091,7 +3091,7 @@
             },
             {
                 "name": "initialization expression index",
-                "type": "int32"
+                "type": "uint32"
             },
             {
                 "type": "pad",

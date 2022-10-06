@@ -13,6 +13,8 @@ strings = { path = "../strings" }
 macros = { path = "../macros" }
 encoding = "0.2"
 h1_code_generator = { path = "src/engines/h1/definitions/h1_code_generator" }
+h1_engine_target_codegen = { path = "src/engines/h1/engine_target/h1_engine_target_codegen" }
+riat = { git = "https://github.com/SnowyMouse/riat.git" }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use strings::get_compiled_string;
+use crate::engines::h1::EngineTarget;
 use crate::error::*;
 
 #[cfg(test)]
@@ -13,6 +14,9 @@ mod tests;
 /// Constraints for if we need specific default resources.
 #[derive(Default, Copy, Clone)]
 pub struct ArgumentConstraints {
+    /// True if an engine is needed.
+    pub needs_engine: bool,
+
     /// True if the data dir is needed.
     pub needs_data: bool,
 
@@ -32,6 +36,13 @@ impl ArgumentConstraints {
     /// Instantiate a new ArgumentContraints.
     pub fn new() -> ArgumentConstraints {
         ArgumentConstraints::default()
+    }
+
+    /// Set needs_engine to true.
+    pub fn needs_engine(self) -> ArgumentConstraints {
+        let mut s = self;
+        s.needs_engine = true;
+        s
     }
 
     /// Set needs_data to true.
@@ -78,7 +89,10 @@ pub struct ParsedArguments {
     pub named: HashMap<&'static str, Vec<String>>,
 
     /// Extra arguments that do not have a switch associated with them
-    pub extra: Vec<String>
+    pub extra: Vec<String>,
+
+    /// Engine target, if one was specified
+    pub engine_target: Option<&'static EngineTarget>
 }
 
 /// Argument to search for in [ParsedArguments::parse_arguments].
@@ -101,12 +115,13 @@ pub struct Argument {
 }
 
 /// Arguments present in all commands
-const STANDARD_ARGUMENTS: [Argument; 6] = [
+const STANDARD_ARGUMENTS: &'static [Argument] = &[
     Argument { long: "data", short: 'd', description: get_compiled_string!("arguments.data.description"), parameter: Some("dir"), multiple: false },
     Argument { long: "help", short: 'h', description: get_compiled_string!("arguments.help.description"), parameter: None, multiple: false },
     Argument { long: "maps", short: 'm', description: get_compiled_string!("arguments.maps.description"), parameter: Some("dir"), multiple: false },
     Argument { long: "tags", short: 't', description: get_compiled_string!("arguments.tags.description_multi"), parameter: Some("dir"), multiple: true },
     Argument { long: "tags", short: 't', description: get_compiled_string!("arguments.tags.description_single"), parameter: Some("dir"), multiple: false },
+    Argument { long: "engine", short: 'e', description: get_compiled_string!("arguments.engine.description"), parameter: Some("engine"), multiple: false },
 
     Argument { long: "overwrite", short: 'o', description: get_compiled_string!("arguments.overwrite.description"), parameter: None, multiple: false }
 ];
@@ -264,10 +279,11 @@ impl ParsedArguments {
                         (n.description == get_compiled_string!("arguments.tags.description_single") && constraints.multiple_tags_directories)
                     )) &&
                     !(n.short == 'd' && !constraints.needs_data) &&
-                    !(n.short == 'm' && !constraints.needs_maps)
+                    !(n.short == 'm' && !constraints.needs_maps) &&
+                    !(n.short == 'e' && !constraints.needs_engine)
                 });
 
-                let argument_width = 29;
+                let argument_width = 32;
                 let right_margin = 1;
                 let left_side = argument_width + right_margin;
 
@@ -339,6 +355,15 @@ impl ParsedArguments {
             }
             if constraints.needs_data {
                 check_if_exists!("data");
+            }
+            if constraints.needs_engine {
+                parsed.engine_target = match parsed.named.get("engine") {
+                    None => return Err(ErrorMessage::StaticString(get_compiled_string!("arguments.error_engine_needed"))),
+                    Some(n) => match EngineTarget::from_shorthand(&n[0]) {
+                        Some(n) => Some(n),
+                        None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("arguments.error_engine_invalid"), engine=n[0])))
+                    }
+                };
             }
 
             Ok(parsed)

@@ -13,5 +13,8 @@ pub mod jms;
 
 pub mod definitions;
 
+mod engine_target;
+pub use self::engine_target::*;
+
 /// Maximum array length for arrays in Halo: CE.
 pub const MAX_ARRAY_LENGTH: usize = i32::MAX as usize;

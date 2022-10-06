@@ -416,7 +416,7 @@ fn normalize_path(path: &str) -> ErrorMessageResult<String> {
 
         // Ban non-ascii
         else if !character.is_ascii() {
-            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_not_ascii"), new_path=path)))
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.types.error_path_not_ascii"), path=path)))
         }
 
         new_path.push(character);
@@ -572,16 +572,33 @@ impl<T: TagGroupFn + Copy + Default> TagReference<T> {
     pub fn set_group(&mut self, group: T) {
         self.group = group
     }
+
+    /// Return `true` if the reference is empty.
+    pub fn is_empty(&self) -> bool {
+        self.path.is_empty()
+    }
 }
 
 impl<T: TagGroupFn> fmt::Display for TagReference<T> {
+    // Windows uses backslashes, so no need to do any conversion here.
+    #[cfg(target_os = "windows")]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        f.write_str(self.path.as_str())?;
+        f.write_str(".")?;
+        f.write_str(self.group.as_str())
+    }
+
+    // If we aren't on Windows, go through each character one-by-one, converting backslashes to OS path separators.
+    #[cfg(not(target_os = "windows"))]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        use std::fmt::Write;
+
         for c in self.path.chars() {
-            let mut character = c;
-            if c == HALO_DIRECTORY_SEPARATOR {
-                character = std::path::MAIN_SEPARATOR;
-            }
-            f.write_str(std::str::from_utf8(&[character as u8]).unwrap())?;
+            let character = match c {
+                HALO_DIRECTORY_SEPARATOR => std::path::MAIN_SEPARATOR,
+                n => n
+            };
+            f.write_char(character)?;
         }
 
         f.write_str(".")?;

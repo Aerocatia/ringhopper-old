@@ -1,0 +1,8 @@
+{
+    "name": "Halo: Combat Evolved (Mac)",
+    "version": "Halo macintosh 01.00.09.0620 Oct 20 2009 17:36:11",
+    "derives": "halo pc.json",
+    "shorthand": "mac-retail",
+    "build": "01.00.09.0620",
+    "script_compile_target": "gbx-retail"
+}

@@ -1,0 +1,12 @@
+[package]
+name = "h1_engine_target_codegen"
+version = "0.1.0"
+description = "Code generator"
+license = "GPL-3.0-only"
+
+[lib]
+doc = false
+proc-macro = true
+
+[dependencies]
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }

@@ -1,0 +1,16 @@
+{
+    "name": "Halo Trial (PC)",
+    "version": "halo pc 01.00.00.0578 Sep 30 2003 11:23:08",
+    "fallback": true,
+    "derives": "halo pc.json",
+    "shorthand": "pc-demo",
+    "build": "01.00.00.0578",
+    "cache_file_version": 6,
+
+    "script_compile_target": "gbx-demo",
+
+    "base_memory_address": {
+        "value": "0x4BF10000",
+        "type": "fixed"
+    }
+}

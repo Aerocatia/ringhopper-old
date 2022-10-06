@@ -1,0 +1,8 @@
+{
+    "name": "Halo: Combat Evolved (PC)",
+    "derives": "halo pc.json",
+    "fallback": true,
+    "version": "halo pc 01.00.10.0621 Apr 16 2014 15:54:48",
+    "build": "01.00.10.0621",
+    "shorthand": "pc-retail"
+}

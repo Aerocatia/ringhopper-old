@@ -22,7 +22,9 @@ impl EngineModuleFn for HaloCE {
     fn get_verb_function(&self, verb: Verb) -> Option<VerbFn> {
         match verb {
             Verb::Convert => Some(convert::convert_verb),
+            Verb::ListEngines => Some(list_engines::list_engines_verb),
             Verb::Recover => Some(recover::recover_verb),
+            Verb::Script => Some(script::script_verb),
             Verb::Strip => Some(strip::strip_verb),
             Verb::Strings => Some(unicode_strings::unicode_strings_verb),
             Verb::TagCollection => Some(collection::collection_verb),
