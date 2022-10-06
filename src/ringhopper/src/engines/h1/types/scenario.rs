@@ -390,7 +390,7 @@ impl ScriptCompiler for Scenario {
         let mut syntax_data = Vec::new();
         let node_tag_size = ScenarioScriptNode::tag_size();
         let table_header = ScenarioScriptNodeTable {
-            name: String32::from_str("script nodes").unwrap(),
+            name: String32::from_str("script node").unwrap(),
             maximum_count: max_node_count as u16,
             one: 1,
             size: node_count as u16,
