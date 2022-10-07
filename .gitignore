@@ -1,2 +1,8 @@
+# Rust stuff generated on compile
 target
 Cargo.lock
+
+# The contents of HCEEK.7z
+data
+shaders
+tags

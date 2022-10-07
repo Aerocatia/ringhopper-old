@@ -55,9 +55,6 @@ fn handle_node<'a, F>(scenario: &Scenario,
         }
     };
 
-    // Should we exclude string data from going in string data.
-    let mut ignore_strings = false;
-
     // Add our node
     new_nodes.push(ScenarioScriptNode {
         salt: (generate_script_node_id(Some(index)) >> 16) as u16,
@@ -126,19 +123,15 @@ fn handle_node<'a, F>(scenario: &Scenario,
                         let tag_str = n.get_string_data().unwrap();
                         let mut found = false;
                         let reference = TagReference::from_path_and_group(tag_str, $group)?;
-                        for i in &*references {
+                        for i in references.into_iter() {
                             if reference.eq(i) {
                                 found = true;
                                 break;
                             }
                         }
-
                         if !found {
                             references.push(reference);
                         }
-
-                        ignore_strings = true;
-
                         ScenarioScriptNodeValue::default()
                     }}
                 }
@@ -257,23 +250,21 @@ fn handle_node<'a, F>(scenario: &Scenario,
                 NodeData::Real(f) => ScenarioScriptNodeValue { real: f }
             }
         },
-        string_offset: if ignore_strings { 0 } else {
-            match n.get_string_data() {
-                Some(n) => {
-                    match past_strings.get(n) {
-                        Some(n) => *n,
-                        None => {
-                            let offset = string_data.len() as u32;
-                            past_strings.insert(n, offset);
-                            string_data.reserve(n.len() + 1);
-                            string_data.extend_from_slice(n.as_bytes());
-                            string_data.push(0);
-                            offset
-                        }
+        string_offset: match n.get_string_data() {
+            Some(n) => {
+                match past_strings.get(n) {
+                    Some(n) => *n,
+                    None => {
+                        let offset = string_data.len() as u32;
+                        past_strings.insert(n, offset);
+                        string_data.reserve(n.len() + 1);
+                        string_data.extend_from_slice(n.as_bytes());
+                        string_data.push(0);
+                        offset
                     }
                 }
-                None => 0
             }
+            None => 0
         }
     });
 
@@ -385,6 +376,8 @@ impl ScriptCompiler for Scenario {
                                                                      column=new_nodes_c[i].get_column(),
                                                                      message=e)))?;
         }
+
+        string_data.resize(string_data.len() + 1024, 0); // needed to ensure the console still works since the console dynamically modifies the script data
 
         // Now make our script syntax data!
         let mut syntax_data = Vec::new();
