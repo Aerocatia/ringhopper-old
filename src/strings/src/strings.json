@@ -99,6 +99,7 @@
 
     "engine.h1.verbs.recover.error_bitmap_color_plate_data_invalid": "Compressed color plate data is invalid.",
     "engine.h1.verbs.recover.error_could_not_recover_tag": "Could not recover {tag}: {error}",
+    "engine.h1.verbs.recover.error_duplicate_scripts": "Multiple instances of \"{name}\" script source files.",
     "engine.h1.verbs.recover.error_hud_messages_not_valid_utf16": "String data is not valid UTF-16.",
     "engine.h1.verbs.recover.error_hud_messages_out_of_bounds_message": "Message #{message_index} ({message_name}) has an out-of-bounds range.",
     "engine.h1.verbs.recover.error_hud_messages_out_of_bounds_element": "Element #{message_index} has an out-of-bounds range.",
