@@ -76,7 +76,7 @@ fn compile_scripts_for_tag(path: &TagFile,
 
             // Include global_scripts unless we exclude them from the root.
             if !options.exclude_global_scripts && n.contains(&global_scripts_name) && !script_paths.contains_key(&global_scripts_name) {
-                script_paths.insert(global_scripts_name, global_scripts_path);
+                script_paths.insert(global_scripts_name.clone(), global_scripts_path.clone());
             }
         }
 
@@ -125,13 +125,30 @@ fn compile_scripts_for_tag(path: &TagFile,
 
             // If we are including global_scripts
             if !options.exclude_global_scripts && global_scripts_path.exists() && !script_paths.contains_key(&global_scripts_name) {
-                script_paths.insert(global_scripts_name, global_scripts_path);
+                script_paths.insert(global_scripts_name.clone(), global_scripts_path.clone());
             }
         }
 
         // Add them all.
-        for (name,path) in script_paths {
+        for (name,path) in &script_paths {
             scenario_tag.source_files.blocks.push(ScenarioSourceFile { name: String32::from_str(&name).unwrap(), source: read_file(&path)? })
+        }
+
+        // Sort them.
+        scenario_tag.source_files.blocks.sort_by(|a, b| a.name.to_str().cmp(b.name.to_str()));
+
+        // Check if we have a global_scripts that isn't from the root.
+        //
+        // This is not allowed because recovery would be lossy, as it wouldn't be recovered to the scripts dir but the root dir instead.
+        match script_paths.get(&global_scripts_name) {
+            Some(n) if n != &global_scripts_path => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.script.error_global_scripts_not_in_root"))),
+            Some(_) => {
+                // Move global_scripts to the top
+                let global_scripts_index = scenario_tag.source_files.blocks.binary_search_by(|f| f.name.to_str().cmp("global_scripts")).unwrap();
+                let global_scripts = scenario_tag.source_files.blocks.remove(global_scripts_index);
+                scenario_tag.source_files.blocks.insert(0, global_scripts);
+            }
+            _ => ()
         }
     }
     else {

@@ -126,6 +126,7 @@
     "engine.h1.verbs.script.error_could_not_compile_scripts": "Failed to compile scripts for {tag}: {error}",
     "engine.h1.verbs.script.error_could_not_read_scripts": "Failed to read scripts: {error}",
     "engine.h1.verbs.script.error_could_not_find_hud_globals": "Could not find a HUD globals tag: {error}",
+    "engine.h1.verbs.script.error_global_scripts_not_in_root": "The scenario scripts directory cannot contain \"global_scripts.hsc\"",
     "engine.h1.verbs.script.error_no_hud_globals_referenced": "No HUD globals tag referenced by the globals tag.",
     "engine.h1.verbs.script.error_no_interface_bitmaps": "No interface bitmaps in the globals tag.",
     "engine.h1.verbs.script.error_no_tags_compiled": "No scripts could be compiled due to {error} error(s)",
