@@ -3,7 +3,7 @@ use crate::types::tag::TagGroupFn;
 use std::fmt;
 
 /// Tag groups define types of tags.
-#[derive(Copy, Clone, PartialEq, Debug, PartialOrd, Ord, Eq)]
+#[derive(Copy, Clone, PartialEq, Debug, PartialOrd, Ord, Eq, Default)]
 pub enum TagGroup {
     /// Corresponds to the [`Actor`](crate::engines::h1::definitions::Actor) struct.
     Actor,
@@ -173,6 +173,7 @@ pub enum TagGroup {
     Wind,
 
     /// Special group for when there is an absence of a group.
+    #[default]
     _None,
 }
 
@@ -296,12 +297,6 @@ impl TagGroupFn for TagGroup {
     }
 
     fn none() -> TagGroup {
-        TagGroup::_None
-    }
-}
-
-impl Default for TagGroup {
-    fn default() -> Self {
         TagGroup::_None
     }
 }

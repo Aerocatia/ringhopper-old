@@ -172,3 +172,31 @@ shader_transparent_chicago_conversion!(
     shader_transparent_chicago_flags,
     shader_transparent_chicago_extended_flags
 );
+
+impl BitmapSpriteBudgetSize {
+    /// Convert the length to a sprite budget.
+    ///
+    /// Returns `Err` if `length` does not correspond to a budget size.
+    pub fn from_length(length: u16) -> ErrorMessageResult<BitmapSpriteBudgetSize> {
+        // Rather than the usual error, return an error that might be more relevant for a user on a command line instead.
+        let complain = || {
+            let mut allowed = "32".to_owned();
+            for i in 1..BitmapSpriteBudgetSize::options().len() {
+                allowed += &format!(", {}", (32 << i).to_string());
+            }
+            ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_cannot_convert_sprite_length"), input=length, valid_lengths=allowed))
+        };
+
+        if !length.is_power_of_two() || length < 32 {
+            Err(complain())
+        }
+        else {
+            BitmapSpriteBudgetSize::from_u16(log2_u16(length / 32)).map_err(|_| complain())
+        }
+    }
+
+    /// Convert the sprite budget to a numeric value.
+    pub fn to_length(self) -> u16 {
+        32 << self.into_u16()
+    }
+}

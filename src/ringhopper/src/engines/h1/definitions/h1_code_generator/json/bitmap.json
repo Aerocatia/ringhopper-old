@@ -12,39 +12,24 @@
     {
         "name": "BitmapDataFormat",
         "options": [
-            "a8",
-            "y8",
-            "ay8",
-            "a8y8",
-            {
-                "name": "unused1",
-                "exclude": true
-            },
-            {
-                "name": "unused2",
-                "exclude": true
-            },
-            "r5g6b5",
-            {
-                "name": "unused3",
-                "exclude": true
-            },
-            "a1r5g5b5",
-            "a4r4g4b4",
-            "x8r8g8b8",
-            "a8r8g8b8",
-            {
-                "name": "unused4",
-                "exclude": true
-            },
-            {
-                "name": "unused5",
-                "exclude": true
-            },
-            "dxt1",
-            "dxt3",
-            "dxt5",
-            "p8 bump"
+            { "name": "A8", "description": "8 bpp; 8-bit alpha on white" },
+            { "name": "Y8", "description": "8 bpp; 8-bit luminosity" },
+            { "name": "AY8", "description": "8 bpp; 8-bit luminosity-alpha (alpha = luminosity)" },
+            { "name": "A8Y8", "description": "16 bpp; 8-bit luminosity with 8-bit alpha" },
+            { "name": "unused1", "exclude": true },
+            { "name": "unused2", "exclude": true },
+            { "name": "R5G6B5", "description": "16 bpp; 16-bit RGB (5-bit red, 6-bit green, and 5-bit blue)" },
+            { "name": "unused3", "exclude": true },
+            { "name": "A1R5G5B5", "description": "16 bpp; 15-bit RGB (5-bit red, green, and blue) with 1-bit alpha" },
+            { "name": "A4R4G4B4", "description": "16 bpp; 12-bit RGB (4-bit red, green, and blue) with 4-bit alpha" },
+            { "name": "X8R8G8B8", "description": "32 bpp; 24-bit RGB (8-bit red, green, and blue)" },
+            { "name": "A8R8G8B8", "description": "32 bpp; 24-bit RGB (8-bit red, green, and blue) with 8-bit alpha" },
+            { "name": "unused4", "exclude": true },
+            { "name": "unused5", "exclude": true },
+            { "name": "DXT1", "description": "4 bpp; BC1 compression with optional 1-bit alpha" },
+            { "name": "DXT3", "description": "8 bpp; BC2 compression (effectively BC1 + explicit alpha)" },
+            { "name": "DXT5", "description": "8 bpp; BC3 compression (effectively BC1 + interpolated alpha)" },
+            { "name": "P8", "description": "8 bpp; 8-bit palette optimized for height maps" }
         ],
         "type": "enum"
     },
@@ -62,12 +47,12 @@
     {
         "name": "BitmapFormat",
         "options": [
-            "dxt1",
-            "dxt3",
-            "dxt5",
-            "16-bit",
-            "32-bit",
-            "monochrome"
+            {"name": "DXT1", "description": "Only use DXT1/BC1 compression with optional 1-bit alpha." },
+            {"name": "DXT3", "description": "Prefer DXT3/BC2 compression, using DXT1/BC1 if no alpha channel." },
+            {"name": "DXT5", "description": "Prefer DXT5/BC3 compression, using DXT1/BC1 if no alpha channel." },
+            {"name": "16-bit", "description": "Use 16 bpp (A)RGB formats." },
+            {"name": "32-bit", "description": "Use 32 bpp (A)RGB formats." },
+            {"name": "monochrome", "description": "Use monochrome formats and convert non-monochrome bitmaps into monochrome." }
         ],
         "type": "enum"
     },
@@ -138,11 +123,11 @@
         "name": "BitmapFlags",
         "type": "bitfield",
         "fields": [
-            "enable diffusion dithering",
-            "disable height map compression",
-            "uniform sprite sequences",
-            "filthy sprite bug fix",
-            "half hud scale"
+            { "name": "enable diffusion dithering", "description": "Enable dithering for 16-bit textures." },
+            { "name": "disable height map compression", "description": "Disable palettization when usage is set to height or vector map." },
+            { "name": "uniform sprite sequences", "description": "hey - don't even try it!", "note": "What this flag was intended to do is unknown. Current tools error if you have this set.", "read_only": true },
+            { "name": "filthy sprite bug fix", "description": "Ignore sequence borders when calculating registration point." },
+            { "name": "half hud scale", "description": "Draw the HUD at half the width and height.", "engines": ["mcc-cea"] }
         ],
         "width": 16
     },
@@ -317,7 +302,7 @@
             {
                 "name": "encoding format",
                 "first": "encoding format",
-                "description": "Encoding format determines the maximum format of the bitmap. If \"disable height map compression\" is not set and usage is set to \"height map\" or \"vector map\", then this will be ignored.\n\n\"dxt1\" (4 bits per pixel) compression encodes pixels into 4x4 blocks interpolated between two colors. Alpha from the color plate is reduced to 1-bit alpha, though using alpha may result in even worse quality.\n\n\"dxt3\" (8 bits per pixel) compression uses dxt1 for the color and explicit alpha from the color plate, reduced to 4 bits per pixel. This can cause banding for alpha gradients, but it may be better for noise and shapes. If alpha isn't used, dxt1 is used automatically.\n\n\"dxt5\" (8 bits per pixel) compression uses dxt1 for the color while also compressing and interpolating the alpha similar. This is better than dxt3 for alpha gradients, but not as good for noisy alpha or definite shapes. If alpha isn't used, dxt1 is used automatically.\n\n\"16-bit\" (16 bits per pixel) reduces pixels to 16-bits per pixel. Alpha can optionally be present, but depending on the depth of the alpha, the depth of the colors is affected (no alpha = 5-bit red/blue and 6-bit green; 1-bit alpha = 5-bit red/green/blue, 4-bit alpha = 4-bit red/green/blue). This may cause heavy banding, but dithering can somewhat mitigate this at the cost of added noise.\n\n\"32-bit\" (32 bits per pixel) outputs the original color from the color plate with no loss in quality. Alpha may or may not be used, but it does not affect the size of the bitmap.\n\n\"monochrome\" (8 or 16 bits per pixel) signficantly reduces the size of the bitmap data losslessly if the original input is monochrome/grayscale. This can be especially useful for monochrome HUDs and noise maps. However, monochrome bitmaps do not work on the Gearbox version of Halo without a mod."
+                "description": "Encoding format determines the maximum format of the bitmap when generating the tag. If \"disable height map compression\" is not set and usage is set to \"height map\" or \"vector map\", then this will be ignored.\n\n\"dxt1\" (4 bits per pixel) compression encodes pixels into 4x4 blocks interpolated between two colors. Alpha from the color plate is reduced to 1-bit alpha, though using alpha may result in even worse quality.\n\n\"dxt3\" (8 bits per pixel) compression uses dxt1 for the color and explicit alpha from the color plate, reduced to 4 bits per pixel. This can cause banding for alpha gradients, but it may be better for noise and shapes. If alpha isn't used, dxt1 is used automatically.\n\n\"dxt5\" (8 bits per pixel) compression uses dxt1 for the color while also compressing and interpolating the alpha similar. This is better than dxt3 for alpha gradients, but not as good for noisy alpha or definite shapes. If alpha isn't used, dxt1 is used automatically.\n\n\"16-bit\" (16 bits per pixel) reduces pixels to 16-bits per pixel. Alpha can optionally be present, but depending on the depth of the alpha, the depth of the colors is affected (no alpha = 5-bit red/blue and 6-bit green; 1-bit alpha = 5-bit red/green/blue, 4-bit alpha = 4-bit red/green/blue). This may cause heavy banding, but dithering can somewhat mitigate this at the cost of added noise.\n\n\"32-bit\" (32 bits per pixel) outputs the original color from the color plate with no loss in quality. Alpha may or may not be used, but it does not affect the size of the bitmap.\n\n\"monochrome\" (8 or 16 bits per pixel) signficantly reduces the size of the bitmap data losslessly if the original input is monochrome/grayscale. This can be especially useful for monochrome HUDs and noise maps. However, monochrome bitmaps do not work on the Gearbox version of Halo without a mod."
             },
             {
                 "name": "usage",

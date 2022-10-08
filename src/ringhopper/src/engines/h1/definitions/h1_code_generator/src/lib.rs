@@ -115,10 +115,15 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                         }
                     }
 
+                    match o.get("description") {
+                        Some(doc) => options += &format!(r#"#[doc="{doc}"]"#, doc=doc.as_str().unwrap().replace("\"", "\\\"")),
+                        None => ()
+                    }
+
                     // Build the options
                     options += &format!("{rust_enum_name},");
 
-                    let spaceless = enum_name.replace(" ", "-").replace("'", "");
+                    let spaceless = enum_name.replace(" ", "-").replace("'", "").to_lowercase();
                     options_str += &format!(r#""{spaceless}","#);
                     options_pretty_str += &format!(r#""{enum_name}","#);
                 }
@@ -132,8 +137,8 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                 ").parse::<TokenStream>().unwrap());
 
                 stream.extend(format!(r#"impl TagEnumFn for {object_name} {{
-                    fn into_u16(&self) -> u16 {{
-                        *self as u16
+                    fn into_u16(self) -> u16 {{
+                        self as u16
                     }}
 
                     fn from_u16(input_value: u16) -> ErrorMessageResult<{object_name}> {{
@@ -165,7 +170,7 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                                 return return_value;
                             }}
                         }}
-                        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.serialize.error_enum_invalid_str"), input=s, enum_name="{object_name}")))
+                        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.serialize.error_enum_invalid_str"), input=s, enum_name="{object_name}", options=options)))
                     }}
                 }}"#).parse::<TokenStream>().unwrap());
 
@@ -210,6 +215,12 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                     };
 
                     let name = format_tag_field_name(o.get("name").unwrap().as_str().unwrap());
+
+                    match o.get("description") {
+                        Some(doc) => fields += &format!(r#"#[doc="{doc}"]"#, doc=doc.as_str().unwrap().replace("\"", "\\\"")),
+                        None => ()
+                    }
+
                     fields += &format!("pub {name}: bool,");
 
                     // Set these masks so we know what to read/write
@@ -498,7 +509,7 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                     // Put the doc in the struct
                     if doc != "" {
                         doc = doc.replace("\"", "\\\"");
-                        all_fields_defined += &format!("#[doc=\"{doc}\"] ")
+                        all_fields_defined += &format!(r#"#[doc="{doc}"] "#)
                     }
 
                     // Put it in the struct

@@ -283,7 +283,7 @@ impl ParsedArguments {
                     !(n.short == 'e' && !constraints.needs_engine)
                 });
 
-                let argument_width = 32;
+                let argument_width = 40;
                 let right_margin = 1;
                 let left_side = argument_width + right_margin;
 

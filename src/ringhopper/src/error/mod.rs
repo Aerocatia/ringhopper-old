@@ -25,4 +25,3 @@ impl Display for ErrorMessage {
 ///
 /// This is the main return type for error reporting from within Ringhopper's API.
 pub type ErrorMessageResult<T> = Result<T, ErrorMessage>;
-

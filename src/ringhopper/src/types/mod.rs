@@ -27,7 +27,7 @@ pub type Data = Vec<u8>;
 /// Trait for accessing tag enums.
 pub trait TagEnumFn {
     /// Get the numeric representation of the enum.
-    fn into_u16(&self) -> u16;
+    fn into_u16(self) -> u16 where Self: Sized;
 
     /// Convert the number into an enum.
     ///
@@ -41,12 +41,12 @@ pub trait TagEnumFn {
     fn options_pretty() -> &'static [&'static str];
 
     /// Get the string representation of the enum.
-    fn as_str(&self) -> &'static str {
+    fn as_str(self) -> &'static str where Self: Sized {
         Self::options()[self.into_u16() as usize]
     }
 
     /// Get the display string representation of the enum.
-    fn as_str_pretty(&self) -> &'static str {
+    fn as_str_pretty(self) -> &'static str where Self: Sized {
         Self::options_pretty()[self.into_u16() as usize]
     }
 }
@@ -244,4 +244,21 @@ fn match_pattern_bytes(string: &[u8], pattern: &[u8]) -> bool {
 /// Note that wildcard characters cannot be directly matched. These characters are unsupported in tag paths, anyway.
 pub fn match_pattern(string: &str, pattern: &str) -> bool {
     match_pattern_bytes(string.as_bytes(), pattern.as_bytes())
+}
+
+/// Compute log2 on a 16-bit unsigned integer, rounding down.
+///
+/// NOTE: THIS SHOULD BE REPLACED WHEN log_int BECOMES STABILIZED!
+pub(crate) fn log2_u16(input: u16) -> u16 {
+    debug_assert!(input > 0, "cannot log2 zero");
+
+    let mut v = 0;
+    let mut i = input / 2;
+
+    while i > 0 {
+        i /= 2;
+        v += 1;
+    }
+
+    v
 }
