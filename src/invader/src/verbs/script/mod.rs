@@ -214,7 +214,7 @@ pub fn script_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
     )?;
 
     // Here are our tags.
-    let tags_dirs = str_slice_to_path_vec(parsed_args.named.get("tags").unwrap());
+    let tags_dirs = str_slice_to_path_vec(&parsed_args.named["tags"]);
 
     // We first need to get the HUD globals tag from the globals tag
     let hud_globals = match (|| -> ErrorMessageResult<HUDGlobals> {

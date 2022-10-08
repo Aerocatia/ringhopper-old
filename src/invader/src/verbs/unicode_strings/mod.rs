@@ -133,8 +133,8 @@ fn make_string_list(file_data: &[u8], data_path: &Path, group: TagGroup) -> Erro
 pub fn unicode_strings_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode> {
     let parsed_args = ParsedArguments::parse_arguments(args, &[], &[get_compiled_string!("arguments.specifier.tag_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags())?;
 
-    let tags = Path::new(&parsed_args.named.get("tags").unwrap()[0]);
-    let data = Path::new(&parsed_args.named.get("data").unwrap()[0]);
+    let tags = Path::new(&parsed_args.named["tags"][0]);
+    let data = Path::new(&parsed_args.named["data"][0]);
     let internal_path = &parsed_args.extra[0];
     let internal_path_path = Path::new(&internal_path).to_owned();
     let data_path = data.join(internal_path_path.clone()).with_extension("txt");

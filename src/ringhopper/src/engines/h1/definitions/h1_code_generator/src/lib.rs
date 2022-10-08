@@ -69,7 +69,124 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
             let object_type = object.get("type").unwrap().as_str().unwrap();
 
             if object_type == "enum" {
-                stream.extend(format!("pub type {object_name} = u16;").parse::<TokenStream>().unwrap());
+                let mut options = String::new();
+
+                let all_options = object.get("options").unwrap().as_array().unwrap();
+                let enum_count = all_options.len();
+
+                let mut options_str = String::new();
+                let mut options_pretty_str = String::new();
+
+                for o in all_options {
+                    let o = match o.as_object() {
+                        Some(n) => n.to_owned(),
+                        None => {
+                            let mut m = Map::<String, Value>::new();
+                            m.insert("name".to_owned(), Value::String(o.as_str().unwrap().to_owned()));
+                            m
+                        }
+                    };
+
+                    // If the enum starts with a number, prefix with an underscore.
+                    let enum_name = o.get("name").unwrap().as_str().unwrap();
+                    let mut rust_enum_name = if enum_name.as_bytes()[0].is_ascii_digit() {
+                        "_".to_owned()
+                    }
+                    else {
+                        String::new()
+                    };
+
+                    // Now, add each character.
+                    rust_enum_name.reserve(enum_name.len());
+                    let mut next_character_uppercase = true;
+                    for i in enum_name.chars() {
+                        if i == ' ' {
+                            next_character_uppercase = true;
+                        }
+                        else if i == '-' {
+                            continue
+                        }
+                        else if next_character_uppercase {
+                            rust_enum_name.push(i.to_ascii_uppercase());
+                            next_character_uppercase = false;
+                        }
+                        else {
+                            rust_enum_name.push(i);
+                        }
+                    }
+
+                    // Build the options
+                    options += &format!("{rust_enum_name},");
+
+                    let spaceless = enum_name.replace(" ", "-").replace("'", "");
+                    options_str += &format!(r#""{spaceless}","#);
+                    options_pretty_str += &format!(r#""{enum_name}","#);
+                }
+
+                stream.extend(format!("
+                    #[repr(u16)]
+                    #[derive(Copy, Clone, PartialEq, Default)]
+                    pub enum {object_name} {{
+                        #[default] {options}
+                    }}
+                ").parse::<TokenStream>().unwrap());
+
+                stream.extend(format!(r#"impl TagEnumFn for {object_name} {{
+                    fn into_u16(&self) -> u16 {{
+                        *self as u16
+                    }}
+
+                    fn from_u16(input_value: u16) -> ErrorMessageResult<{object_name}> {{
+                        if input_value >= {enum_count} {{
+                            Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.serialize.error_enum_out_of_bounds"), input_value=input_value, enum_count={enum_count}, enum_name="{object_name}")))
+                        }}
+                        else {{
+                            Ok(unsafe {{ std::mem::transmute(input_value) }})
+                        }}
+                    }}
+
+                    fn options() -> &'static [&'static str] {{
+                        &[{options_str}]
+                    }}
+
+                    fn options_pretty() -> &'static [&'static str] {{
+                        &[{options_pretty_str}]
+                    }}
+                }}"#).parse::<TokenStream>().unwrap());
+
+                stream.extend(format!(r#"impl FromStr for {object_name} {{
+                    type Err = ErrorMessage;
+                    fn from_str(s: &str) -> ErrorMessageResult<{object_name}> {{
+                        let options = Self::options();
+                        for i in 0..Self::options().len() {{
+                            if options[i] == s {{
+                                let return_value = Self::from_u16(i as u16);
+                                debug_assert!(return_value.is_ok());
+                                return return_value;
+                            }}
+                        }}
+                        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.serialize.error_enum_invalid_str"), input=s, enum_name="{object_name}")))
+                    }}
+                }}"#).parse::<TokenStream>().unwrap());
+
+                stream.extend(format!("
+                impl TagSerialize for {object_name} {{
+                    fn tag_size() -> usize {{
+                        u16::tag_size()
+                    }}
+                    fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {{
+                        self.into_u16().into_tag(data, at, struct_end)
+                    }}
+                    fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<{object_name}> {{
+                        {object_name}::from_u16(u16::from_tag(data, at, struct_end, cursor)?)
+                    }}
+                    fn into_tag_cached(&self, data: &mut [u8], at: usize, struct_end: usize) -> ErrorMessageResult<()> where Self: Sized {{
+                        self.into_u16().into_tag_cached(data, at, struct_end)
+                    }}
+                    fn from_tag_cached(data: &[u8], at: usize, struct_end: usize) -> ErrorMessageResult<Self> where Self: Sized {{
+                        {object_name}::from_u16(u16::from_tag_cached(data, at, struct_end)?)
+                    }}
+                }}").parse::<TokenStream>().unwrap());
             }
             else if object_type == "bitfield" {
                 let width = object.get("width").unwrap().as_u64().unwrap();
@@ -234,11 +351,16 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                         _ => format!("[{field_type_data_type}; {count}]")
                     };
 
-                    // Is this swapped?
-                    let swapped = match f.get("little_endian").unwrap_or(&Value::Bool(false)).as_bool().unwrap() {
-                        true => "_swapped",
-                        false => ""
-                    };
+                    // Is this cached?
+                    let little_endian = f.get("little_endian").unwrap_or(&Value::Bool(false)).as_bool().unwrap();
+                    let uses_cursor = field_type == "TagReference" || field_type == "Data" || field_type == "Reflexive";
+
+                    // This is not allowed if it is little endian and uses a data pointer.
+                    if little_endian && uses_cursor {
+                        if little_endian {
+                            panic!("{field_type} cannot be little endian!", field_type=field_type);
+                        }
+                    }
 
                     // Is this cache only?
                     let cache_only = f.get("cache_only").unwrap_or(&Value::Bool(false)).as_bool().unwrap();
@@ -252,15 +374,21 @@ pub fn load_json_def(_: TokenStream) -> TokenStream {
                         // If it is cache only, if it is inconsequential (i.e. does not advance the data cursor), we ignore it. Otherwise, we read it from the tag but don't keep it.
                         // Either way, we do not generate any code to put it in a tag file.
                         if cache_only {
-                            if field_type == "TagReference" || field_type == "Data" || field_type == "Reflexive" {
-                                from_tag_code += &format!("{field_type_written_expression}::from_tag{swapped}(data, local_cursor, struct_end, cursor)?;");
+                            if uses_cursor {
+                                from_tag_code += &format!("{field_type_written_expression}::from_tag(data, local_cursor, struct_end, cursor)?;");
                             }
                         }
 
                         // Otherwise we serialize it normally
                         else {
-                            into_tag_code += &format!("self.{field_name_written}{type_suffix}.into_tag{swapped}(data, local_cursor, struct_end)?;");
-                            from_tag_code += &format!("new_object.{field_name_written}{type_suffix} = {field_type_written_expression}::from_tag{swapped}(data, local_cursor, struct_end, cursor)?;");
+                            if little_endian {
+                                into_tag_code += &format!("self.{field_name_written}{type_suffix}.into_tag_cached(data, local_cursor, struct_end)?;");
+                                from_tag_code += &format!("new_object.{field_name_written}{type_suffix} = {field_type_written_expression}::from_tag_cached(data, local_cursor, struct_end)?;");
+                            }
+                            else {
+                                into_tag_code += &format!("self.{field_name_written}{type_suffix}.into_tag(data, local_cursor, struct_end)?;");
+                                from_tag_code += &format!("new_object.{field_name_written}{type_suffix} = {field_type_written_expression}::from_tag(data, local_cursor, struct_end, cursor)?;");
+                            }
                         }
 
                         let cursor_increment = format!("local_cursor += {field_type_written_expression}::tag_size();");

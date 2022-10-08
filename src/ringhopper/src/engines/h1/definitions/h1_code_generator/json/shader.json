@@ -139,8 +139,7 @@
             {
                 "name": "shader type",
                 "type": "uint16",
-                "volatile": true,
-                "little_endian": true
+                "cache_only": true
             },
             {
                 "type": "pad",

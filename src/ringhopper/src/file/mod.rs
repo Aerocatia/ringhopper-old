@@ -201,7 +201,7 @@ impl TagFile {
         };
 
         // Check if we don't actually need to do any batching.
-        if !pattern.contains(&['*', '?']) {
+        if !TagFile::uses_batching(pattern) {
             let reference = TagReference::from_full_path(&tag_path_to_search)?;
             return match TagFile::from_tag_ref(tags_directories, &reference) {
                 Some(n) => Ok(vec![n]),
@@ -212,5 +212,10 @@ impl TagFile {
         let mut everything = TagFile::from_virtual_tags_directory(tags_directories)?;
         everything.retain(|i| i.tag_path.matches_pattern(&tag_path_to_search));
         Ok(everything)
+    }
+
+    /// Return `true` if the pattern uses batching.
+    pub fn uses_batching(pattern: &str) -> bool {
+        pattern.contains(&['*', '?'])
     }
 }

@@ -105,6 +105,7 @@ impl TagFileHeader {
 }
 
 /// Serialization implementation for tags in tag format using the normal endian (big endian).
+#[allow(unused_variables)]
 pub trait TagSerialize {
     /// Get the size of the data
     fn tag_size() -> usize where Self: Sized;
@@ -115,24 +116,29 @@ pub trait TagSerialize {
     /// Deserialize the data from tag format, returning an error on failure (except for allocation errors which will panic).
     fn from_tag(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> where Self: Sized;
 
-    /// Get the size of the instance.
-    fn instance_tag_size(&self) -> usize where Self: Sized {
-        Self::tag_size()
+    /// Serialize the data into tag format in little endian, returning an error on failure (except for out-of-bounds and allocation errors which will panic).
+    fn into_tag_cached(&self, data: &mut [u8], at: usize, struct_end: usize) -> ErrorMessageResult<()> where Self: Sized {
+        todo!()
     }
 
-    /// Deserialize into an instance.
-    fn instance_from_tag(&self, data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> where Self: Sized {
-        Self::from_tag(data, at, struct_end, cursor)
+    /// Deserialize the data from tag format from little endian, returning an error on failure (except for allocation errors which will panic).
+    fn from_tag_cached(data: &[u8], at: usize, struct_end: usize) -> ErrorMessageResult<Self> where Self: Sized {
+        todo!()
     }
 }
 
-/// Serialization implementation for tags in tag format using little endian.
-pub trait TagSerializeSwapped: TagSerialize {
-    /// Serialize the data into tag format in little endian, returning an error on failure (except for out-of-bounds and allocation errors which will panic).
-    fn into_tag_swapped(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> where Self: Sized;
+/// Get the tag size of `T`.
+///
+/// This is a convenience function for `T::tag_size`.
+pub fn tag_size_instance<T: TagSerialize>(_: &T) -> usize where T: Sized {
+    T::tag_size()
+}
 
-    /// Deserialize the data from tag format from little endian, returning an error on failure (except for allocation errors which will panic).
-    fn from_tag_swapped(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<Self> where Self: Sized;
+/// Deserialize tag data into `T`.
+///
+/// This is a convenience function for `T::from_tag`.
+pub fn from_tag<T: TagSerialize>(data: &[u8], at: usize, struct_end: usize, cursor: &mut usize) -> ErrorMessageResult<T> where T: Sized {
+    T::from_tag(data, at, struct_end, cursor)
 }
 
 macro_rules! sizeof {
@@ -209,10 +215,8 @@ macro_rules! serialize_for_primitive {
                 let bytes: [u8; SIZE] = data[at..at + SIZE].try_into().unwrap();
                 Ok(<$t>::from_be_bytes(bytes))
             }
-        }
 
-        impl TagSerializeSwapped for $t {
-            fn into_tag_swapped(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
+            fn into_tag_cached(&self, data: &mut [u8], at: usize, struct_end: usize) -> ErrorMessageResult<()> {
                 const SIZE: usize = sizeof!($t);
                 debug_assert!(fits(SIZE, at, struct_end, data.len()).is_ok());
                 let bytes = self.to_le_bytes();
@@ -220,7 +224,7 @@ macro_rules! serialize_for_primitive {
                 Ok(())
             }
 
-            fn from_tag_swapped(data: &[u8], at: usize, struct_end: usize, _: &mut usize) -> ErrorMessageResult<Self> {
+            fn from_tag_cached(data: &[u8], at: usize, struct_end: usize) -> ErrorMessageResult<Self> {
                 use std::convert::TryInto;
 
                 const SIZE: usize = sizeof!($t);
@@ -243,7 +247,7 @@ serialize_for_primitive!(f32);
 
 macro_rules! add_sizeof_together {
     // base case
-    ($instance:tt, $field:tt) => ($instance.$field.instance_tag_size());
+    ($instance:tt, $field:tt) => (tag_size_instance(&$instance.$field));
 
     // stuff
     ($instance:tt, $field:tt, $($fields:tt), +) => (
@@ -254,7 +258,7 @@ macro_rules! add_sizeof_together {
 macro_rules! into_tag {
     // base case
     ($data:expr, $at:tt, $struct_end:tt, $instance:tt, $field:tt) => ({
-        let size = $instance.$field.instance_tag_size();
+        let size = tag_size_instance(&$instance.$field);
         $instance.$field.into_tag($data, $at, $struct_end)?;
         $at += size;
     });
@@ -269,8 +273,8 @@ macro_rules! into_tag {
 macro_rules! from_tag {
     // base case
     ($data:expr, $at:tt, $struct_end:tt, $instance:tt, $field:tt) => ({
-        let size = $instance.$field.instance_tag_size();
-        $instance.$field = $instance.$field.instance_from_tag($data, $at, $struct_end, &mut 0)?;
+        let size = tag_size_instance(&$instance.$field);
+        $instance.$field = from_tag($data, $at, $struct_end, &mut 0)?;
         $at += size;
     });
 
@@ -292,7 +296,7 @@ macro_rules! serialize_for_struct {
 
             fn into_tag(&self, data: &mut Vec<u8>, at: usize, struct_end: usize) -> ErrorMessageResult<()> {
                 // Verify
-                let size: usize = self.instance_tag_size();
+                let size: usize = Self::tag_size();
                 debug_assert!(fits(size, at, struct_end, data.len()).is_ok());
 
                 // Now go through each member one at a time
@@ -309,7 +313,7 @@ macro_rules! serialize_for_struct {
                 let mut instance = Self::default();
 
                 // Verify
-                let size: usize = instance.instance_tag_size();
+                let size: usize = Self::tag_size();
                 fits(size, at, struct_end, data.len())?;
 
                 // Now go through each member one at a time

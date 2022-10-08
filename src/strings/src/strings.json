@@ -81,6 +81,8 @@
     "engine.h1.types.serialize.error_corrupt_tag": "Tried to read out-of-bounds data. (Tag may be corrupt!)",
     "engine.h1.types.serialize.error_data_cursor_inside_struct": "Data cursor is inside the struct instead of outside. This is a bug!",
     "engine.h1.types.serialize.error_data_not_zeroed_out": "Data not zeroed out at offset 0x{:08X}. This is a bug!",
+    "engine.h1.types.serialize.error_enum_invalid_str": "\"{input}\" does not correspond to a {enum_name}",
+    "engine.h1.types.serialize.error_enum_out_of_bounds": "{input_value} is out-of-bounds for {enum_name} ({input_value} >= {enum_count})",
     "engine.h1.types.serialize.error_fourcc_invalid": "0x{fourcc:08X} does not correspond to a valid FourCC.",
     "engine.h1.types.serialize.error_max_path_limit": "Path exceeds the maximum number of characters and cannot be written to a tag ({size} > {limit}).",
     "engine.h1.types.serialize.error_path_not_utf8": "Path is not valid UTF-8.",

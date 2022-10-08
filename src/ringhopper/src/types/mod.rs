@@ -24,6 +24,33 @@ pub type FourCC = u32;
 /// A block of data that doesn't have any fields directly attributed to it.
 pub type Data = Vec<u8>;
 
+/// Trait for accessing tag enums.
+pub trait TagEnumFn {
+    /// Get the numeric representation of the enum.
+    fn into_u16(&self) -> u16;
+
+    /// Convert the number into an enum.
+    ///
+    /// Return an [`Err`] if the value is out of bounds for the enum.
+    fn from_u16(input_value: u16) -> ErrorMessageResult<Self> where Self: Sized;
+
+    /// Get all options.
+    fn options() -> &'static [&'static str];
+
+    /// Get all options as their display representation.
+    fn options_pretty() -> &'static [&'static str];
+
+    /// Get the string representation of the enum.
+    fn as_str(&self) -> &'static str {
+        Self::options()[self.into_u16() as usize]
+    }
+
+    /// Get the display string representation of the enum.
+    fn as_str_pretty(&self) -> &'static str {
+        Self::options_pretty()[self.into_u16() as usize]
+    }
+}
+
 /// Halo directory separator used in tag paths.
 ///
 /// This corresponds to a Windows path separator.

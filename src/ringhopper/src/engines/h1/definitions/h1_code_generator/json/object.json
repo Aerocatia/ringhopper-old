@@ -365,9 +365,7 @@
             {
                 "name": "object type",
                 "type": "ObjectType",
-                "hidden": true,
-                "volatile": true,
-                "little_endian": true
+                "cache_only": true
             },
             {
                 "name": "flags",

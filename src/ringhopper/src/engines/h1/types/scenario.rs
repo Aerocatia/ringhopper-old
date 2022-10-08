@@ -59,7 +59,7 @@ fn handle_node<'a, F>(scenario: &Scenario,
     new_nodes.push(ScenarioScriptNode {
         salt: (generate_script_node_id(Some(index)) >> 16) as u16,
         index_union: n.get_index().unwrap_or(n.get_value_type() as u16),
-        _type: n.get_value_type() as u16,
+        _type: ScenarioScriptValueType::from_u16(n.get_value_type() as u16).unwrap(),
         flags,
         next_node: generate_script_node_id(n.get_next_node_index()),
         data: match n.get_data() {
@@ -321,12 +321,12 @@ impl ScriptCompiler for Scenario {
             let parameters_c = s.get_parameters();
             parameters.reserve(parameters_c.len());
             for p in parameters_c {
-                parameters.push(ScenarioScriptParameter { name: String32::from_str(p.get_name())?, return_type: p.get_value_type() as u16 })
+                parameters.push(ScenarioScriptParameter { name: String32::from_str(p.get_name())?, return_type: ScenarioScriptValueType::from_u16(p.get_value_type() as u16).unwrap() })
             }
             new_scripts.push(ScenarioScript {
                 name: String32::from_str(s.get_name())?,
-                script_type: s.get_type() as u16,
-                return_type: s.get_value_type() as u16,
+                script_type: ScenarioScriptType::from_u16(s.get_type() as u16).unwrap(),
+                return_type: ScenarioScriptValueType::from_u16(s.get_value_type() as u16).unwrap(),
                 root_expression_index: generate_script_node_id(Some(s.get_first_node_index())),
                 parameters: Reflexive { blocks: parameters }
             });
@@ -339,7 +339,7 @@ impl ScriptCompiler for Scenario {
         for g in new_globals_c {
             new_globals.push(ScenarioGlobal {
                 name: String32::from_str(g.get_name())?,
-                _type: g.get_value_type() as u16,
+                _type: ScenarioScriptValueType::from_u16(g.get_value_type() as u16).unwrap(),
                 initialization_expression_index: generate_script_node_id(Some(g.get_first_node_index()))
             });
         }
@@ -395,7 +395,7 @@ impl ScriptCompiler for Scenario {
         };
 
         // Write the nodes
-        let mut node_offset = table_header.instance_tag_size();
+        let mut node_offset = tag_size_instance(&table_header);
         let expected_length = node_offset + max_node_count * node_tag_size;
         syntax_data.resize(expected_length, 0);
         table_header.into_tag(&mut syntax_data, 0, node_offset).unwrap();
