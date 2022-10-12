@@ -11,6 +11,7 @@ mod verbs;
 use verbs::*;
 
 mod file;
+mod string;
 
 use std::process::ExitCode;
 

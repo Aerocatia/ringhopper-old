@@ -5,6 +5,7 @@ use ringhopper::engines::h1::definitions::*;
 use ringhopper::engines::{h1::*, HUD_MESSAGE_ELEMENT_TYPES};
 use std::path::Path;
 use crate::file::*;
+use crate::string::*;
 use super::RecoverResult;
 
 pub fn recover_hud_messages(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, overwrite: bool) -> ErrorMessageResult<RecoverResult> {
@@ -59,16 +60,7 @@ pub fn recover_hud_messages(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path
                     };
                     let input = match text_data.get(cursor..end) {
                         // go up to the first null terminator
-                        Some(n) => {
-                            (|| {
-                                for i in 0..n.len() {
-                                    if n[i] == 0 {
-                                        return &n[0..i];
-                                    }
-                                }
-                                n
-                            })()
-                        },
+                        Some(n) => to_terminator(&n, 0),
                         None => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.recover.error_hud_messages_out_of_bounds_element"), message_index=i)))
                     };
                     output_data.extend_from_slice(input);
