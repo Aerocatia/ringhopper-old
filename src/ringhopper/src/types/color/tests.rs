@@ -49,3 +49,28 @@ fn test_component_conversion() {
         assert_eq!(ColorARGBInt::from(gray), ColorARGBInt::from_y8(ColorARGBInt::from(gray).to_y8()));
     }
 }
+
+#[test]
+fn test_vector_normalize_generational_loss() {
+    let a = u8::MAX;
+    for r in 0..=255 {
+        for g in 0..=64 {
+            // Here's our original color.
+            let c = ColorARGBInt { a, r, g, b: 0 };
+            let cnormalized = c.vector_normalize();
+
+            // Renormalizing a vector 3 times should have no generational loss.
+            let mut new_normalized = cnormalized;
+            for _ in 0..3 {
+                // Normalize our normalized vector.
+                new_normalized = new_normalized.vector_normalize();
+
+                // Compare with our very first normalized vector. The difference should remain extremely small if none.
+                assert!(cnormalized.a.abs_diff(new_normalized.a) == 0, "alpha should not change when normalizing a vector");
+                assert!(cnormalized.r.abs_diff(new_normalized.r) <= 1);
+                assert!(cnormalized.g.abs_diff(new_normalized.g) <= 1);
+                assert!(cnormalized.b.abs_diff(new_normalized.b) <= 1);
+            }
+        }
+    }
+}

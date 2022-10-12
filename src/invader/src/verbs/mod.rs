@@ -1,3 +1,4 @@
+pub mod bitmap;
 pub mod collection;
 pub mod convert;
 pub mod list_engines;

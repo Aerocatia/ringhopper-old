@@ -97,7 +97,7 @@
     "engine.h1.verbs.bitmap.arguments.dithering.description": "Apply dithering to 16-bit or p8 bitmaps. Default (new tag): off",
     "engine.h1.verbs.bitmap.arguments.filthy-sprite-bug-fix.description": "Ignore sequence borders when calculating registration point. Default (new tag): off",
     "engine.h1.verbs.bitmap.arguments.format.description": "Set the output pixel format. Can be: dxt1, dxt3, dxt5, 16-bit, 32-bit, monochrome. Default (new tag): best lossless",
-    "engine.h1.verbs.bitmap.arguments.mipmap-count.description": "Limit the maximum number of mipmaps. Default (new tag): 32767",
+    "engine.h1.verbs.bitmap.arguments.mipmap-count.description": "Limit the maximum number of mipmaps, or 0 for no limit. Default (new tag): 0",
     "engine.h1.verbs.bitmap.arguments.palettization.description": "Enable palettization for height maps. Default (new tag): off",
     "engine.h1.verbs.bitmap.arguments.regenerate.description": "Use the bitmap tag's script source data as data. This setting does not persist.",
     "engine.h1.verbs.bitmap.arguments.sharpen-amount.description": "Sharpen the bitmap by the given amount. Default (new tag): 0",

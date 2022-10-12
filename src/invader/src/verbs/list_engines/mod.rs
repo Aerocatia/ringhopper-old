@@ -4,7 +4,6 @@ use ringhopper::cmd::*;
 use ringhopper::error::ErrorMessageResult;
 use ringhopper::engines::h1::ALL_TARGETS;
 
-
 pub fn list_engines_verb(_verb: &Verb, _args: &[&str], _executable: &str) -> ErrorMessageResult<ExitCode> {
     let mut targets_vec = ALL_TARGETS.to_vec();
     targets_vec.retain(|t| t.shorthand.is_some());

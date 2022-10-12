@@ -2,6 +2,7 @@
 
 extern crate h1_code_generator;
 use self::h1_code_generator::load_json_def;
+use crate::bitmap::BitmapEncoding;
 use crate::engines::h1::{TagSerialize, TagFileSerializeFn, TagReference, ScenarioScriptNodeValue, Index, TagID, Pointer, TAG_FILE_HEADER_LEN, TagGroup, ParsedTagFile, TagFileHeader};
 use crate::error::*;
 use crate::types::*;
@@ -198,5 +199,29 @@ impl BitmapSpriteBudgetSize {
     /// Convert the sprite budget to a numeric value.
     pub fn to_length(self) -> u16 {
         32 << self.into_u16()
+    }
+}
+
+impl TryFrom<BitmapEncoding> for BitmapDataFormat {
+    type Error = ErrorMessage;
+
+    fn try_from(value: BitmapEncoding) -> Result<Self, ErrorMessage> {
+        let m = match value {
+            BitmapEncoding::A8R8G8B8 => BitmapDataFormat::A8R8G8B8,
+            BitmapEncoding::X8R8G8B8 => BitmapDataFormat::X8R8G8B8,
+            BitmapEncoding::R5G6B5 => BitmapDataFormat::R5G6B5,
+            BitmapEncoding::A1R5G5B5 => BitmapDataFormat::A1R5G5B5,
+            BitmapEncoding::A4R4G4B4 => BitmapDataFormat::A4R4G4B4,
+            BitmapEncoding::A8 => BitmapDataFormat::A8,
+            BitmapEncoding::Y8 => BitmapDataFormat::Y8,
+            BitmapEncoding::AY8 => BitmapDataFormat::AY8,
+            BitmapEncoding::A8Y8 => BitmapDataFormat::A8Y8,
+            BitmapEncoding::P8HCE => BitmapDataFormat::P8,
+            BitmapEncoding::BC1 => BitmapDataFormat::DXT1,
+            BitmapEncoding::BC2 => BitmapDataFormat::DXT3,
+            BitmapEncoding::BC3 => BitmapDataFormat::DXT5,
+        };
+
+        Ok(m)
     }
 }

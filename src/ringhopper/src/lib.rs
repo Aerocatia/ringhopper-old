@@ -9,6 +9,7 @@ pub mod error;
 pub mod cmd;
 pub mod crc;
 pub mod types;
+pub mod bitmap;
 
 /// The current Ringhopper version, including a git commit count/hash if available.
 pub const RINGHOPPER_VERSION: &'static str = env!("ringhopper_version");

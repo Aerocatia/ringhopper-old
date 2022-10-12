@@ -16,7 +16,7 @@ pub struct ColorRGBInt {
 
 impl From<ColorRGB> for ColorRGBInt {
     fn from(item: ColorRGB) -> Self {
-        Self { r: (item.r * 255.0) as u8, g: (item.g * 255.0) as u8, b: (item.b * 255.0) as u8 }
+        Self { r: (item.r * 255.0 + 0.5) as u8, g: (item.g * 255.0 + 0.5) as u8, b: (item.b * 255.0 + 0.5) as u8 }
     }
 }
 
@@ -250,6 +250,17 @@ impl ColorARGBInt {
     pub const fn from_y8(color: u8) -> ColorARGBInt {
         ColorARGBInt { a: 255, r: color, g: color, b: color }
     }
+
+    /// Return true if the color is the same color, ignoring alpha.
+    pub const fn same_color(self, other: ColorARGBInt) -> bool {
+        self.r == other.r && self.g == other.g && self.b == other.b
+    }
+
+    /// Normalize for vector mapping.
+    pub fn vector_normalize(self) -> ColorARGBInt {
+        let f: ColorARGB = self.into();
+        f.vector_normalize().into()
+    }
 }
 
 impl From<ColorRGBInt> for ColorARGBInt {
@@ -260,11 +271,9 @@ impl From<ColorRGBInt> for ColorARGBInt {
 
 impl From<ColorARGB> for ColorARGBInt {
     fn from(item: ColorARGB) -> Self {
-        Self { a: (item.a * 255.0) as u8, r: (item.r * 255.0) as u8, g: (item.g * 255.0) as u8, b: (item.b * 255.0) as u8 }
+        Self { a: (item.a * 255.0 + 0.5) as u8, r: (item.r * 255.0 + 0.5) as u8, g: (item.g * 255.0 + 0.5) as u8, b: (item.b * 255.0 + 0.5) as u8 }
     }
 }
-
-
 
 /// Color with 32-bit floating point channels and no alpha component.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
@@ -315,7 +324,40 @@ impl From<ColorARGBInt> for ColorARGB {
     }
 }
 
+impl ColorARGB {
+    /// Normalize for vector mapping.
+    pub fn vector_normalize(self) -> ColorARGB {
+        // Constants
+        const HALF: f32 = 0.5;
 
+        // Calculate the magnitude of the vector
+        let r = self.r - HALF;
+        let g = self.g - HALF;
+        let b = self.b - HALF;
+        let magnitude = (r*r + g*g + b*b).sqrt() / HALF;
+
+        // Normalize, convert back to u8
+        let a = self.a;
+        let r = r / magnitude + HALF;
+        let g = g / magnitude + HALF;
+        let b = b / magnitude + HALF;
+
+        // Done
+        ColorARGB { a, r, g, b }
+    }
+
+    /// Do alpha blending.
+    pub fn alpha_blend(self, source: ColorARGB) -> ColorARGB {
+        let blend = self.a * (1.0 - source.a);
+
+        let a = source.a + blend;
+        let r = source.r * source.a + self.r * blend;
+        let g = source.g * source.a + self.g * blend;
+        let b = source.b * source.a + self.b * blend;
+
+        ColorARGB { a, r, g, b }
+    }
+}
 
 /// Color with 32-bit floating point channels represented as HSV and with no alpha component.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
