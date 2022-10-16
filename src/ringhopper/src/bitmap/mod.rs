@@ -121,9 +121,8 @@ pub fn iterate_encoded_base_map_and_mipmaps_with_err<F>(compression: BitmapEncod
         // 16 + ((4 - (16 % 4)) & ~4) = 16
         // 15 + ((4 - (15 % 4)) & ~4) = 16
         let effective_width = m.width + ((bwidth - (m.width % bwidth)) & !bwidth);
-        let effective_height = m.height + ((bheight - (m.width % bwidth)) & !bheight);
+        let effective_height = m.height + ((bheight - (m.height % bheight)) & !bheight);
         let effective_size = effective_height * effective_width * m.depth * faces;
-        effective_pixel_offset += effective_size;
 
         let mut m = m;
         m.effective_pixel_offset = effective_pixel_offset;
@@ -132,6 +131,9 @@ pub fn iterate_encoded_base_map_and_mipmaps_with_err<F>(compression: BitmapEncod
         m.effective_width = effective_width;
         m.effective_size = effective_size;
 
-        function(m)
+        function(m)?;
+
+        effective_pixel_offset += effective_size;
+        Ok(())
     })
 }

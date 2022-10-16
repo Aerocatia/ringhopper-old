@@ -220,6 +220,8 @@ impl TryFrom<BitmapEncoding> for BitmapDataFormat {
             BitmapEncoding::BC1 => BitmapDataFormat::DXT1,
             BitmapEncoding::BC2 => BitmapDataFormat::DXT3,
             BitmapEncoding::BC3 => BitmapDataFormat::DXT5,
+
+            BitmapEncoding::A8B8G8R8 => return Err(ErrorMessage::StaticString("unsupported"))
         };
 
         Ok(m)

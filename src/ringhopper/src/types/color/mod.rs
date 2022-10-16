@@ -100,6 +100,16 @@ impl ColorARGBInt {
         ColorARGBInt { a: ((color >> 24) & 0xFF) as u8, r: ((color >> 16) & 0xFF) as u8, g: ((color >> 8) & 0xFF) as u8, b: ((color >> 0) & 0xFF) as u8 }
     }
 
+    /// Encode into A8B8G8R8 (8-bit color components with alpha).
+    pub const fn to_a8b8g8r8(self) -> u32 {
+        ((self.a as u32) << 24) | ((self.b as u32) << 16) | ((self.g as u32) << 8) | ((self.r as u32) << 0)
+    }
+
+    /// Decode from A8B8G8R8 (8-bit color components with alpha).
+    pub const fn from_a8b8g8r8(color: u32) -> ColorARGBInt {
+        ColorARGBInt { a: ((color >> 24) & 0xFF) as u8, b: ((color >> 16) & 0xFF) as u8, g: ((color >> 8) & 0xFF) as u8, r: ((color >> 0) & 0xFF) as u8 }
+    }
+
     /// Encode into X8R8G8B8 (8-bit color components without an alpha channel).
     pub const fn to_x8r8g8b8(self) -> u32 {
         ColorARGBInt { a: 0xFF, r: self.r, g: self.g, b: self.b }.to_a8r8g8b8()

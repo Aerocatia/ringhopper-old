@@ -1,6 +1,7 @@
 extern crate strings;
 extern crate macros;
 extern crate riat;
+extern crate texpresso;
 
 #[cfg(target_os = "windows")]
 extern crate windows;

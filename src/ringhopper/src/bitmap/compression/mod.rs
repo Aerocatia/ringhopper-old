@@ -1,7 +1,9 @@
 use std::convert::TryInto;
 
-use crate::types::ColorARGBInt;
+use crate::{types::ColorARGBInt, bitmap::CurrentBitmap};
 use crate::engines::h1::P8_PALETTE;
+
+use texpresso::{Params, Format, Algorithm};
 
 use super::iterate_encoded_base_map_and_mipmaps;
 
@@ -11,6 +13,9 @@ pub enum BitmapEncoding {
     /// 8-bit alpha, red, green, blue
     #[default]
     A8R8G8B8,
+
+    // 8-bit alpha, green, blue, red
+    A8B8G8R8,
 
     /// 8-bit red, green, blue aligned to 32 bits
     X8R8G8B8,
@@ -51,10 +56,10 @@ pub enum BitmapEncoding {
 
 impl BitmapEncoding {
     /// Get the number of bits per pixel (all channels combined).
-    pub fn bits_per_pixel(self) -> usize {
+    pub const fn bits_per_pixel(self) -> usize {
         match self {
             // 32-bit (A)RGB
-            BitmapEncoding::A8R8G8B8 | BitmapEncoding::X8R8G8B8 => 32,
+            BitmapEncoding::A8R8G8B8 | BitmapEncoding::A8B8G8R8 | BitmapEncoding::X8R8G8B8 => 32,
 
             // 16-bit (A)RGB
             BitmapEncoding::R5G6B5 | BitmapEncoding::A1R5G5B5 | BitmapEncoding::A4R4G4B4 => 16,
@@ -75,13 +80,13 @@ impl BitmapEncoding {
     }
 
     /// Get the number of pixels per block.
-    pub fn pixels_per_block(self) -> usize {
+    pub const fn pixels_per_block(self) -> usize {
         let (w,h) = self.block_size();
         w*h
     }
 
     /// Get the block size.
-    pub fn block_size(self) -> (usize, usize) {
+    pub const fn block_size(self) -> (usize, usize) {
         match self {
             BitmapEncoding::BC1 | BitmapEncoding::BC2 | BitmapEncoding::BC3 => (4,4),
             _ => (1,1)
@@ -89,12 +94,12 @@ impl BitmapEncoding {
     }
 
     /// Get the number of bytes per block.
-    pub fn bytes_per_block(self) -> usize {
+    pub const fn bytes_per_block(self) -> usize {
         self.pixels_per_block() * self.bits_per_pixel() / 8
     }
 
     /// Return `true` if the format is a palettization encoding.
-    pub fn is_palettized(self) -> bool {
+    pub const fn is_palettized(self) -> bool {
         match self {
             BitmapEncoding::P8HCE => true,
             _ => false
@@ -111,7 +116,7 @@ impl BitmapEncoding {
     /// This will panic if `pixels` is too small. On debug builds, it will also panic if `pixels` is too large. Take
     /// care that you pass a correct buffer size and the correct dimensions.
     pub fn encode(self, pixels: &[ColorARGBInt], width: usize, height: usize, depth: usize, faces: usize, mipmaps: usize) -> Vec<u8> {
-        debug_assert_eq!(pixels.len(), self.calculate_effective_pixel_count(width, height, depth, faces, mipmaps), "input pixel count is incorrect");
+        debug_assert_eq!(pixels.len(), BitmapEncoding::A8R8G8B8.calculate_effective_pixel_count(width, height, depth, faces, mipmaps), "input pixel count is incorrect");
 
         let mut output = Vec::new();
 
@@ -122,6 +127,7 @@ impl BitmapEncoding {
                 32 => {
                     let function = match self {
                         BitmapEncoding::A8R8G8B8 => ColorARGBInt::to_a8r8g8b8,
+                        BitmapEncoding::A8B8G8R8 => ColorARGBInt::to_a8b8g8r8,
                         BitmapEncoding::X8R8G8B8 => ColorARGBInt::to_x8r8g8b8,
                         _ => unreachable!()
                     };
@@ -160,7 +166,104 @@ impl BitmapEncoding {
             }
         }
         else {
-            todo!("block encoding not implemented")
+            match self {
+                BitmapEncoding::BC1 | BitmapEncoding::BC2 | BitmapEncoding::BC3 => {
+                    let format = match self {
+                        BitmapEncoding::BC1 => Format::Bc1,
+                        BitmapEncoding::BC2 => Format::Bc2,
+                        BitmapEncoding::BC3 => Format::Bc3,
+                        _ => unreachable!()
+                    };
+
+                    // Set up our parameters
+                    let mut params = Params::default();
+                    params.algorithm = Algorithm::IterativeClusterFit;
+                    let mut rgba = BitmapEncoding::A8B8G8R8.encode(pixels, width, height, depth, faces, mipmaps);
+                    const UNCOMPRESSED_BPP: usize = BitmapEncoding::A8B8G8R8.bits_per_pixel() / 8;
+
+                    // Set alpha to 255 unless it is 0
+                    if self == BitmapEncoding::BC1 {
+                        for a in rgba[3..].iter_mut().step_by(4) {
+                            if *a != 0 {
+                                *a = 255;
+                            }
+                        }
+                    }
+
+                    fn do_thing(faces: usize, m: CurrentBitmap, rgba: &[u8], output: &mut [u8], format: Format, params: Params, encoding: BitmapEncoding) {
+                        let textures = m.depth * faces;
+                        let texture_res = m.width * m.height;
+
+                        let input_texture_size = texture_res * UNCOMPRESSED_BPP;
+                        let input_byte_offset = m.pixel_offset * UNCOMPRESSED_BPP;
+                        let output_texture_size = format.compressed_size(m.width, m.height);
+
+                        debug_assert_eq!(output_texture_size, m.effective_width * m.effective_height * encoding.bits_per_pixel() / 8, "our calculation does not line up with squish's");
+
+                        for i in 0..textures {
+                            let input_offset = input_byte_offset + input_texture_size * i;
+                            let input_end = input_offset + input_texture_size;
+
+                            let output_offset = output_texture_size * i;
+                            let output_offset_end = output_offset + output_texture_size;
+
+                            let input = &rgba[input_offset..input_end];
+                            let output = &mut output[output_offset..output_offset_end];
+
+                            format.compress(input, m.width, m.height, params, output);
+                        }
+                    }
+
+                    // Do this on two threads!
+                    let thread_count = 2;
+
+                    let mut completed_pixels = Vec::<Option<Vec<u8>>>::new();
+                    completed_pixels.resize(mipmaps + 1, None);
+                    let completed_pixels_mutex = std::sync::Arc::new(std::sync::Mutex::new(completed_pixels));
+
+                    let mut threads = Vec::new();
+                    for _ in 0..thread_count {
+                        let rgba_base = rgba.clone();
+                        let done_mutex_clone = completed_pixels_mutex.clone();
+
+                        threads.push(std::thread::spawn(move || {
+                            iterate_encoded_base_map_and_mipmaps(self, width, height, depth, faces, mipmaps, |m| {
+                                // Claim our spot here
+                                if let Ok(mut a) = done_mutex_clone.lock() {
+                                    if a[m.index].is_some() {
+                                        return;
+                                    }
+                                    else {
+                                        a[m.index] = Some(Vec::new());
+                                    }
+                                }
+                                else {
+                                    panic!();
+                                }
+
+                                let mut output = Vec::<u8>::new();
+                                output.resize(self.calculate_size_of_texture(m.width, m.height, m.depth, faces, 0), 0);
+                                do_thing(faces, m, &rgba_base, &mut output, format, params, self);
+
+                                // We did it!
+                                done_mutex_clone.lock().unwrap()[m.index] = Some(output);
+                            });
+                        }));
+                    }
+
+                    // Wait for completion
+                    for t in threads {
+                        t.join().unwrap();
+                    }
+
+                    // Combine our data
+                    output.reserve(self.calculate_size_of_texture(width, height, depth, faces, mipmaps));
+                    for p in completed_pixels_mutex.lock().unwrap().iter_mut() {
+                        output.append(&mut p.as_mut().unwrap());
+                    }
+                },
+                _ => panic!("tried to block compress {encoding_type:?}", encoding_type=self)
+            }
         }
 
         debug_assert_eq!(output.len(), self.calculate_size_of_texture(width, height, depth, faces, mipmaps), "output length does not match expected length (this is a bug!!)");
@@ -189,6 +292,7 @@ impl BitmapEncoding {
                 32 => {
                     let function = match self {
                         BitmapEncoding::A8R8G8B8 => ColorARGBInt::from_a8r8g8b8,
+                        BitmapEncoding::A8B8G8R8 => ColorARGBInt::from_a8b8g8r8,
                         BitmapEncoding::X8R8G8B8 => ColorARGBInt::from_x8r8g8b8,
                         _ => unreachable!()
                     };
@@ -259,6 +363,35 @@ impl BitmapEncoding {
         });
 
         total_pixels
+    }
+
+    /// Get the pixels of the block at the x and y coordinates.
+    pub fn get_block(self, pixels: &[ColorARGBInt], output: &mut [ColorARGBInt], width: usize, height: usize, block_x: usize, block_y: usize) {
+        let (blockw, blockh) = self.block_size();
+
+        let x_start = block_x * blockw;
+        let x_end = (x_start + blockw).min(width);
+
+        let y_start = block_y * blockh;
+        let y_end = (y_start + blockh).min(height);
+
+        for y in y_start..y_end {
+            let y_rel = y - y_start;
+            for x in x_start..x_end {
+                let x_rel = x - x_start;
+                output[x_rel + y_rel * blockw] = pixels[x + y * width];
+            }
+        }
+    }
+
+    /// Get the width and height of the image in blocks.
+    pub fn get_block_dimensions(self, width: usize, height: usize) -> (usize, usize) {
+        let (blockw, blockh) = self.block_size();
+
+        let new_width = width / blockw + match width % blockw { 0 => 0, _ => 1 };
+        let new_height = height / blockh + match height % blockh { 0 => 0, _ => 1 };
+
+        (new_width, new_height)
     }
 }
 

@@ -93,4 +93,3 @@ fn test_encoding_decoding_match() {
     let decoded = BitmapEncoding::AY8.decode(&encoded, 16, 16, 1, 1, 0);
     assert_eq!(pxs, &decoded[..]);
 }
-
