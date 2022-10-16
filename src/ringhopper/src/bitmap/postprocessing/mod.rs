@@ -171,7 +171,7 @@ impl ProcessedBitmaps {
             let mut new_bitmap = ProcessedBitmap { pixels: Vec::with_capacity(capacity), height, width, depth, mipmaps, faces };
             iterate_base_map_and_mipmaps(width, height, 1, 1, mipmaps, |m| {
                 for b in &self.bitmaps[first_bitmap_index..first_bitmap_index+s.bitmap_count] {
-                    new_bitmap.pixels.extend_from_slice(&b.pixels[m.offset..m.offset+m.width*m.height]);
+                    new_bitmap.pixels.extend_from_slice(&b.pixels[m.pixel_offset..m.pixel_offset+m.size]);
                 }
             });
 
@@ -208,7 +208,7 @@ impl ProcessedBitmaps {
                         let mut new_pixel = ColorARGB::default();
 
                         for l in first_level..end {
-                            let adding_pixel: ColorARGB = b.pixels[m.offset + l * mipmap_size + p].into();
+                            let adding_pixel: ColorARGB = b.pixels[m.pixel_offset + l * mipmap_size + p].into();
                             new_pixel.a += adding_pixel.a;
                             new_pixel.r += adding_pixel.r;
                             new_pixel.g += adding_pixel.g;
@@ -306,7 +306,7 @@ impl ProcessedBitmaps {
                 let map_pixel_count = m.size;
 
                 // Get this bitmap's pixels and the next mipmap's.
-                let (map_pixels, next_map_pixels) = &mut b.pixels[m.offset..].split_at_mut(map_pixel_count);
+                let (map_pixels, next_map_pixels) = &mut b.pixels[m.pixel_offset..].split_at_mut(map_pixel_count);
 
                 // Now generate the next bitmap's mipmaps.
                 if m.index < final_mipmap_count {
@@ -382,7 +382,7 @@ impl ProcessedBitmaps {
 
                         // Do fade-to-gray on each pixel
                         let fade_to_gray = ColorARGB { a, r: 0.5, g: 0.5, b: 0.5 };
-                        for px in &mut pixels[m.offset..m.offset + m.size] {
+                        for px in &mut pixels[m.pixel_offset..m.pixel_offset + m.size] {
                             let px_float: ColorARGB = (*px).into();
                             *px = px_float.alpha_blend(fade_to_gray).into();
                         }
@@ -392,3 +392,4 @@ impl ProcessedBitmaps {
         }
     }
 }
+

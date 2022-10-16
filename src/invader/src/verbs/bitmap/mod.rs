@@ -408,7 +408,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         }
 
         // Okay, encode it
-        let encoded = format.encode(&b.pixels, b.height, b.width, b.depth, b.faces);
+        let encoded = format.encode(&b.pixels, b.width, b.height, b.depth, b.faces, b.mipmaps);
         let encoded_len = encoded.len();
         bitmap_lengths.push(encoded_len);
         bitmap_tag.processed_pixel_data.extend(encoded);
