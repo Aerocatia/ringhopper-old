@@ -26,6 +26,7 @@ struct BitmapOptions {
     detail_fade_factor: Option<f32>,
     sharpen_amount: Option<f32>,
     bump_height: Option<f32>,
+    bump_algorithm: BumpmapAlgorithm,
     sprite_budget_size: Option<BitmapSpriteBudgetSize>,
     sprite_budget_count: Option<u16>,
     blur_filter_size: Option<f32>,
@@ -79,6 +80,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         Argument { long: "detail-fade-factor", short: 'F', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.detail-fade-factor.description"), parameter: Some("factor"), multiple: false },
         Argument { long: "sharpen-amount", short: 'a', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sharpen-amount.description"), parameter: Some("px"), multiple: false },
         Argument { long: "bump-height", short: 'H', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.bump-height.description"), parameter: Some("height"), multiple: false },
+        Argument { long: "bump-algorithm", short: 'G', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.bump-algorithm.description"), parameter: Some("algorithm"), multiple: false },
         Argument { long: "blur-filter-size", short: 'b', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.blur-filter-size.description"), parameter: Some("px"), multiple: false },
         Argument { long: "alpha-bias", short: 'A', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.alpha-bias.description"), parameter: Some("bias"), multiple: false },
         Argument { long: "sprite-budget-count", short: 'C', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sprite-budget-count.description"), parameter: Some("count"), multiple: false },
@@ -168,16 +170,49 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         usage: parse_enum_cli!("usage")?,
 
         square_sheets: parsed_args.named.contains_key("square-sheets"),
-        regenerate: parsed_args.named.contains_key("regenerate")
+        regenerate: parsed_args.named.contains_key("regenerate"),
+
+        bump_algorithm: match parsed_args.named.get("bump-algorithm") {
+            Some(n) => match n[0].as_str() {
+                "fast" => BumpmapAlgorithm::Fast,
+                "smooth" => BumpmapAlgorithm::Sobel,
+                n => return Err(ErrorMessage::AllocatedString(format!("Unknown bump algorithm {n}"))),
+            },
+            None => BumpmapAlgorithm::Fast
+        }
     };
 
     let data_dir = Path::new(&parsed_args.named["data"][0]);
 
     if TagFile::uses_batching(tag_path) {
+        let mut success = 0usize;
+        let mut total = 0usize;
+        let mut errors = 0usize;
+
         for i in TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &tag_path, Some(TagGroup::Bitmap))? {
-            do_single_bitmap(&i, &data_dir, &options, false)?;
+            match do_single_bitmap(&i, &data_dir, &options, false) {
+                Ok(_) => {
+                    success += 1;
+                }
+                Err(e) => {
+                    eprintln_error_pre!("Could not generate bitmaps for {tag}: {error}", tag=i.tag_path, error=e);
+                    errors += 1;
+                }
+            }
+            total += 1;
         }
-        Ok(ExitCode::SUCCESS)
+
+        if total == 0 {
+            Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_no_tags_found"))))
+        }
+        else if errors > 0 {
+            println_warn!("Generated bitmaps for {count} tag(s) with {error} error(s)", count=success, error=errors);
+            Ok(ExitCode::FAILURE)
+        }
+        else {
+            println_success!("Successfully generated bitmaps for {count} tag(s)", count=success);
+            Ok(ExitCode::SUCCESS)
+        }
     }
     else {
         let tag_path = TagReference::from_path_and_group(tag_path, TagGroup::Bitmap)?;
@@ -303,7 +338,9 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     let color_plate = ColorPlate::read_color_plate(&image.pixels, image.width, image.height, color_plate_type)?;
 
     // Process the color plate on our bitmap tag.
-    let processed_result = ProcessedBitmaps::process_color_plate(color_plate, &make_bitmap_processing_options(&bitmap_tag));
+    let mut processing_options = make_bitmap_processing_options(&bitmap_tag);
+    processing_options.bumpmap_algorithm = options.bump_algorithm;
+    let processed_result = ProcessedBitmaps::process_color_plate(color_plate, &processing_options);
 
     if bitmap_tag._type == BitmapType::Sprites {
         todo!("sprites not yet implemented")
@@ -531,7 +568,12 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         println!("Total: {size}", size=format_size(bitmap_tag.processed_pixel_data.len()));
     }
 
-    write_file(&file.file_path, &bitmap_tag.into_tag_file()?)
+    make_parent_directories(&file.file_path)?;
+    write_file(&file.file_path, &bitmap_tag.into_tag_file()?)?;
+
+    println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=file.tag_path);
+
+    Ok(())
 }
 
 fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
@@ -540,6 +582,7 @@ fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
             BitmapUsage::HeightMap => Some(bitmap_tag.bump_height as f64),
             _ => None
         },
+        bumpmap_algorithm: BumpmapAlgorithm::Fast,
 
         detail_fade_factor: match bitmap_tag.usage {
             BitmapUsage::DetailMap => Some(bitmap_tag.detail_fade_factor as f64),
@@ -575,7 +618,7 @@ fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
 
         truncate_zero_alpha: bitmap_tag.usage == BitmapUsage::AlphaBlend,
         vectorize: bitmap_tag.usage == BitmapUsage::VectorMap,
-        nearest_neighbor_alpha_mipmap: bitmap_tag.usage == BitmapUsage::VectorMap
+        nearest_neighbor_alpha_mipmap: bitmap_tag.usage == BitmapUsage::VectorMap,
     }
 }
 

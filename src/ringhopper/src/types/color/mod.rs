@@ -1,3 +1,7 @@
+use crate::types::Point3D;
+
+use super::Vector3D;
+
 #[cfg(test)]
 mod tests;
 
@@ -124,7 +128,7 @@ impl ColorARGBInt {
 
     parse_16_bit!(0,5,6,5,from_r5g6b5,to_r5g6b5,"Encode into R5G6B5 (5-bit red, 6-bit green, 5-bit blue, no alpha channel).","Decode from R5G6B5 (5-bit red, 6-bit green, 5-bit blue, no alpha channel).");
     parse_16_bit!(1,5,5,5,from_a1r5g5b5,to_a1r5g5b5,"Encode into A1R5G5B5 (5-bit red, 5-bit green, 5-bit blue, 1-bit alpha).","Decode from A1R5G5B5 (5-bit red, 5-bit green, 5-bit blue, 1-bit alpha).");
-    parse_16_bit!(4,4,4,4,from_a4r4g4b4,to_a4r4g4b4,"Encode into A4R4G4B4 (4-bit color components with alpha).","Decode fro A4R4G4B4 (4-bit color components with alpha).");
+    parse_16_bit!(4,4,4,4,from_a4r4g4b4,to_a4r4g4b4,"Encode into A4R4G4B4 (4-bit color components with alpha).","Decode from A4R4G4B4 (4-bit color components with alpha).");
 
     /// Encode into A8Y8 (8-bit alpha, 8-bit luminosity).
     pub const fn to_a8y8(self) -> u16 {
@@ -156,59 +160,41 @@ impl ColorARGBInt {
 
     /// Encode into P8 (8-bit palette)
     pub fn to_p8(self, palette: &[ColorARGBInt; 256]) -> u8 {
-        // Get the differences
-        let mut differences_rgb = [0u16; 256];
-        let mut differences_a = [0u8; 256];
-        for i in 0..256 {
+        // Blue is inferred, thus we just need to find red and green values.
+        let mut closest_error = f32::INFINITY;
+        let mut closest_pixel = 0;
+
+        let this_color = Point3D {
+            x: self.r as f32,
+            y: self.g as f32,
+            z: self.b as f32
+        };
+
+        let transparent = self.a <= 128;
+
+        for i in 0x00..=palette.len() {
             let color = palette[i];
 
-            let a = (color.a as i16) - (self.a as i16);
-            let r = (color.r as i16) - (self.r as i16);
-            let g = (color.g as i16) - (self.g as i16);
-            let b = (color.b as i16) - (self.b as i16);
-
-            differences_rgb[i] = (r.abs() + g.abs() + b.abs()) as u16;
-            differences_a[i] = a.abs() as u8;
-        }
-
-        // Sort by RGB
-        let mut differences_sorted = [0usize; 256];
-
-        'color_loop: for i in 1..256 {
-            let diff = differences_rgb[i];
-            for j in 0..i {
-                let diff_j = differences_rgb[j];
-                if diff_j > diff {
-                    for k in j..i+1 {
-                        differences_sorted[k + 1] = differences_sorted[k];
-                    }
-                }
-                differences_sorted[j] = i;
-                continue 'color_loop;
+            // Check for fully transparent colors.
+            if transparent && color.a != 0 {
+                continue
             }
-            differences_sorted[i] = i;
-        }
 
-        // Now sort by alpha
-        loop {
-            let mut difference_found = false;
-            for i in 0..255 {
-                let index_this = differences_sorted[i];
-                let index_next = differences_sorted[i + 1];
+            let other_color = Point3D {
+                x: color.r as f32,
+                y: color.g as f32,
+                z: color.b as f32
+            };
 
-                if differences_a[index_this] > differences_a[index_next] {
-                    differences_sorted[i] = index_next;
-                    differences_sorted[i + 1] = index_this;
-                    difference_found = true;
-                }
-            }
-            if !difference_found {
-                break;
+            let difference = other_color.distance_from_point_squared(&this_color);
+
+            if difference < closest_error {
+                closest_pixel = i;
+                closest_error = difference;
             }
         }
 
-        // Done
-        differences_sorted[0] as u8
+        closest_pixel as u8
     }
 
     /// Encode into P8 (8-bit palette)

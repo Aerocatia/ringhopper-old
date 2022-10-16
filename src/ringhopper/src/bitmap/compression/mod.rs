@@ -190,7 +190,7 @@ impl BitmapEncoding {
                         }
                     }
 
-                    fn do_thing(faces: usize, m: CurrentBitmap, rgba: &[u8], output: &mut [u8], format: Format, params: Params, encoding: BitmapEncoding) {
+                    fn encode_face(faces: usize, m: CurrentBitmap, rgba: &[u8], output: &mut [u8], format: Format, params: Params, encoding: BitmapEncoding) {
                         let textures = m.depth * faces;
                         let texture_res = m.width * m.height;
 
@@ -243,7 +243,7 @@ impl BitmapEncoding {
 
                                 let mut output = Vec::<u8>::new();
                                 output.resize(self.calculate_size_of_texture(m.width, m.height, m.depth, faces, 0), 0);
-                                do_thing(faces, m, &rgba_base, &mut output, format, params, self);
+                                encode_face(faces, m, &rgba_base, &mut output, format, params, self);
 
                                 // We did it!
                                 done_mutex_clone.lock().unwrap()[m.index] = Some(output);

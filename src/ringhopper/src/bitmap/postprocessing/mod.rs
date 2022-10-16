@@ -1,4 +1,4 @@
-use crate::types::{ColorARGBInt, log2_u16, ColorARGB};
+use crate::types::{ColorARGBInt, log2_u16, ColorARGB, Vector3D};
 
 use super::*;
 
@@ -26,11 +26,27 @@ pub struct ProcessedBitmap {
     pub faces: usize
 }
 
+/// Algorithm to use for bumpmap generation
+#[derive(Copy, Clone, Default, PartialEq)]
+pub enum BumpmapAlgorithm {
+    /// Simple algorithm that uses the delta of adjacent pixels.
+    ///
+    /// This is most similar to Halo: Combat Evolved's bumpmap generator.
+    #[default]
+    Fast,
+
+    /// Uses the Sobel operator, resulting in a much smoother heightmap.
+    Sobel
+}
+
 /// Options for configuring the bitmap processor.
 #[derive(Copy, Clone, Default)]
 pub struct ProcessingOptions {
     /// If `Some`, convert a monochrome input into a bumpmap, setting the height to make the bumpmap.
     pub bumpmap_height: Option<f64>,
+
+    /// Algorithm to use for bumpmaps.
+    pub bumpmap_algorithm: BumpmapAlgorithm,
 
     /// If `Some`, fade mipmaps to gray by a factor when doing mipmap generation.
     pub detail_fade_factor: Option<f64>,
@@ -245,7 +261,64 @@ impl ProcessedBitmaps {
         if options.bumpmap_height.is_none() {
             return;
         }
-        todo!("heightmaps not yet implemented")
+
+        let h = options.bumpmap_height.unwrap() as f32;
+
+        for b in &mut self.bitmaps {
+            let mut new_pixels = Vec::with_capacity(b.pixels.len());
+
+            for center_y in 0..b.height {
+                let top_y = center_y.saturating_sub(1);
+                let bottom_y = (center_y + 1).min(b.height - 1);
+
+                for center_x in 0..b.width {
+                    let left_x = center_x.saturating_sub(1);
+                    let right_x = (center_x + 1).min(b.width - 1);
+
+                    let strength = |x,y| {
+                        let pixel: &ColorARGBInt = &b.pixels[x + y * b.width];
+                        (pixel.r as f32) / 255.0 * 2.0 - 1.0
+                    };
+
+                    let top_left = strength(left_x, top_y);
+                    let top = strength(center_x, top_y);
+                    let top_right = strength(right_x, top_y);
+                    let left = strength(left_x, center_y);
+                    let center = strength(center_x, center_y);
+                    let right = strength(right_x, center_y);
+                    let bottom_left = strength(left_x, bottom_y);
+                    let bottom = strength(center_x, bottom_y);
+                    let bottom_right = strength(right_x, bottom_y);
+
+                    let (dx, dy, dz);
+
+                    if options.bumpmap_algorithm == BumpmapAlgorithm::Fast {
+                        dx = (left - center).max(0.0) - (right - center).max(0.0);
+                        dy = (top - center).max(0.0) - (bottom - center).max(0.0);
+                        dz = 1.0 / (h * 150.0);
+                    }
+                    else {
+                        // from https://stackoverflow.com/questions/2368728/can-normal-maps-be-generated-from-a-texture/2368794#2368794
+                        dx = -((top_right + 2.0 * right + bottom_right) - (top_left + 2.0 * left + bottom_left));
+                        dy = -((bottom_left + 2.0 * bottom + bottom_right) - (top_left + 2.0 * top + top_right));
+                        dz = 1.0 / (h * 20.0);
+                    }
+
+                    let v = Vector3D { x: dx, y: dy, z: dz }.normalize();
+                    let c = ColorARGB {
+                        a: b.pixels[center_x + center_y * b.width].a as f32 / 255.0,
+                        r: v.x / 2.0 + 0.5,
+                        g: v.y / 2.0 + 0.5,
+                        b: v.z / 2.0 + 0.5
+                    };
+
+                    new_pixels.push(c.into());
+                }
+            }
+
+            debug_assert_eq!(b.pixels.len(), new_pixels.len());
+            b.pixels = new_pixels;
+        }
     }
 
     /// Generate mipmaps.
