@@ -1,7 +1,5 @@
 use crate::types::Point3D;
 
-use super::Vector3D;
-
 #[cfg(test)]
 mod tests;
 

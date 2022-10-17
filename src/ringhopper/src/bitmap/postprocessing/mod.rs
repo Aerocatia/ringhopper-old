@@ -1,4 +1,4 @@
-use crate::types::{ColorARGBInt, log2_u16, ColorARGB, Vector3D};
+use crate::types::{ColorARGBInt, log2_u16, ColorARGB, Vector3D, Point2D};
 
 use super::*;
 
@@ -100,6 +100,7 @@ impl ProcessedBitmaps {
         let color_plate_type = color_plate.input_type;
         let mut processed_bitmaps = ProcessedBitmaps::load_color_plate(color_plate);
 
+        processed_bitmaps.perform_blur(options);
         processed_bitmaps.generate_heightmaps(options);
         processed_bitmaps.generate_mipmaps(options);
         processed_bitmaps.truncate_zero_alpha(options);
@@ -148,6 +149,65 @@ impl ProcessedBitmaps {
             for p in &mut b.pixels {
                 if p.a == 0 {
                     *p = BLACK;
+                }
+            }
+        }
+    }
+
+    /// Perform a blur
+    fn perform_blur(&mut self, options: &ProcessingOptions) {
+        // Apply sharpening and blur?
+        if let Some(blur) = options.blur_factor {
+            for b in &mut self.bitmaps {
+                let mut output = Vec::<ColorARGBInt>::with_capacity(b.pixels.len());
+
+                let blur = blur / 2.0;
+                let max_distance = blur + 1.0;
+                let max_distance_squared = (max_distance * max_distance) as f32;
+                let max_distance_usize = max_distance as usize;
+
+                for y in 0..b.height {
+                    for x in 0..b.width {
+                        let point = Point2D { x: x as f32, y: y as f32 };
+
+                        let mut total_color = ColorARGB::default();
+                        let mut total_factor = 0.0;
+
+                        for y2 in 0..1+max_distance_usize*2 {
+                            for x2 in 0..1+max_distance_usize*2 {
+                                let x2_delta = (x2 as isize) - max_distance_usize as isize;
+                                let y2_delta = (y2 as isize) - max_distance_usize as isize;
+
+                                let real_x2 = (x as isize - x2_delta).clamp(0, b.width as isize - 1) as usize;
+                                let real_y2 = (y as isize - y2_delta).clamp(0, b.height as isize - 1) as usize;
+
+                                let point_c = Point2D { x: real_x2 as f32, y: real_y2 as f32 };
+                                let distance_squared = point_c.distance_from_point_squared(&point);
+                                if distance_squared >= max_distance_squared {
+                                    continue;
+                                }
+
+                                let color: ColorARGB = b.pixels[real_x2 + real_y2 * b.width].into();
+                                let factor = 1.0 - (distance_squared / max_distance_squared).sqrt();
+
+                                total_factor += factor;
+                                total_color.a += color.a.powi(2) * factor; // square it to account for sRGB
+                                total_color.r += color.r.powi(2) * factor;
+                                total_color.g += color.g.powi(2) * factor;
+                                total_color.b += color.b.powi(2) * factor;
+                            }
+                        }
+
+                        total_color.a = (total_color.a / total_factor).sqrt();
+                        total_color.r = (total_color.r / total_factor).sqrt();
+                        total_color.g = (total_color.g / total_factor).sqrt();
+                        total_color.b = (total_color.b / total_factor).sqrt();
+                        output.push(total_color.into());
+                    }
+                }
+
+                for i in 0..output.len() {
+                    b.pixels[i] = output[i];
                 }
             }
         }
@@ -280,28 +340,31 @@ impl ProcessedBitmaps {
                         (pixel.r as f32) / 255.0 * 2.0 - 1.0
                     };
 
-                    let top_left = strength(left_x, top_y);
-                    let top = strength(center_x, top_y);
-                    let top_right = strength(right_x, top_y);
-                    let left = strength(left_x, center_y);
                     let center = strength(center_x, center_y);
+                    let top = strength(center_x, top_y);
+                    let left = strength(left_x, center_y);
                     let right = strength(right_x, center_y);
-                    let bottom_left = strength(left_x, bottom_y);
                     let bottom = strength(center_x, bottom_y);
-                    let bottom_right = strength(right_x, bottom_y);
 
                     let (dx, dy, dz);
 
-                    if options.bumpmap_algorithm == BumpmapAlgorithm::Fast {
-                        dx = (left - center).max(0.0) - (right - center).max(0.0);
-                        dy = (top - center).max(0.0) - (bottom - center).max(0.0);
-                        dz = 1.0 / (h * 150.0);
-                    }
-                    else {
-                        // from https://stackoverflow.com/questions/2368728/can-normal-maps-be-generated-from-a-texture/2368794#2368794
-                        dx = -((top_right + 2.0 * right + bottom_right) - (top_left + 2.0 * left + bottom_left));
-                        dy = -((bottom_left + 2.0 * bottom + bottom_right) - (top_left + 2.0 * top + top_right));
-                        dz = 1.0 / (h * 20.0);
+                    match options.bumpmap_algorithm {
+                        BumpmapAlgorithm::Fast => {
+                            dx = (left - center).max(0.0) - (right - center).max(0.0);
+                            dy = (top - center).max(0.0) - (bottom - center).max(0.0);
+                            dz = 1.0 / (h * 150.0);
+                        },
+                        BumpmapAlgorithm::Sobel => {
+                            let top_right = strength(right_x, top_y);
+                            let top_left = strength(left_x, top_y);
+                            let bottom_left = strength(left_x, bottom_y);
+                            let bottom_right = strength(right_x, bottom_y);
+
+                            // from https://stackoverflow.com/questions/2368728/can-normal-maps-be-generated-from-a-texture/2368794#2368794
+                            dx = -((top_right + 2.0 * right + bottom_right) - (top_left + 2.0 * left + bottom_left));
+                            dy = -((bottom_left + 2.0 * bottom + bottom_right) - (top_left + 2.0 * top + top_right));
+                            dz = 1.0 / (h * 20.0);
+                        }
                     }
 
                     let v = Vector3D { x: dx, y: dy, z: dz }.normalize();
@@ -380,6 +443,9 @@ impl ProcessedBitmaps {
 
                 // Get this bitmap's pixels and the next mipmap's.
                 let (map_pixels, next_map_pixels) = &mut b.pixels[m.pixel_offset..].split_at_mut(map_pixel_count);
+                if let Some(sharpen) = options.sharpen_factor {
+                    todo!("sharpen not yet implemented {factor}", factor=sharpen)
+                }
 
                 // Now generate the next bitmap's mipmaps.
                 if m.index < final_mipmap_count {
@@ -398,10 +464,13 @@ impl ProcessedBitmaps {
                             for y_prev in y_orig..(y_orig+2).min(m.height) {
                                 for x_prev in x_orig..(x_orig+2).min(m.width) {
                                     let copied_color: ColorARGB = map_pixels[x_prev + y_prev * m.width].into();
-                                    total_color.a += copied_color.a;
-                                    total_color.r += copied_color.r;
-                                    total_color.g += copied_color.g;
-                                    total_color.b += copied_color.b;
+
+                                    // square it to account for sRGB to prevent darkening of gradients
+                                    total_color.a += copied_color.a.powi(2);
+                                    total_color.r += copied_color.r.powi(2);
+                                    total_color.g += copied_color.g.powi(2);
+                                    total_color.b += copied_color.b.powi(2);
+
                                     count += 1;
                                 }
                             }
@@ -410,6 +479,11 @@ impl ProcessedBitmaps {
                             total_color.r /= count as f32;
                             total_color.g /= count as f32;
                             total_color.b /= count as f32;
+
+                            total_color.a = total_color.a.sqrt();
+                            total_color.r = total_color.r.sqrt();
+                            total_color.g = total_color.g.sqrt();
+                            total_color.b = total_color.b.sqrt();
 
                             next_map_pixels[x + y * next_map_width] = total_color.into();
                         }
@@ -422,14 +496,6 @@ impl ProcessedBitmaps {
                                 next_map_pixels[x + y * next_map_width].a = map_pixels[x*2 + y*2 * m.width].a;
                             }
                         }
-                    }
-
-                    // Apply sharpening and blur?
-                    if let Some(sharpen) = options.sharpen_factor {
-                        todo!("sharpen not yet implemented {factor}", factor=sharpen)
-                    }
-                    if let Some(blur) = options.blur_factor {
-                        todo!("blur not yet implemented {factor}", factor=blur)
                     }
                 }
             });
