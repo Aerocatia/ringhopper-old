@@ -503,10 +503,9 @@ impl ProcessedBitmaps {
             // Lastly, fade to gray on mipmaps
             if let Some(fade) = options.detail_fade_factor {
                 if final_mipmap_count > 0 {
-                    // Note that while OFFICIALLY only mipmaps are mentioned in fade-to-gray by guerilla, calculating fade factor includes the base map too.
                     let fade = fade.clamp(0.0, 1.0) as f32;
-                    let mipmap_count_plus_one = final_mipmap_count as f32 + 1.0;
-                    let overall_fade_factor = mipmap_count_plus_one - fade * (mipmap_count_plus_one - 1.0 + (1.0 - fade));
+                    let mipmap_count_float = final_mipmap_count as f32;
+                    let overall_fade_factor = mipmap_count_float - fade * (mipmap_count_float - 1.0 + (1.0 - fade));
                     let pixels = &mut b.pixels[b.width * b.height..];
 
                     iterate_base_map_and_mipmaps((b.width / 2).max(1), (b.height / 2).max(1), 1, 1, final_mipmap_count - 1, |m| {
@@ -520,7 +519,7 @@ impl ProcessedBitmaps {
                         };
 
                         // Do fade-to-gray on each pixel
-                        let fade_to_gray = ColorARGB { a, r: 0.5, g: 0.5, b: 0.5 };
+                        let fade_to_gray: ColorARGB = ColorARGBInt { a: (0xFF as f32 * a) as u8, r: 0x7F, g: 0x7F, b: 0x7F }.into();
                         for px in &mut pixels[m.pixel_offset..m.pixel_offset + m.size] {
                             let px_float: ColorARGB = (*px).into();
                             *px = px_float.alpha_blend(fade_to_gray).into();
