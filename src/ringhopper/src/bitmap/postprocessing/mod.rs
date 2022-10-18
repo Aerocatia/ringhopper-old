@@ -1,4 +1,5 @@
-use crate::types::{ColorARGBInt, log2_u16, ColorARGB, Vector3D, Point2D};
+use crate::types::{ColorARGBInt, log2_u16, ColorARGB, ColorRGB, Vector3D, Point2D};
+use crate::error::*;
 
 use super::*;
 
@@ -23,7 +24,10 @@ pub struct ProcessedBitmap {
     /// Number of faces in the bitmap.
     ///
     /// For cubemaps, this is 6. For all other bitmaps, this is 1.
-    pub faces: usize
+    pub faces: usize,
+
+    /// Floating point versions of the pixels.
+    pixels_float: Vec<ColorARGB>
 }
 
 /// Algorithm to use for bumpmap generation
@@ -37,6 +41,17 @@ pub enum BumpmapAlgorithm {
 
     /// Uses the Sobel operator, resulting in a much smoother heightmap.
     Sobel
+}
+
+/// Detail fade color to use.
+#[derive(Copy, Clone, Default, PartialEq)]
+pub enum DetailFadeColor {
+    /// Fade to #7F7F7F gray.
+    #[default]
+    Gray,
+
+    /// Fade to the average color of the bitmap.
+    Average
 }
 
 /// Options for configuring the bitmap processor.
@@ -73,7 +88,10 @@ pub struct ProcessingOptions {
     pub vectorize: bool,
 
     /// If `true`, use nearest neighbor scaling for the alpha channel.
-    pub nearest_neighbor_alpha_mipmap: bool
+    pub nearest_neighbor_alpha_mipmap: bool,
+
+    /// Fade color to use.
+    pub detail_fade_color: DetailFadeColor
 }
 
 /// Final processed bitmap sequence.
@@ -98,14 +116,21 @@ pub struct ProcessedBitmaps {
 
 impl ProcessedBitmaps {
     /// Process the color plate, returning a final set of bitmaps.
-    pub fn process_color_plate(color_plate: ColorPlate, options: &ProcessingOptions) -> ProcessedBitmaps {
+    pub fn process_color_plate(color_plate: ColorPlate, options: &ProcessingOptions) -> ErrorMessageResult<ProcessedBitmaps> {
         // Load the processed bitmaps.
         let color_plate_type = color_plate.input_type;
         let mut processed_bitmaps = ProcessedBitmaps::load_color_plate(color_plate);
 
+        // You think you want to but you don't.
+        //
+        // Vector maps use RGB as vector values, not colors.
+        if options.gamma_corrected_mipmaps && options.vectorize {
+            return Err(ErrorMessage::StaticString("Vectorized bitmaps cannot be gamma corrected."));
+        }
+
         processed_bitmaps.perform_blur(options);
         processed_bitmaps.generate_heightmaps(options);
-        processed_bitmaps.generate_mipmaps(options);
+        processed_bitmaps.generate_mipmaps(options)?;
         processed_bitmaps.truncate_zero_alpha(options);
         processed_bitmaps.consolidate_textures(color_plate_type);
 
@@ -114,7 +139,16 @@ impl ProcessedBitmaps {
             processed_bitmaps.vectorize();
         }
 
-        processed_bitmaps
+        // Finally, convert to integer RGB
+        for i in &mut processed_bitmaps.bitmaps {
+            i.pixels.reserve_exact(i.pixels_float.len());
+            for p in &i.pixels_float {
+                i.pixels.push((*p).into());
+            }
+            i.pixels_float = Vec::new();
+        }
+
+        Ok(processed_bitmaps)
     }
 
     /// Use the color plate data to make a set of processed bitmaps.
@@ -129,7 +163,11 @@ impl ProcessedBitmaps {
 
         // Copy in the bitmaps.
         for b in color_plate.bitmaps {
-            processed_bitmaps.bitmaps.push(ProcessedBitmap { pixels: b.pixels.clone(), height: b.height, width: b.width, depth: 1, mipmaps: 0, faces: 1 })
+            let mut pixels_float = Vec::with_capacity(b.pixels.len());
+            for p in b.pixels {
+                pixels_float.push(p.into());
+            }
+            processed_bitmaps.bitmaps.push(ProcessedBitmap { pixels: Vec::new(), height: b.height, width: b.width, depth: 1, mipmaps: 0, faces: 1, pixels_float })
         }
 
         // Copy in the sequences.
@@ -142,15 +180,15 @@ impl ProcessedBitmaps {
 
     /// If a bitmap has zero alpha, set to black.
     fn truncate_zero_alpha(&mut self, options: &ProcessingOptions) {
-        const BLACK: ColorARGBInt = ColorARGBInt { a: 0, r: 0, g: 0, b: 0 };
+        const BLACK: ColorARGB = ColorARGB { a: 0.0, r: 0.0, g: 0.0, b: 0.0 };
 
         if !options.truncate_zero_alpha {
             return
         }
 
         for b in &mut self.bitmaps {
-            for p in &mut b.pixels {
-                if p.a == 0 {
+            for p in &mut b.pixels_float {
+                if p.a == 0.0 {
                     *p = BLACK;
                 }
             }
@@ -162,7 +200,7 @@ impl ProcessedBitmaps {
         // Apply sharpening and blur?
         if let Some(blur) = options.blur_factor {
             for b in &mut self.bitmaps {
-                let mut output = Vec::<ColorARGBInt>::with_capacity(b.pixels.len());
+                let mut output = Vec::<ColorARGB>::with_capacity(b.pixels_float.len());
 
                 let blur = blur / 2.0;
                 let max_distance = blur + 1.0;
@@ -190,7 +228,7 @@ impl ProcessedBitmaps {
                                     continue;
                                 }
 
-                                let color: ColorARGB = b.pixels[real_x2 + real_y2 * b.width].into();
+                                let color = &b.pixels_float[real_x2 + real_y2 * b.width];
                                 let factor = 1.0 - (distance_squared / max_distance_squared).sqrt();
 
                                 total_factor += factor;
@@ -205,12 +243,12 @@ impl ProcessedBitmaps {
                         total_color.r = (total_color.r / total_factor).sqrt();
                         total_color.g = (total_color.g / total_factor).sqrt();
                         total_color.b = (total_color.b / total_factor).sqrt();
-                        output.push(total_color.into());
+                        output.push(total_color);
                     }
                 }
 
                 for i in 0..output.len() {
-                    b.pixels[i] = output[i];
+                    b.pixels_float[i] = output[i];
                 }
             }
         }
@@ -244,13 +282,13 @@ impl ProcessedBitmaps {
 
             let mut capacity = 0;
             for b in first_bitmap_index..first_bitmap_index+s.bitmap_count {
-                capacity += self.bitmaps[b].pixels.len();
+                capacity += self.bitmaps[b].pixels_float.len();
             }
 
-            let mut new_bitmap = ProcessedBitmap { pixels: Vec::with_capacity(capacity), height, width, depth, mipmaps, faces };
+            let mut new_bitmap = ProcessedBitmap { pixels: Vec::new(), height, width, depth, mipmaps, faces, pixels_float: Vec::with_capacity(capacity) };
             iterate_base_map_and_mipmaps(width, height, 1, 1, mipmaps, |m| {
                 for b in &self.bitmaps[first_bitmap_index..first_bitmap_index+s.bitmap_count] {
-                    new_bitmap.pixels.extend_from_slice(&b.pixels[m.pixel_offset..m.pixel_offset+m.size]);
+                    new_bitmap.pixels_float.extend_from_slice(&b.pixels_float[m.pixel_offset..m.pixel_offset+m.size]);
                 }
             });
 
@@ -270,7 +308,7 @@ impl ProcessedBitmaps {
             // NOTE: Deliberately passing depth as faces since it is stored like that and we want to make it store it correctly.
             //
             // You should not do this (outside of this function).
-            let mut new_pixels = Vec::<ColorARGBInt>::with_capacity(b.pixels.len());
+            let mut new_pixels = Vec::<ColorARGB>::with_capacity(b.pixels_float.len());
             iterate_base_map_and_mipmaps(b.width, b.height, 1, b.depth, b.mipmaps, |m| {
                 // For the first index, just passthrough it.
                 let mipmap_size = m.size / b.depth;
@@ -281,13 +319,13 @@ impl ProcessedBitmaps {
                     let first_level = i * compaction;
                     let end = (i + 1) * compaction;
 
-                    let mut new_pixels_buffer = Vec::<ColorARGBInt>::with_capacity(mipmap_size);
+                    let mut new_pixels_buffer = Vec::<ColorARGB>::with_capacity(mipmap_size);
 
                     for p in 0..mipmap_size {
                         let mut new_pixel = ColorARGB::default();
 
                         for l in first_level..end {
-                            let adding_pixel: ColorARGB = b.pixels[m.pixel_offset + l * mipmap_size + p].into();
+                            let adding_pixel = &b.pixels_float[m.pixel_offset + l * mipmap_size + p];
                             new_pixel.a += adding_pixel.a;
                             new_pixel.r += adding_pixel.r;
                             new_pixel.g += adding_pixel.g;
@@ -299,21 +337,21 @@ impl ProcessedBitmaps {
                         new_pixel.g /= compaction as f32;
                         new_pixel.b /= compaction as f32;
 
-                        new_pixels_buffer.push(new_pixel.into());
+                        new_pixels_buffer.push(new_pixel);
                     }
 
                     new_pixels.append(&mut new_pixels_buffer);
                 }
             });
 
-            b.pixels = new_pixels;
+            b.pixels_float = new_pixels;
         }
     }
 
     /// Vectorize bitmaps.
     fn vectorize(&mut self) {
         for b in &mut self.bitmaps {
-            for p in &mut b.pixels {
+            for p in &mut b.pixels_float {
                 *p = p.vector_normalize();
             }
         }
@@ -328,7 +366,7 @@ impl ProcessedBitmaps {
         let h = options.bumpmap_height.unwrap() as f32;
 
         for b in &mut self.bitmaps {
-            let mut new_pixels = Vec::with_capacity(b.pixels.len());
+            let mut new_pixels = Vec::with_capacity(b.pixels_float.len());
 
             for center_y in 0..b.height {
                 let top_y = center_y.saturating_sub(1);
@@ -339,8 +377,8 @@ impl ProcessedBitmaps {
                     let right_x = (center_x + 1).min(b.width - 1);
 
                     let strength = |x,y| {
-                        let pixel: &ColorARGBInt = &b.pixels[x + y * b.width];
-                        (pixel.r as f32) / 255.0 * 2.0 - 1.0
+                        let pixel: &ColorARGB = &b.pixels_float[x + y * b.width];
+                        pixel.r * 2.0 - 1.0
                     };
 
                     let center = strength(center_x, center_y);
@@ -372,23 +410,23 @@ impl ProcessedBitmaps {
 
                     let v = Vector3D { x: dx, y: dy, z: dz }.normalize();
                     let c = ColorARGB {
-                        a: b.pixels[center_x + center_y * b.width].a as f32 / 255.0,
+                        a: b.pixels_float[center_x + center_y * b.width].a,
                         r: v.x / 2.0 + 0.5,
                         g: v.y / 2.0 + 0.5,
                         b: v.z / 2.0 + 0.5
                     };
 
-                    new_pixels.push(c.into());
+                    new_pixels.push(c);
                 }
             }
 
-            debug_assert_eq!(b.pixels.len(), new_pixels.len());
-            b.pixels = new_pixels;
+            debug_assert_eq!(b.pixels_float.len(), new_pixels.len());
+            b.pixels_float = new_pixels;
         }
     }
 
     /// Generate mipmaps.
-    fn generate_mipmaps(&mut self, options: &ProcessingOptions) {
+    fn generate_mipmaps(&mut self, options: &ProcessingOptions) -> ErrorMessageResult<()> {
         for b in &mut self.bitmaps {
             // Get the highest dimension.
             //
@@ -436,18 +474,18 @@ impl ProcessedBitmaps {
             iterate_base_map_and_mipmaps(b.width, b.height, 1, 1, final_mipmap_count, |m| {
                 total_pixels += m.size;
             });
-            b.pixels.resize(total_pixels, ColorARGBInt::default());
+            b.pixels_float.resize(total_pixels, ColorARGB::default());
 
             // Now generate mipmaps.
             //
             // Note that, yes, sharpness and blur also apply to the base map.
-            iterate_base_map_and_mipmaps(b.width, b.height, 1, 1, final_mipmap_count, |m| {
+            iterate_base_map_and_mipmaps_with_err(b.width, b.height, 1, 1, final_mipmap_count, |m| {
                 let map_pixel_count = m.size;
 
                 // Get this bitmap's pixels and the next mipmap's.
-                let (map_pixels, next_map_pixels) = &mut b.pixels[m.pixel_offset..].split_at_mut(map_pixel_count);
+                let (map_pixels, next_map_pixels) = &mut b.pixels_float[m.pixel_offset..].split_at_mut(map_pixel_count);
                 if let Some(sharpen) = options.sharpen_factor {
-                    todo!("sharpen not yet implemented {factor}", factor=sharpen)
+                    return Err(ErrorMessage::AllocatedString(format!("sharpen not yet implemented {factor}", factor=sharpen)));
                 }
 
                 // Now generate the next bitmap's mipmaps.
@@ -467,7 +505,7 @@ impl ProcessedBitmaps {
 
                             for y_prev in y_orig..(y_orig+2).min(m.height) {
                                 for x_prev in x_orig..(x_orig+2).min(m.width) {
-                                    let copied_color: ColorARGB = map_pixels[x_prev + y_prev * m.width].into();
+                                    let copied_color = &map_pixels[x_prev + y_prev * m.width];
 
                                     // square it to account for sRGB to prevent darkening of gradients
                                     if options.gamma_corrected_mipmaps {
@@ -503,7 +541,7 @@ impl ProcessedBitmaps {
                                 total_color.b = total_color.b.sqrt();
                             }
 
-                            next_map_pixels[x + y * next_map_width] = total_color.into();
+                            next_map_pixels[x + y * next_map_width] = total_color;
                         }
                     }
 
@@ -516,36 +554,73 @@ impl ProcessedBitmaps {
                         }
                     }
                 }
-            });
 
-            // Lastly, fade to gray on mipmaps
+                Ok(())
+            })?;
+
+            macro_rules! iterate_mipmaps {
+                ($function:expr) => {
+                    iterate_base_map_and_mipmaps((b.width / 2).max(1), (b.height / 2).max(1), 1, 1, final_mipmap_count - 1, $function)
+                }
+            }
+
+            let (base_map_pixels, mipmap_pixels) = b.pixels_float.split_at_mut(b.width * b.height);
+
+            // Next, fade to gray on mipmaps
             if let Some(fade) = options.detail_fade_factor {
                 if final_mipmap_count > 0 {
                     let fade = fade.clamp(0.0, 1.0) as f32;
                     let mipmap_count_float = final_mipmap_count as f32;
                     let overall_fade_factor = mipmap_count_float - fade * (mipmap_count_float - 1.0 + (1.0 - fade));
-                    let pixels = &mut b.pixels[b.width * b.height..];
 
-                    iterate_base_map_and_mipmaps((b.width / 2).max(1), (b.height / 2).max(1), 1, 1, final_mipmap_count - 1, |m| {
-                        let a = if fade == 1.0 {
-                            // To prevent shenanigans, limit to 1.0
-                            1.0
+                    // Get the fade color
+                    let (r,g,b) = match options.detail_fade_color {
+                        DetailFadeColor::Gray => (127.0 / 255.0, 127.0 / 255.0, 127.0 / 255.0),
+                        DetailFadeColor::Average => {
+                            let mut average = ColorRGB::default();
+                            for p in &base_map_pixels[..] {
+                                average.r += p.r;
+                                average.g += p.g;
+                                average.b += p.b;
+                            }
+                            let sum = base_map_pixels.len() as f32;
+                            (average.r / sum, average.g / sum, average.b / sum)
                         }
-                        else {
-                            // Basically, a higher mipmap fade factor scales faster
-                            (((m.index + 1) as f32) / overall_fade_factor).min(1.0)
-                        };
+                    };
 
-                        // Do fade-to-gray on each pixel
-                        let fade_to_gray: ColorARGB = ColorARGBInt { a: (0xFF as f32 * a) as u8, r: 0x7F, g: 0x7F, b: 0x7F }.into();
-                        for px in &mut pixels[m.pixel_offset..m.pixel_offset + m.size] {
-                            let px_float: ColorARGB = (*px).into();
-                            *px = px_float.alpha_blend(fade_to_gray).into();
+                    // Do it!
+                    iterate_mipmaps!(|m| {
+                        // The amount we fade depends on the mipmap. We can use alpha blending to calculate this.
+                        let fade_to_gray = ColorARGB {
+                            a: (((m.index + 1) as f32) / overall_fade_factor).min(1.0),
+                            r,
+                            g,
+                            b
+                        };
+                        for px in &mut mipmap_pixels[m.pixel_offset..m.pixel_offset + m.size] {
+                            *px = (*px).alpha_blend(fade_to_gray);
+                        }
+                    });
+                }
+            }
+
+            // Lastly, do alpha bias on mipmaps
+            if let Some(alpha_bias) = options.alpha_bias {
+                if final_mipmap_count > 0 {
+                    let alpha_bias = alpha_bias.clamp(-1.0, 1.0) as f32;
+                    let mipmap_count_float = final_mipmap_count as f32;
+
+                    iterate_mipmaps!(|m| {
+                        let delta = alpha_bias * ((m.index + 1) as f32) / mipmap_count_float;
+                        for p in &mut mipmap_pixels[m.pixel_offset..m.pixel_offset + m.size] {
+                            p.a = (p.a + delta).clamp(0.0, 1.0);
                         }
                     });
                 }
             }
         }
+
+        Ok(())
     }
 }
 

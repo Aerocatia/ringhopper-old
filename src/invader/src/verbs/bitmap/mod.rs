@@ -38,6 +38,7 @@ struct BitmapOptions {
     square_sheets: bool,
     regenerate: bool,
     bump_algorithm: BumpmapAlgorithm,
+    detail_fade_color: DetailFadeColor,
     gamma_corrected_mipmaps: bool
 }
 
@@ -101,7 +102,8 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         Argument { long: "regenerate", short: 'R', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.regenerate.description"), parameter: None, multiple: false },
         Argument { long: "sobel-bumpmaps", short: 'S', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sobel-bumpmaps.description"), parameter: None, multiple: false },
         Argument { long: "square-sheets", short: 'Q', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.square-sheets.description"), parameter: None, multiple: false },
-        Argument { long: "legacy-mipmaps", short: 'L', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.legacy-mipmaps.description"), parameter: None, multiple: false },
+        Argument { long: "gamma-corrected-mipmaps", short: 'G', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.gamma-corrected-mipmaps.description"), parameter: None, multiple: false },
+        Argument { long: "fade-to-average", short: 'V', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.fade-to-average.description"), parameter: None, multiple: false },
     ], &[get_compiled_string!("arguments.specifier.tag_batch_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags())?;
     let tag_path = &parsed_args.extra[0];
 
@@ -176,22 +178,33 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         square_sheets: parsed_args.named.contains_key("square-sheets"),
         regenerate: parsed_args.named.contains_key("regenerate"),
 
-        bump_algorithm: match parsed_args.named.contains_key("smooth-bumpmaps") {
+        bump_algorithm: match parsed_args.named.contains_key("sobel-bumpmaps") {
             true => BumpmapAlgorithm::Sobel,
             false => BumpmapAlgorithm::Fast
         },
-        gamma_corrected_mipmaps: !parsed_args.named.contains_key("fast-mipmaps"),
+        gamma_corrected_mipmaps: parsed_args.named.contains_key("gamma-corrected-mipmaps"),
+        detail_fade_color: match parsed_args.named.contains_key("fade-to-average") {
+            true => DetailFadeColor::Average,
+            false => DetailFadeColor::Gray,
+        }
     };
 
     let data_dir = Path::new(&parsed_args.named["data"][0]);
-
     if TagFile::uses_batching(tag_path) {
         let mut success = 0usize;
         let mut total = 0usize;
         let mut errors = 0usize;
 
         for i in TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &tag_path, Some(TagGroup::Bitmap))? {
-            match do_single_bitmap(&i, &data_dir, &options, false) {
+            let do_single_bitmap = match std::panic::catch_unwind(|| {
+                return do_single_bitmap(&i, &data_dir, &options, false);
+            }) {
+                Ok(n) => n,
+                Err(_) => {
+                    panic!("Panicked when doing {}", i.tag_path);
+                }
+            };
+            match do_single_bitmap {
                 Ok(_) => {
                     success += 1;
                 }
@@ -287,7 +300,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     }
     else {
         let mut tag = Bitmap::default();
-        tag.bump_height = 0.026;
+        tag.bump_height = 0.026; // 🐭
         tag.flags.disable_height_map_compression = true;
         tag.usage = BitmapUsage::Default;
         tag.encoding_format = BitmapFormat::_32bit;
@@ -295,6 +308,11 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     };
 
     let image = if options.regenerate {
+        // Check if we have a color plate.
+        if bitmap_tag.compressed_color_plate_data.is_empty() {
+            return Err(ErrorMessage::AllocatedString(format!("{tag} does has no color plate data and thus cannot be regenerated.", tag=file.tag_path.get_path_with_extension())))
+        }
+
         // Regenerate
         let decompressed = crate::load_bitmap_color_plate(&bitmap_tag)?;
         let mut pixels = Vec::with_capacity(decompressed.len() / 4);
@@ -313,13 +331,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         // Load the TIFF if we are not regenerating
         let mut tiff = data_dir.join(file.tag_path.to_string());
         tiff.set_extension("tif");
-
-        if tiff.exists() {
-            load_tiff(&tiff)?
-        }
-        else {
-            panic!("{} doesn't exist", tiff.to_str().unwrap());
-        }
+        load_tiff(&tiff)?
     };
 
     options.apply_to_bitmap_tag(&mut bitmap_tag);
@@ -342,10 +354,11 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     let mut processing_options = make_bitmap_processing_options(&bitmap_tag);
     processing_options.bumpmap_algorithm = options.bump_algorithm;
     processing_options.gamma_corrected_mipmaps = options.gamma_corrected_mipmaps;
-    let processed_result = ProcessedBitmaps::process_color_plate(color_plate, &processing_options);
+    processing_options.detail_fade_color = options.detail_fade_color;
 
+    let processed_result = ProcessedBitmaps::process_color_plate(color_plate, &processing_options)?;
     if bitmap_tag._type == BitmapType::Sprites {
-        todo!("sprites not yet implemented")
+        return Err(ErrorMessage::StaticString("Sprites not yet implemented!"));
     }
 
     bitmap_tag.bitmap_group_sequence.blocks.clear();
@@ -387,28 +400,34 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         let mut is_monochrome = true;
         let mut alpha_equals_luminosity = true;
         let mut contains_varying_alpha = false;
-        let mut contains_alpha = false;
-        let mut contains_luminosity = false;
+        let mut transparent = false;
+        let mut white = true;
         for p in &b.pixels {
             let y8 = p.to_y8();
 
             if !p.same_color(ColorARGBInt::from_y8(y8)) {
                 is_monochrome = false;
             }
-            else if *p != ColorARGBInt::from_ay8(y8) {
+
+            if *p != ColorARGBInt::from_ay8(y8) {
                 alpha_equals_luminosity = false;
             }
 
-            if p.a != 0xFF && p.a != 0x00 {
-                contains_varying_alpha = true;
+            if y8 < 0xFF {
+                white = false;
             }
 
-            if p.a != 0xFF {
-                contains_alpha = true;
-            }
-
-            if p.to_y8() > 0 {
-                contains_luminosity = true;
+            match p.a {
+                // if it is not 0 or 255, then it is not 1-bit alpha
+                0x01..=0xFE => {
+                    contains_varying_alpha = true;
+                    transparent = true;
+                }
+                // if it is 0, then it may be 1-bit alpha
+                0x00 => {
+                    transparent = true;
+                }
+                0xFF => ()
             }
         }
         let format = if !bitmap_tag.flags.disable_height_map_compression && (bitmap_tag.usage == BitmapUsage::HeightMap || bitmap_tag.usage == BitmapUsage::VectorMap) {
@@ -417,28 +436,28 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         else {
             match bitmap_tag.encoding_format {
                 BitmapFormat::DXT1 => BitmapEncoding::BC1,
-                BitmapFormat::DXT3 => if !contains_alpha { BitmapEncoding::BC1 } else { BitmapEncoding::BC2 },
-                BitmapFormat::DXT5 => if !contains_alpha { BitmapEncoding::BC1 } else { BitmapEncoding::BC3 },
+                BitmapFormat::DXT3 => if !transparent { BitmapEncoding::BC1 } else { BitmapEncoding::BC2 },
+                BitmapFormat::DXT5 => if !transparent { BitmapEncoding::BC1 } else { BitmapEncoding::BC3 },
 
-                BitmapFormat::_16bit => if !contains_alpha { BitmapEncoding::R5G6B5 }
+                BitmapFormat::_16bit => if !transparent { BitmapEncoding::R5G6B5 }
                                         else if !contains_varying_alpha { BitmapEncoding::A1R5G5B5 }
                                         else { BitmapEncoding::A4R4G4B4 }
 
-                BitmapFormat::_32bit => if !contains_alpha { BitmapEncoding::X8R8G8B8 }
+                BitmapFormat::_32bit => if !transparent { BitmapEncoding::X8R8G8B8 }
                                         else { BitmapEncoding::A8R8G8B8 }
 
                 BitmapFormat::Monochrome => if alpha_equals_luminosity { BitmapEncoding::AY8 }
-                                            else if !contains_alpha { BitmapEncoding::Y8 }
-                                            else if !contains_luminosity { BitmapEncoding::A8 }
+                                            else if !transparent { BitmapEncoding::Y8 }
+                                            else if white { BitmapEncoding::A8 }
                                             else { BitmapEncoding::A8Y8 }
             }
         };
 
         // Set these weird flags
         let mut flags = BitmapDataFlags::default();
-        flags.power_of_two_dimensions = bitmap_tag._type != BitmapType::InterfaceBitmaps;
-        flags.linear = bitmap_tag._type == BitmapType::InterfaceBitmaps;
-        flags.compressed = format.pixels_per_block() > 1;
+        flags.power_of_two_dimensions = bitmap_tag._type != BitmapType::InterfaceBitmaps; // power of two dimensions = not interface bitmaps
+        flags.linear = bitmap_tag._type == BitmapType::InterfaceBitmaps; // linear = interface bitmaps
+        flags.compressed = format.is_block_compression();
         flags.palettized = format.is_palettized();
 
         // Encoding to monochrome with non-monochrome input
@@ -586,12 +605,13 @@ fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
         },
 
         bumpmap_algorithm: BumpmapAlgorithm::Fast,
-        gamma_corrected_mipmaps: true,
+        gamma_corrected_mipmaps: false,
 
         detail_fade_factor: match bitmap_tag.usage {
             BitmapUsage::DetailMap => Some(bitmap_tag.detail_fade_factor as f64),
             _ => None
         },
+        detail_fade_color: DetailFadeColor::Gray,
 
         sharpen_factor: match bitmap_tag.sharpen_amount {
             n if n > 0.0 => Some(n as f64),

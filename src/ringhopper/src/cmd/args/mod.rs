@@ -283,9 +283,8 @@ impl ParsedArguments {
                     !(n.short == 'e' && !constraints.needs_engine)
                 });
 
-                let argument_width = 40;
-                let right_margin = 1;
-                let left_side = argument_width + right_margin;
+                let argument_width = 41;
+                let left_side = argument_width;
 
                 for a in available_arguments {
                     // Print the short and long
@@ -299,7 +298,7 @@ impl ParsedArguments {
                     }
 
                     // Did we overflow?
-                    debug_assert!(current_position < (left_side - right_margin), "Left side for --{} overflowed!", a.long);
+                    debug_assert!(current_position < left_side, "Left side for --{} overflowed!", a.long);
 
                     // Print it!
                     print_word_wrap(a.description, left_side, current_position, OutputType::Stdout);

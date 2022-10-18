@@ -106,6 +106,11 @@ impl BitmapEncoding {
         }
     }
 
+    /// Return `true` if the format is a block compression encoding.
+    pub const fn is_block_compression(self) -> bool {
+        self.pixels_per_block() != 1
+    }
+
     /// Encode the input bitmap into a format.
     ///
     /// - For non-cubemaps, specify `faces` as 1.
@@ -120,7 +125,7 @@ impl BitmapEncoding {
 
         let mut output = Vec::new();
 
-        if self.pixels_per_block() == 1 {
+        if !self.is_block_compression() {
             output.reserve_exact(pixels.len() * self.bytes_per_block());
 
             match self.bits_per_pixel() {
@@ -286,7 +291,7 @@ impl BitmapEncoding {
         let pixel_count = self.calculate_effective_pixel_count(width, height, depth, faces, mipmaps);
         let mut output = Vec::with_capacity(pixel_count);
 
-        if self.pixels_per_block() == 1 {
+        if !self.is_block_compression() {
             let iterator = 0..pixels.len();
             match self.bits_per_pixel() {
                 32 => {

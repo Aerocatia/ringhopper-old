@@ -145,8 +145,21 @@ impl ColorPlate {
 
     /// Get if the color is background or sequence divider.
     fn is_background_or_sequence_divider(&self, color: ColorARGBInt) -> bool {
-        let some_color = Some(color);
-        self.background_color == some_color || self.sequence_divider_color == some_color
+        match self.background_color {
+            Some(n) if n.same_color(color) => {
+                return true;
+            },
+            _ => ()
+        }
+
+        match self.sequence_divider_color {
+            Some(n) if n.same_color(color) => {
+                return true;
+            },
+            _ => ()
+        }
+
+        false
     }
 
     /// Get if the color is dummy space.
@@ -379,7 +392,7 @@ impl ColorPlate {
 
                 // If it's non-power-of-two
                 if self.input_type != ColorPlateInputType::NonPowerOfTwoTextures && !bitmap_width.is_power_of_two() && !bitmap_height.is_power_of_two() {
-                    return Err(ErrorMessage::AllocatedString(format!("Tried to process a non-power-of-two texture {width}x{height}", width=bitmap_width, height=bitmap_height)))
+                    return Err(ErrorMessage::AllocatedString(format!("Tried to process a non-power-of-two texture {width}x{height} @ x={x}, y={y}", width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)))
                 }
 
                 // Increment
@@ -387,13 +400,13 @@ impl ColorPlate {
 
                 // Do not allow zero-width or zero-height bitmaps.
                 if bitmap_width == 0 || bitmap_height == 0 {
-                    return Err(ErrorMessage::AllocatedString(format!("Tried to process a {width}x{height} texture.", width=bitmap_width, height=bitmap_height)));
+                    return Err(ErrorMessage::AllocatedString(format!("Tried to process a {width}x{height} texture @ x={x}, y={y}", width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)));
                 }
 
                 const MAX_DIMENSION: usize = (i16::MAX as usize) + 1;
 
                 if bitmap_height > MAX_DIMENSION || bitmap_width > MAX_DIMENSION {
-                    return Err(ErrorMessage::AllocatedString(format!("Tried to process a {width}x{height} texture which is too large.", width=bitmap_width, height=bitmap_height)));
+                    return Err(ErrorMessage::AllocatedString(format!("Tried to process a {width}x{height} texture which is too large @ x={x}, y={y}", width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)));
                 }
 
                 // Push!

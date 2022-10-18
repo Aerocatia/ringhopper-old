@@ -170,7 +170,7 @@ impl ColorARGBInt {
 
         let transparent = self.a <= 128;
 
-        for i in 0x00..=palette.len() {
+        for i in 0x00..palette.len() {
             let color = palette[i];
 
             // Check for fully transparent colors.
