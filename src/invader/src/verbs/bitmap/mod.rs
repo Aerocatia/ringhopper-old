@@ -26,7 +26,6 @@ struct BitmapOptions {
     detail_fade_factor: Option<f32>,
     sharpen_amount: Option<f32>,
     bump_height: Option<f32>,
-    bump_algorithm: BumpmapAlgorithm,
     sprite_budget_size: Option<BitmapSpriteBudgetSize>,
     sprite_budget_count: Option<u16>,
     blur_filter_size: Option<f32>,
@@ -34,8 +33,12 @@ struct BitmapOptions {
     mipmap_count: Option<u16>,
     sprite_usage: Option<BitmapSpriteUsage>,
     sprite_spacing: Option<u16>,
+
+    // These are not saved
     square_sheets: bool,
-    regenerate: bool
+    regenerate: bool,
+    bump_algorithm: BumpmapAlgorithm,
+    gamma_corrected_mipmaps: bool
 }
 
 impl BitmapOptions {
@@ -80,7 +83,6 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         Argument { long: "detail-fade-factor", short: 'F', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.detail-fade-factor.description"), parameter: Some("factor"), multiple: false },
         Argument { long: "sharpen-amount", short: 'a', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sharpen-amount.description"), parameter: Some("px"), multiple: false },
         Argument { long: "bump-height", short: 'H', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.bump-height.description"), parameter: Some("height"), multiple: false },
-        Argument { long: "bump-algorithm", short: 'G', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.bump-algorithm.description"), parameter: Some("algorithm"), multiple: false },
         Argument { long: "blur-filter-size", short: 'b', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.blur-filter-size.description"), parameter: Some("px"), multiple: false },
         Argument { long: "alpha-bias", short: 'A', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.alpha-bias.description"), parameter: Some("bias"), multiple: false },
         Argument { long: "sprite-budget-count", short: 'C', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sprite-budget-count.description"), parameter: Some("count"), multiple: false },
@@ -96,8 +98,10 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         Argument { long: "sprite-usage", short: 'g', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sprite-usage.description"), parameter: Some("usage"), multiple: false },
         Argument { long: "usage", short: 'u', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.usage.description"), parameter: Some("usage"), multiple: false },
 
-        Argument { long: "square-sheets", short: 'S', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.square-sheets.description"), parameter: None, multiple: false },
         Argument { long: "regenerate", short: 'R', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.regenerate.description"), parameter: None, multiple: false },
+        Argument { long: "sobel-bumpmaps", short: 'S', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sobel-bumpmaps.description"), parameter: None, multiple: false },
+        Argument { long: "square-sheets", short: 'Q', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.square-sheets.description"), parameter: None, multiple: false },
+        Argument { long: "legacy-mipmaps", short: 'L', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.legacy-mipmaps.description"), parameter: None, multiple: false },
     ], &[get_compiled_string!("arguments.specifier.tag_batch_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags())?;
     let tag_path = &parsed_args.extra[0];
 
@@ -172,14 +176,11 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         square_sheets: parsed_args.named.contains_key("square-sheets"),
         regenerate: parsed_args.named.contains_key("regenerate"),
 
-        bump_algorithm: match parsed_args.named.get("bump-algorithm") {
-            Some(n) => match n[0].as_str() {
-                "fast" => BumpmapAlgorithm::Fast,
-                "smooth" => BumpmapAlgorithm::Sobel,
-                n => return Err(ErrorMessage::AllocatedString(format!("Unknown bump algorithm {n}"))),
-            },
-            None => BumpmapAlgorithm::Fast
-        }
+        bump_algorithm: match parsed_args.named.contains_key("smooth-bumpmaps") {
+            true => BumpmapAlgorithm::Sobel,
+            false => BumpmapAlgorithm::Fast
+        },
+        gamma_corrected_mipmaps: !parsed_args.named.contains_key("fast-mipmaps"),
     };
 
     let data_dir = Path::new(&parsed_args.named["data"][0]);
@@ -340,6 +341,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     // Process the color plate on our bitmap tag.
     let mut processing_options = make_bitmap_processing_options(&bitmap_tag);
     processing_options.bumpmap_algorithm = options.bump_algorithm;
+    processing_options.gamma_corrected_mipmaps = options.gamma_corrected_mipmaps;
     let processed_result = ProcessedBitmaps::process_color_plate(color_plate, &processing_options);
 
     if bitmap_tag._type == BitmapType::Sprites {
@@ -582,7 +584,9 @@ fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
             BitmapUsage::HeightMap => Some(bitmap_tag.bump_height as f64),
             _ => None
         },
+
         bumpmap_algorithm: BumpmapAlgorithm::Fast,
+        gamma_corrected_mipmaps: true,
 
         detail_fade_factor: match bitmap_tag.usage {
             BitmapUsage::DetailMap => Some(bitmap_tag.detail_fade_factor as f64),

@@ -48,6 +48,9 @@ pub struct ProcessingOptions {
     /// Algorithm to use for bumpmaps.
     pub bumpmap_algorithm: BumpmapAlgorithm,
 
+    /// If `true`, use gamma correction when generating mipmaps.
+    pub gamma_corrected_mipmaps: bool,
+
     /// If `Some`, fade mipmaps to gray by a factor when doing mipmap generation.
     pub detail_fade_factor: Option<f64>,
 
@@ -453,6 +456,7 @@ impl ProcessedBitmaps {
                     let next_map_height = (m.height / 2).max(1);
                     let next_map_pixel_count = next_map_width * next_map_height;
                     let next_map_pixels = &mut next_map_pixels[..next_map_pixel_count];
+
                     for y in 0..next_map_height {
                         for x in 0..next_map_width {
                             let mut total_color = ColorARGB::default();
@@ -466,24 +470,38 @@ impl ProcessedBitmaps {
                                     let copied_color: ColorARGB = map_pixels[x_prev + y_prev * m.width].into();
 
                                     // square it to account for sRGB to prevent darkening of gradients
-                                    total_color.a += copied_color.a.powi(2);
-                                    total_color.r += copied_color.r.powi(2);
-                                    total_color.g += copied_color.g.powi(2);
-                                    total_color.b += copied_color.b.powi(2);
+                                    if options.gamma_corrected_mipmaps {
+                                        total_color.a += copied_color.a.powi(2);
+                                        total_color.r += copied_color.r.powi(2);
+                                        total_color.g += copied_color.g.powi(2);
+                                        total_color.b += copied_color.b.powi(2);
+                                    }
+
+                                    // otherwise linearly do it (fast but produces worse mipmaps)
+                                    else {
+                                        total_color.a += copied_color.a;
+                                        total_color.r += copied_color.r;
+                                        total_color.g += copied_color.g;
+                                        total_color.b += copied_color.b;
+                                    }
 
                                     count += 1;
                                 }
                             }
 
+                            // Divide to get the average
                             total_color.a /= count as f32;
                             total_color.r /= count as f32;
                             total_color.g /= count as f32;
                             total_color.b /= count as f32;
 
-                            total_color.a = total_color.a.sqrt();
-                            total_color.r = total_color.r.sqrt();
-                            total_color.g = total_color.g.sqrt();
-                            total_color.b = total_color.b.sqrt();
+                            // Then square-root if we were using gamma correction
+                            if options.gamma_corrected_mipmaps {
+                                total_color.a = total_color.a.sqrt();
+                                total_color.r = total_color.r.sqrt();
+                                total_color.g = total_color.g.sqrt();
+                                total_color.b = total_color.b.sqrt();
+                            }
 
                             next_map_pixels[x + y * next_map_width] = total_color.into();
                         }
