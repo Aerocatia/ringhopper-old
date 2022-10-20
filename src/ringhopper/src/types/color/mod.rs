@@ -3,6 +3,22 @@ use crate::types::Point3D;
 #[cfg(test)]
 mod tests;
 
+pub trait ColorRGBFn {
+    /// Calculate the brightness of the color.
+    ///
+    /// Note that if this is gamma-compressed, the output will be gamma-compressed, too.
+    fn luma(self) -> f32;
+
+    /// Normalize for vector mapping.
+    fn vector_normalize(self) -> Self;
+
+    /// Compress for gamma which is what is stored in textures.
+    fn gamma_compress(self) -> Self;
+
+    /// Decompress into linear RGB which is what is edited.
+    fn gamma_decompress(self) -> Self;
+}
+
 /// Color with 8-bit channels and no alpha component.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct ColorRGBInt {
@@ -222,22 +238,7 @@ impl ColorARGBInt {
 
     /// Encode into Y8 (8-bit luminosity, no alpha channel).
     pub const fn to_y8(self) -> u8 {
-        // If the channels are the same, return one of them.
-        if self.r == self.g && self.g == self.b {
-            return self.r;
-        }
-
-        // Based on Luma
-        const RED_WEIGHT: u32 = 54;
-        const GREEN_WEIGHT: u32 = 182;
-        const BLUE_WEIGHT: u32 = 19;
-        const _: () = assert!(RED_WEIGHT + GREEN_WEIGHT + BLUE_WEIGHT == 255, "r+g+b does not equal 255");
-
-        let r = ((self.r as u32) * RED_WEIGHT / 255) as u8;
-        let g = ((self.g as u32) * GREEN_WEIGHT / 255) as u8;
-        let b = ((self.b as u32) * BLUE_WEIGHT / 255) as u8;
-
-        r + g + b
+        self.r
     }
 
     /// Decode from Y8 (8-bit luminosity, no alpha channel).
@@ -289,7 +290,6 @@ impl From<ColorRGBInt> for ColorRGB {
 }
 
 
-
 /// Color with 32-bit floating point channels and an alpha component.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct ColorARGB {
@@ -319,27 +319,6 @@ impl From<ColorARGBInt> for ColorARGB {
 }
 
 impl ColorARGB {
-    /// Normalize for vector mapping.
-    pub fn vector_normalize(self) -> ColorARGB {
-        // Constants
-        const HALF: f32 = 0.5;
-
-        // Calculate the magnitude of the vector
-        let r = self.r - HALF;
-        let g = self.g - HALF;
-        let b = self.b - HALF;
-        let magnitude = (r*r + g*g + b*b).sqrt() / HALF;
-
-        // Normalize, convert back to u8
-        let a = self.a;
-        let r = r / magnitude + HALF;
-        let g = g / magnitude + HALF;
-        let b = b / magnitude + HALF;
-
-        // Done
-        ColorARGB { a, r, g, b }
-    }
-
     /// Do alpha blending.
     pub fn alpha_blend(self, source: ColorARGB) -> ColorARGB {
         let blend = self.a * (1.0 - source.a);
@@ -350,6 +329,16 @@ impl ColorARGB {
         let b = source.b * source.a + self.b * blend;
 
         ColorARGB { a, r, g, b }
+    }
+
+    /// Create from a [`ColorRGB`] value.
+    pub fn from_rgb(alpha: f32, rgb: ColorRGB) -> ColorARGB {
+        ColorARGB { a: alpha, r: rgb.r, g: rgb.g, b: rgb.b }
+    }
+
+    /// Get the RGB components as a [`ColorRGB`] value.
+    pub fn rgb(self) -> ColorRGB {
+        ColorRGB { r: self.r, g: self.g, b: self.b }
     }
 }
 
@@ -380,4 +369,61 @@ pub struct ColorAHSV {
 
     /// Value value.
     pub v: f32
+}
+
+impl ColorRGBFn for ColorRGB {
+    fn vector_normalize(self) -> Self {
+        // Constants
+        const HALF: f32 = 0.5;
+
+        // Calculate the magnitude of the vector
+        let r = self.r - HALF;
+        let g = self.g - HALF;
+        let b = self.b - HALF;
+        let magnitude = (r*r + g*g + b*b).sqrt() / HALF;
+
+        // Normalize, convert back to u8
+        let r = r / magnitude + HALF;
+        let g = g / magnitude + HALF;
+        let b = b / magnitude + HALF;
+
+        // Done
+        ColorRGB { r, g, b }
+    }
+
+    fn luma(self) -> f32 {
+        self.r * 0.2126 + self.g * 0.7152 + self.b * 0.0722
+    }
+
+    fn gamma_compress(self) -> Self {
+        // Gamma compression involves square-rooting.
+        //
+        // Note that this is an approximation. The actual exponent is slightly higher (around 2.2) but this is faster
+        // and still fairly accurate.
+        ColorRGB { r: self.r.sqrt(), g: self.g.sqrt(), b: self.b.sqrt() }
+    }
+
+    fn gamma_decompress(self) -> Self {
+        ColorRGB { r: self.r.powi(2), g: self.g.powi(2), b: self.b.powi(2) }
+    }
+}
+
+impl ColorRGBFn for ColorARGB {
+    fn vector_normalize(self) -> Self {
+        ColorARGB::from_rgb(self.a, self.rgb().vector_normalize())
+    }
+
+    fn luma(self) -> f32 {
+        self.rgb().luma()
+    }
+
+    // Note that alpha is stored linearly and does not get gamma-compressed!
+
+    fn gamma_compress(self) -> Self {
+        ColorARGB::from_rgb(self.a, self.rgb().gamma_compress())
+    }
+
+    fn gamma_decompress(self) -> Self {
+        ColorARGB::from_rgb(self.a, self.rgb().gamma_decompress())
+    }
 }

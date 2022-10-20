@@ -106,6 +106,14 @@ impl BitmapEncoding {
         }
     }
 
+    /// Return `true` if the format is a monochrome encoding.
+    pub const fn is_monochrome(self) -> bool {
+        match self {
+            BitmapEncoding::A8Y8 | BitmapEncoding::A8 | BitmapEncoding::Y8 | BitmapEncoding::AY8 => true,
+            _ => false
+        }
+    }
+
     /// Return `true` if the format is a block compression encoding.
     pub const fn is_block_compression(self) -> bool {
         self.pixels_per_block() != 1

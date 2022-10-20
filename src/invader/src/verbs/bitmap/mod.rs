@@ -466,7 +466,22 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         }
 
         // Okay, encode it
-        let encoded = format.encode(&b.pixels, b.width, b.height, b.depth, b.faces, b.mipmaps);
+        let encoded = if !is_monochrome && format.is_monochrome() {
+            // Get the effective brightness level.
+            let mut encoded_luma = Vec::with_capacity(b.pixels.len());
+            for p in &b.pixels {
+                let argb: ColorARGB = (*p).into();
+                let luma = argb.gamma_decompress().luma();
+
+                let argb_luma = ColorARGB { a: argb.a, r: luma, g: luma, b: luma }.gamma_compress().into();
+                encoded_luma.push(argb_luma);
+            }
+            format.encode(&encoded_luma, b.width, b.height, b.depth, b.faces, b.mipmaps)
+        }
+        else {
+            format.encode(&b.pixels, b.width, b.height, b.depth, b.faces, b.mipmaps)
+        };
+
         let encoded_len = encoded.len();
         bitmap_lengths.push(encoded_len);
         bitmap_tag.processed_pixel_data.extend(encoded);
@@ -531,7 +546,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         }
     }
 
-    // Warn if we did something bad.
+    // Warn if we did something that may not be what we wanted.
     if warn_monochrome {
         eprintln_warn_pre!("Monochrome was requested, but the input is not monochrome.");
     }

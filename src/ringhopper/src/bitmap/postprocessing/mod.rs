@@ -1,4 +1,4 @@
-use crate::types::{ColorARGBInt, log2_u16, ColorARGB, ColorRGB, Vector3D, Point2D};
+use crate::types::{ColorARGBInt, log2_u16, ColorARGB, ColorRGB, Vector3D, Point2D, ColorRGBFn};
 use crate::error::*;
 
 use super::*;
@@ -228,22 +228,25 @@ impl ProcessedBitmaps {
                                     continue;
                                 }
 
-                                let color = &b.pixels_float[real_x2 + real_y2 * b.width];
+                                // We use gamma_decompress because blurring ends up creating nasty artifacts if we don't do this.
+                                //
+                                // See https://www.youtube.com/watch?v=LKnqECcg6Gw for a cool video on this.
+                                let color = b.pixels_float[real_x2 + real_y2 * b.width].gamma_decompress();
                                 let factor = 1.0 - (distance_squared / max_distance_squared).sqrt();
 
                                 total_factor += factor;
-                                total_color.a += color.a.powi(2) * factor; // square it to account for sRGB
-                                total_color.r += color.r.powi(2) * factor;
-                                total_color.g += color.g.powi(2) * factor;
-                                total_color.b += color.b.powi(2) * factor;
+                                total_color.a += color.a * factor;
+                                total_color.r += color.r * factor;
+                                total_color.g += color.g * factor;
+                                total_color.b += color.b * factor;
                             }
                         }
 
-                        total_color.a = (total_color.a / total_factor).sqrt();
-                        total_color.r = (total_color.r / total_factor).sqrt();
-                        total_color.g = (total_color.g / total_factor).sqrt();
-                        total_color.b = (total_color.b / total_factor).sqrt();
-                        output.push(total_color);
+                        total_color.a = total_color.a / total_factor;
+                        total_color.r = total_color.r / total_factor;
+                        total_color.g = total_color.g / total_factor;
+                        total_color.b = total_color.b / total_factor;
+                        output.push(total_color.gamma_compress());
                     }
                 }
 
