@@ -13,7 +13,8 @@ pub struct ColorPlate {
     pub(super) input_type: ColorPlateInputType,
     background_color: Option<ColorARGBInt>,
     sequence_divider_color: Option<ColorARGBInt>,
-    dummy_space_color: Option<ColorARGBInt>
+    dummy_space_color: Option<ColorARGBInt>,
+    reg_point_hack: bool
 }
 
 /// Options for the color plate scanner.
@@ -37,10 +38,12 @@ pub enum ColorPlateInputType {
 
 impl ColorPlate {
     /// Read the color plate.
-    pub fn read_color_plate(pixels: &[ColorARGBInt], width: usize, height: usize, input_type: ColorPlateInputType) -> ErrorMessageResult<ColorPlate> {
+    ///
+    /// If `reg_point_hack` is set, use the bitmap, itself, for determining the registration point Y.
+    pub fn read_color_plate(pixels: &[ColorARGBInt], width: usize, height: usize, input_type: ColorPlateInputType, reg_point_hack: bool) -> ErrorMessageResult<ColorPlate> {
         debug_assert_eq!(pixels.len(), width.checked_mul(height).unwrap(), "input bitmap width and height do not match pixel count");
 
-        let mut color_plate = ColorPlate::new(input_type);
+        let mut color_plate = ColorPlate::new(input_type, reg_point_hack);
 
         if width == 0 || height == 0 {
             return Ok(color_plate);
@@ -100,12 +103,6 @@ impl ColorPlate {
             }
         }
 
-        let top = 0;
-        let left = 0;
-        let bottom = height;
-        let right = width;
-        let coordinates = ColorPlateRegistrationCoordinates { top, left, bottom, right };
-
         match input_type {
             ColorPlateInputType::TwoDimensionalTextures | ColorPlateInputType::ThreeDimensionalTextures => {
                 if !width.is_power_of_two() || !height.is_power_of_two() {
@@ -115,8 +112,7 @@ impl ColorPlate {
                     pixels: pixels.to_owned(),
                     width,
                     height,
-                    virtual_coordinates: coordinates,
-                    real_coordinates: coordinates
+                    registration_point: Point2D { x: 0.5, y: 0.5 }
                 });
                 color_plate.sequences.push(ColorPlateSequence { first_bitmap: Some(0), bitmap_count: 1, start_y: 0, end_y: height });
             },
@@ -125,8 +121,7 @@ impl ColorPlate {
                     pixels: pixels.to_owned(),
                     width,
                     height,
-                    virtual_coordinates: coordinates,
-                    real_coordinates: coordinates
+                    registration_point: Point2D { x: 0.5, y: 0.5 }
                 });
                 color_plate.sequences.push(ColorPlateSequence { first_bitmap: Some(0), bitmap_count: 1, start_y: 0, end_y: height });
             },
@@ -173,8 +168,8 @@ impl ColorPlate {
     }
 
     /// Initialize a blank color plate.
-    fn new(input_type: ColorPlateInputType) -> ColorPlate {
-        ColorPlate { bitmaps: Vec::new(), sequences: Vec::new(), background_color: None, sequence_divider_color: None, dummy_space_color: None, input_type }
+    fn new(input_type: ColorPlateInputType, reg_point_hack: bool) -> ColorPlate {
+        ColorPlate { bitmaps: Vec::new(), sequences: Vec::new(), background_color: None, sequence_divider_color: None, dummy_space_color: None, input_type, reg_point_hack }
     }
 
     /// Generate sequences, expecting a full color plate (that is, with the sequence divider color defined).
@@ -264,6 +259,9 @@ impl ColorPlate {
         for s in &mut sequences {
             // Set the first bitmap to this!
             s.first_bitmap = Some(bitmaps.len());
+
+            // Average this (for registration point)
+            let mid_y = (s.start_y + s.end_y) as f32 / 2.0;
 
             // Search for bitmaps by column
             let mut x = 0;
@@ -409,14 +407,24 @@ impl ColorPlate {
                     return Err(ErrorMessage::AllocatedString(format!("Tried to process a {width}x{height} texture which is too large @ x={x}, y={y}", width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)));
                 }
 
+                // Get the registration point
+                let mid_x = (virtual_left + virtual_right) as f32 / 2.0;
+                let mid_y = if !self.reg_point_hack {
+                    mid_y // use sequence mid_y
+                }
+                else {
+                    (virtual_top + virtual_bottom) as f32 / 2.0 // use bitmap mid_y
+                };
+                let x = (mid_x - (real_left as f32)) / (bitmap_width as f32);
+                let y = (mid_y - (real_top as f32)) / (bitmap_height as f32);
+
                 // Push!
                 bitmaps.push(ColorPlateBitmap {
                     pixels: bitmap_pixels,
                     width: bitmap_width,
                     height: bitmap_height,
 
-                    real_coordinates: ColorPlateRegistrationCoordinates { left: real_left, right: real_right, top: real_top, bottom: real_bottom },
-                    virtual_coordinates: ColorPlateRegistrationCoordinates { left: virtual_left, right: virtual_right, top: virtual_top, bottom: virtual_bottom }
+                    registration_point: Point2D { x, y }
                 });
             }
         }
@@ -489,14 +497,11 @@ impl ColorPlate {
                 }
             }
 
-            let right = left + length;
-            let bottom = top + length;
             ColorPlateBitmap {
                 pixels: output_pixels,
                 width: length,
                 height: length,
-                virtual_coordinates: ColorPlateRegistrationCoordinates { top, left, bottom, right },
-                real_coordinates: ColorPlateRegistrationCoordinates { top, left, bottom, right },
+                registration_point: Point2D { x: 0.5, y: 0.5 }
             }
         }
 
@@ -523,12 +528,7 @@ pub struct ColorPlateBitmap {
     pub pixels: Vec<ColorARGBInt>,
     pub width: usize,
     pub height: usize,
-
-    /// Coordinates where it was found in the color plate including dummy space.
-    pub virtual_coordinates: ColorPlateRegistrationCoordinates,
-
-    /// Coordinates where it was found in the color plate not including dummy space.
-    pub real_coordinates: ColorPlateRegistrationCoordinates
+    pub registration_point: Point2D
 }
 
 /// Point where a bitmap was found in the color plate.

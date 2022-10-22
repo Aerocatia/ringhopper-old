@@ -348,7 +348,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     };
 
     // Read the color plate!
-    let color_plate = ColorPlate::read_color_plate(&image.pixels, image.width, image.height, color_plate_type)?;
+    let color_plate = ColorPlate::read_color_plate(&image.pixels, image.width, image.height, color_plate_type, bitmap_tag.flags.filthy_sprite_bug_fix)?;
 
     // Process the color plate on our bitmap tag.
     let mut processing_options = make_bitmap_processing_options(&bitmap_tag);
@@ -497,7 +497,26 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         };
         data.format = format.try_into().unwrap();
         data.flags = flags;
-        data.registration_point = Point2DInt::default();
+
+        // Calculate registration point, rounding to the nearest integer.
+        //
+        // NOTE: This will sometimes be slightly off from tool.exe, as tool.exe essentially does this instead:
+        //
+        // data.registration_point = Point2DInt {
+        //     x: (b.registration_point.x * b.width as f32 + 0.5) as i16,
+        //     y: (b.registration_point.y * b.height as f32 + 0.5) as i16
+        // };
+        //
+        // This appears to be an oversight, as while it rounds positive numbers, it totally breaks negative numbers.
+        //
+        // For example, let's take 0.75. If we add 0.5, we get 1.25, and integer conversion removes the decimal point, making it 1.
+        // But if we take -1.25 and add 0.5, we get -0.75, and integer conversion removes the decimal point, making it 0.
+
+        data.registration_point = Point2DInt {
+            x: (b.registration_point.x * b.width as f32).round() as i16,
+            y: (b.registration_point.y * b.height as f32).round() as i16
+        };
+
         data.mipmap_count = b.mipmaps as u16; // this is assumed to be safe since mipmap is log2 our dimensions which we check
         data.pixel_data_offset = data_offset as u32;
         data.pixel_data_size = encoded_len as u32;

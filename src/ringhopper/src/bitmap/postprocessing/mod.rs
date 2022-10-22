@@ -25,6 +25,9 @@ pub struct ProcessedBitmap {
     /// For cubemaps, this is 6. For all other bitmaps, this is 1.
     pub faces: usize,
 
+    /// Registration point
+    pub registration_point: Point2D,
+
     /// Floating point versions of the pixels.
     pixels_float: Vec<ColorARGB>
 }
@@ -183,7 +186,7 @@ impl ProcessedBitmaps {
             for p in b.pixels {
                 pixels_float.push(p.into());
             }
-            processed_bitmaps.bitmaps.push(ProcessedBitmap { pixels: Vec::new(), height: b.height, width: b.width, depth: 1, mipmaps: 0, faces: 1, pixels_float })
+            processed_bitmaps.bitmaps.push(ProcessedBitmap { pixels: Vec::new(), height: b.height, width: b.width, depth: 1, mipmaps: 0, faces: 1, pixels_float, registration_point: b.registration_point })
         }
 
         // Copy in the sequences.
@@ -379,7 +382,7 @@ impl ProcessedBitmaps {
                 capacity += self.bitmaps[b].pixels_float.len();
             }
 
-            let mut new_bitmap = ProcessedBitmap { pixels: Vec::new(), height, width, depth, mipmaps, faces, pixels_float: Vec::with_capacity(capacity) };
+            let mut new_bitmap = ProcessedBitmap { pixels: Vec::new(), height, width, depth, mipmaps, faces, pixels_float: Vec::with_capacity(capacity), registration_point: first_bitmap.registration_point };
             iterate_base_map_and_mipmaps(width, height, 1, 1, mipmaps, |m| {
                 for b in &self.bitmaps[first_bitmap_index..first_bitmap_index+s.bitmap_count] {
                     new_bitmap.pixels_float.extend_from_slice(&b.pixels_float[m.pixel_offset..m.pixel_offset+m.size]);
