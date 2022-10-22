@@ -82,7 +82,7 @@ impl BitmapOptions {
 pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode> {
     let parsed_args = ParsedArguments::parse_arguments(args, &[
         Argument { long: "detail-fade-factor", short: 'F', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.detail-fade-factor.description"), parameter: Some("factor"), multiple: false },
-        Argument { long: "sharpen-amount", short: 'a', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sharpen-amount.description"), parameter: Some("px"), multiple: false },
+        Argument { long: "sharpen-amount", short: 's', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sharpen-amount.description"), parameter: Some("px"), multiple: false },
         Argument { long: "bump-height", short: 'H', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.bump-height.description"), parameter: Some("height"), multiple: false },
         Argument { long: "blur-filter-size", short: 'b', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.blur-filter-size.description"), parameter: Some("px"), multiple: false },
         Argument { long: "alpha-bias", short: 'A', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.alpha-bias.description"), parameter: Some("bias"), multiple: false },

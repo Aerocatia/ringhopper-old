@@ -114,6 +114,23 @@ pub struct ProcessedBitmaps {
     pub bitmaps: Vec<ProcessedBitmap>
 }
 
+// Wrap around the dimensions
+fn wrap_around(x: usize, y: usize, xd: isize, yd: isize, width: usize, height: usize) -> (usize,usize) {
+    let iwidth = width as isize;
+    let iheight = height as isize;
+
+    let mut x_after = (x as isize + xd) % iwidth;
+    if x_after < 0 {
+        x_after += iwidth;
+    }
+    let mut y_after = (y as isize + yd) % iheight;
+    if y_after < 0 {
+        y_after += iheight;
+    }
+
+    (x_after as usize, y_after as usize)
+}
+
 impl ProcessedBitmaps {
     /// Process the color plate, returning a final set of bitmaps.
     pub fn process_color_plate(color_plate: ColorPlate, options: &ProcessingOptions) -> ErrorMessageResult<ProcessedBitmaps> {
@@ -131,6 +148,7 @@ impl ProcessedBitmaps {
         processed_bitmaps.perform_blur(options);
         processed_bitmaps.generate_heightmaps(options);
         processed_bitmaps.generate_mipmaps(options)?;
+        processed_bitmaps.perform_sharpen(options);
         processed_bitmaps.truncate_zero_alpha(options);
         processed_bitmaps.consolidate_textures(color_plate_type);
 
@@ -195,65 +213,140 @@ impl ProcessedBitmaps {
         }
     }
 
-    /// Perform a blur
+    /// Perform a blur. This factors in gamma compression.
     fn perform_blur(&mut self, options: &ProcessingOptions) {
-        // Apply sharpening and blur?
-        if let Some(blur) = options.blur_factor {
-            for b in &mut self.bitmaps {
-                let mut output = Vec::<ColorARGB>::with_capacity(b.pixels_float.len());
+        let blur = match options.blur_factor {
+            Some(it) => it,
+            _ => return,
+        };
 
-                let blur = blur / 2.0;
-                let max_distance = blur + 1.0;
-                let max_distance_squared = (max_distance * max_distance) as f32;
-                let max_distance_usize = max_distance as usize;
+        // Apply blur to the base map.
+        for b in &mut self.bitmaps {
+            let mut output = Vec::<ColorARGB>::with_capacity(b.pixels_float.len());
 
-                for y in 0..b.height {
-                    for x in 0..b.width {
-                        let point = Point2D { x: x as f32, y: y as f32 };
+            let blur = blur / 2.0;
+            let max_distance = blur + 1.0;
+            let max_distance_squared = (max_distance * max_distance) as f32;
+            let max_distance_usize = max_distance as usize;
 
-                        let mut total_color = ColorARGB::default();
-                        let mut total_factor = 0.0;
+            for y in 0..b.height {
+                for x in 0..b.width {
+                    let point = Point2D { x: x as f32, y: y as f32 };
 
-                        for y2 in 0..1+max_distance_usize*2 {
-                            for x2 in 0..1+max_distance_usize*2 {
-                                let x2_delta = (x2 as isize) - max_distance_usize as isize;
-                                let y2_delta = (y2 as isize) - max_distance_usize as isize;
+                    let mut total_color = ColorARGB::default();
+                    let mut total_factor = 0.0;
 
-                                let real_x2 = (x as isize - x2_delta).clamp(0, b.width as isize - 1) as usize;
-                                let real_y2 = (y as isize - y2_delta).clamp(0, b.height as isize - 1) as usize;
+                    for y2 in 0..1+max_distance_usize*2 {
+                        for x2 in 0..1+max_distance_usize*2 {
+                            let x2_delta = (x2 as isize) - max_distance_usize as isize;
+                            let y2_delta = (y2 as isize) - max_distance_usize as isize;
+                            let (real_x2, real_y2) = wrap_around(x, y, x2_delta, y2_delta, b.width, b.height);
 
-                                let point_c = Point2D { x: real_x2 as f32, y: real_y2 as f32 };
-                                let distance_squared = point_c.distance_from_point_squared(&point);
-                                if distance_squared >= max_distance_squared {
-                                    continue;
-                                }
-
-                                // We use gamma_decompress because blurring ends up creating nasty artifacts if we don't do this.
-                                //
-                                // See https://www.youtube.com/watch?v=LKnqECcg6Gw for a cool video on this.
-                                let color = b.pixels_float[real_x2 + real_y2 * b.width].gamma_decompress();
-                                let factor = 1.0 - (distance_squared / max_distance_squared).sqrt();
-
-                                total_factor += factor;
-                                total_color.a += color.a * factor;
-                                total_color.r += color.r * factor;
-                                total_color.g += color.g * factor;
-                                total_color.b += color.b * factor;
+                            let point_c = Point2D { x: (x as isize + x2_delta) as f32, y: (y as isize + y2_delta) as f32 };
+                            let distance_squared = point_c.distance_from_point_squared(&point);
+                            if distance_squared >= max_distance_squared {
+                                continue;
                             }
+
+                            // We use gamma_decompress because blurring ends up creating nasty artifacts if we don't do this.
+                            //
+                            // See https://www.youtube.com/watch?v=LKnqECcg6Gw for a cool video on this.
+                            let color = b.pixels_float[real_x2 + real_y2 * b.width].gamma_decompress();
+                            let factor = 1.0 - (distance_squared / max_distance_squared).sqrt();
+
+                            total_factor += factor;
+                            total_color.a += color.a * factor;
+                            total_color.r += color.r * factor;
+                            total_color.g += color.g * factor;
+                            total_color.b += color.b * factor;
                         }
-
-                        total_color.a = total_color.a / total_factor;
-                        total_color.r = total_color.r / total_factor;
-                        total_color.g = total_color.g / total_factor;
-                        total_color.b = total_color.b / total_factor;
-                        output.push(total_color.gamma_compress());
                     }
-                }
 
-                for i in 0..output.len() {
-                    b.pixels_float[i] = output[i];
+                    total_color.a = total_color.a / total_factor;
+                    total_color.r = total_color.r / total_factor;
+                    total_color.g = total_color.g / total_factor;
+                    total_color.b = total_color.b / total_factor;
+                    output.push(total_color.gamma_compress());
                 }
             }
+
+            for i in 0..output.len() {
+                b.pixels_float[i] = output[i];
+            }
+        }
+    }
+
+    fn perform_sharpen(&mut self, options: &ProcessingOptions) {
+        let sharpen_factor = match options.sharpen_factor {
+            Some(it) => it.clamp(0.0, 1.0),
+            _ => return,
+        };
+
+        // Sharpening is just value + factor / (1 - factor) * average difference of the 8 adjacent pixels, wrapping if needed
+        let sharpen_multiplier = (sharpen_factor / (1.0 - sharpen_factor)) as f32;
+        for b in &mut self.bitmaps {
+            let mut new_pixels = Vec::with_capacity(b.pixels_float.len());
+
+            iterate_base_map_and_mipmaps(b.width, b.height, b.depth, b.faces, b.mipmaps, |m| {
+                let pixels = &b.pixels_float[m.pixel_offset .. m.pixel_offset + m.size];
+
+                // Don't sharpen mipmaps that are too small
+                if m.height <= 2 || m.width <= 2 {
+                    new_pixels.extend_from_slice(&pixels);
+                    return;
+                }
+
+                let face_size = m.size / (m.depth * b.faces);
+
+                for p in (0..pixels.len()).step_by(face_size) {
+                    let face = &pixels[p..p+face_size];
+
+                    for y in 0..m.height {
+                        for x in 0..m.width {
+                            let (top, left) = wrap_around(x, y, -1, -1, m.width, m.height);
+                            let (bottom, right) = wrap_around(x, y, -1, -1, m.width, m.height);
+
+                            let mut total = ColorRGB::default();
+                            let pixel = pixels[p + x+y*m.width];
+
+                            macro_rules! add_pixel {
+                                ($x:expr, $y:expr) => {{
+                                    let pixel_to_check = face[$x + $y * m.width];
+                                    total.r += pixel_to_check.r;
+                                    total.g += pixel_to_check.g;
+                                    total.b += pixel_to_check.b;
+                                }}
+                            }
+
+                            add_pixel!(left, top);
+                            add_pixel!(left, y);
+                            add_pixel!(left, bottom);
+
+                            add_pixel!(x, top);
+                            // don't add center pixel
+                            add_pixel!(x, bottom);
+
+                            add_pixel!(right, top);
+                            add_pixel!(right, y);
+                            add_pixel!(right, bottom);
+
+                            total.r /= 8.0;
+                            total.g /= 8.0;
+                            total.b /= 8.0;
+
+                            let sharpened_pixel = ColorRGB {
+                                r: (pixel.r + (pixel.r - total.r) * sharpen_multiplier).clamp(0.0, 1.0),
+                                g: (pixel.g + (pixel.g - total.g) * sharpen_multiplier).clamp(0.0, 1.0),
+                                b: (pixel.b + (pixel.b - total.b) * sharpen_multiplier).clamp(0.0, 1.0)
+                            };
+
+                            new_pixels.push(ColorARGB::from_rgb(pixel.a, sharpened_pixel));
+                        }
+                    }
+                }
+            });
+
+            b.pixels_float = new_pixels;
         }
     }
 
@@ -480,16 +573,11 @@ impl ProcessedBitmaps {
             b.pixels_float.resize(total_pixels, ColorARGB::default());
 
             // Now generate mipmaps.
-            //
-            // Note that, yes, sharpness and blur also apply to the base map.
             iterate_base_map_and_mipmaps_with_err(b.width, b.height, 1, 1, final_mipmap_count, |m| {
                 let map_pixel_count = m.size;
 
                 // Get this bitmap's pixels and the next mipmap's.
                 let (map_pixels, next_map_pixels) = &mut b.pixels_float[m.pixel_offset..].split_at_mut(map_pixel_count);
-                if let Some(sharpen) = options.sharpen_factor {
-                    return Err(ErrorMessage::AllocatedString(format!("sharpen not yet implemented {factor}", factor=sharpen)));
-                }
 
                 // Now generate the next bitmap's mipmaps.
                 if m.index < final_mipmap_count {
