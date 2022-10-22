@@ -356,7 +356,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     processing_options.gamma_corrected_mipmaps = options.gamma_corrected_mipmaps;
     processing_options.detail_fade_color = options.detail_fade_color;
 
-    let processed_result = ProcessedBitmaps::process_color_plate(color_plate, &processing_options)?;
+    let processed_result = ProcessedBitmaps::process_color_plate(color_plate, &processing_options);
     if bitmap_tag._type == BitmapType::Sprites {
         return Err(ErrorMessage::StaticString("Sprites not yet implemented!"));
     }

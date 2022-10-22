@@ -1,5 +1,4 @@
 use crate::types::{ColorARGBInt, log2_u16, ColorARGB, ColorRGB, Vector3D, Point2D, ColorRGBFn};
-use crate::error::*;
 
 use super::*;
 
@@ -66,16 +65,16 @@ pub struct ProcessingOptions {
     /// If `true`, use gamma correction when generating mipmaps.
     pub gamma_corrected_mipmaps: bool,
 
-    /// If `Some`, fade mipmaps to gray by a factor when doing mipmap generation.
+    /// If `Some`, fade mipmaps to gray by a factor after doing mipmap generation.
     pub detail_fade_factor: Option<f64>,
 
-    /// If `Some`, sharpen the base map and mipmaps by a factor when doing mipmap generation.
+    /// If `Some`, sharpen the base map and mipmaps by a factor after doing mipmap generation.
     pub sharpen_factor: Option<f64>,
 
-    /// If `Some`, blur the base map and mipmaps by a factor when doing mipmap generation.
+    /// If `Some`, blur the base map and mipmaps by a factor before doing mipmap generation.
     pub blur_factor: Option<f64>,
 
-    /// If `Some`, modify the alpha by this factor when doing mipmap generation.
+    /// If `Some`, modify the alpha by this factor after doing mipmap generation.
     pub alpha_bias: Option<f64>,
 
     /// If `Some`, limit the maximum number of mipmaps to generate.
@@ -115,7 +114,7 @@ pub struct ProcessedBitmaps {
 }
 
 // Wrap around the dimensions
-fn wrap_around(x: usize, y: usize, xd: isize, yd: isize, width: usize, height: usize) -> (usize,usize) {
+const fn wrap_around(x: usize, y: usize, xd: isize, yd: isize, width: usize, height: usize) -> (usize,usize) {
     let iwidth = width as isize;
     let iheight = height as isize;
 
@@ -131,31 +130,30 @@ fn wrap_around(x: usize, y: usize, xd: isize, yd: isize, width: usize, height: u
     (x_after as usize, y_after as usize)
 }
 
+macro_rules! iterate_mipmaps {
+    ($bitmap:expr, $function:expr) => {{
+        if $bitmap.mipmaps > 0 {
+            iterate_base_map_and_mipmaps(($bitmap.width / 2).max(1), ($bitmap.height / 2).max(1), 1, 1, $bitmap.mipmaps - 1, $function)
+        }
+    }}
+}
+
 impl ProcessedBitmaps {
     /// Process the color plate, returning a final set of bitmaps.
-    pub fn process_color_plate(color_plate: ColorPlate, options: &ProcessingOptions) -> ErrorMessageResult<ProcessedBitmaps> {
+    pub fn process_color_plate(color_plate: ColorPlate, options: &ProcessingOptions) -> ProcessedBitmaps {
         // Load the processed bitmaps.
         let color_plate_type = color_plate.input_type;
         let mut processed_bitmaps = ProcessedBitmaps::load_color_plate(color_plate);
 
-        // You think you want to but you don't.
-        //
-        // Vector maps use RGB as vector values, not colors.
-        if options.gamma_corrected_mipmaps && options.vectorize {
-            return Err(ErrorMessage::StaticString("Vectorized bitmaps cannot be gamma corrected."));
-        }
-
         processed_bitmaps.perform_blur(options);
         processed_bitmaps.generate_heightmaps(options);
-        processed_bitmaps.generate_mipmaps(options)?;
+        processed_bitmaps.generate_mipmaps(options);
+        processed_bitmaps.detail_fade(options);
+        processed_bitmaps.alpha_bias(options);
         processed_bitmaps.perform_sharpen(options);
         processed_bitmaps.truncate_zero_alpha(options);
+        processed_bitmaps.vectorize(options);
         processed_bitmaps.consolidate_textures(color_plate_type);
-
-        // Vectorize the result?
-        if options.vectorize {
-            processed_bitmaps.vectorize();
-        }
 
         // Finally, convert to integer RGB
         for i in &mut processed_bitmaps.bitmaps {
@@ -166,7 +164,7 @@ impl ProcessedBitmaps {
             i.pixels_float = Vec::new();
         }
 
-        Ok(processed_bitmaps)
+        processed_bitmaps
     }
 
     /// Use the color plate data to make a set of processed bitmaps.
@@ -303,8 +301,8 @@ impl ProcessedBitmaps {
 
                     for y in 0..m.height {
                         for x in 0..m.width {
-                            let (top, left) = wrap_around(x, y, -1, -1, m.width, m.height);
-                            let (bottom, right) = wrap_around(x, y, -1, -1, m.width, m.height);
+                            let (left, top) = wrap_around(x, y, -1, -1, m.width, m.height);
+                            let (right, bottom) = wrap_around(x, y, 1, 1, m.width, m.height);
 
                             let mut total = ColorRGB::default();
                             let pixel = pixels[p + x+y*m.width];
@@ -445,7 +443,11 @@ impl ProcessedBitmaps {
     }
 
     /// Vectorize bitmaps.
-    fn vectorize(&mut self) {
+    fn vectorize(&mut self, options: &ProcessingOptions) {
+        if !options.vectorize {
+            return;
+        }
+
         for b in &mut self.bitmaps {
             for p in &mut b.pixels_float {
                 *p = p.vector_normalize();
@@ -521,8 +523,77 @@ impl ProcessedBitmaps {
         }
     }
 
+    /// Do detail fade on mipmaps.
+    fn detail_fade(&mut self, options: &ProcessingOptions) {
+        let fade = match options.detail_fade_factor {
+            Some(it) => it,
+            _ => return,
+        };
+
+        for bitmap in &mut self.bitmaps {
+            let (base_map_pixels, mipmap_pixels) = bitmap.pixels_float.split_at_mut(bitmap.width * bitmap.height);
+
+            if bitmap.mipmaps > 0 {
+                let fade = fade.clamp(0.0, 1.0) as f32;
+                let mipmap_count_float = bitmap.mipmaps as f32;
+                let overall_fade_factor = mipmap_count_float - fade * (mipmap_count_float - 1.0 + (1.0 - fade));
+
+                // Get the fade color
+                let (r,g,b) = match options.detail_fade_color {
+                    DetailFadeColor::Gray => (127.0 / 255.0, 127.0 / 255.0, 127.0 / 255.0),
+                    DetailFadeColor::Average => {
+                        let mut average = ColorRGB::default();
+                        for p in &base_map_pixels[..] {
+                            average.r += p.r;
+                            average.g += p.g;
+                            average.b += p.b;
+                        }
+                        let sum = base_map_pixels.len() as f32;
+                        (average.r / sum, average.g / sum, average.b / sum)
+                    }
+                };
+
+                // Do it!
+                iterate_mipmaps!(bitmap, |m| {
+                    // The amount we fade depends on the mipmap. We can use alpha blending to calculate this.
+                    let fade_to_gray = ColorARGB {
+                        a: (((m.index + 1) as f32) / overall_fade_factor).min(1.0),
+                        r,
+                        g,
+                        b
+                    };
+                    for px in &mut mipmap_pixels[m.pixel_offset..m.pixel_offset + m.size] {
+                        *px = (*px).alpha_blend(fade_to_gray);
+                    }
+                });
+            }
+        }
+    }
+
+    /// Do alpha bias on mipmaps.
+    fn alpha_bias(&mut self, options: &ProcessingOptions) {
+        let alpha_bias = match options.alpha_bias {
+            Some(it) => it,
+            _ => return,
+        };
+
+        for b in &mut self.bitmaps {
+            let mipmap_pixels = &mut b.pixels_float[b.width * b.height..];
+
+            let alpha_bias = alpha_bias.clamp(-1.0, 1.0) as f32;
+            let mipmap_count_float = b.mipmaps as f32;
+
+            iterate_mipmaps!(b, |m| {
+                let delta = alpha_bias * ((m.index + 1) as f32) / mipmap_count_float;
+                for p in &mut mipmap_pixels[m.pixel_offset..m.pixel_offset + m.size] {
+                    p.a = (p.a + delta).clamp(0.0, 1.0);
+                }
+            });
+        }
+    }
+
     /// Generate mipmaps.
-    fn generate_mipmaps(&mut self, options: &ProcessingOptions) -> ErrorMessageResult<()> {
+    fn generate_mipmaps(&mut self, options: &ProcessingOptions) {
         for b in &mut self.bitmaps {
             // Get the highest dimension.
             //
@@ -573,7 +644,7 @@ impl ProcessedBitmaps {
             b.pixels_float.resize(total_pixels, ColorARGB::default());
 
             // Now generate mipmaps.
-            iterate_base_map_and_mipmaps_with_err(b.width, b.height, 1, 1, final_mipmap_count, |m| {
+            iterate_base_map_and_mipmaps(b.width, b.height, 1, 1, final_mipmap_count, |m| {
                 let map_pixel_count = m.size;
 
                 // Get this bitmap's pixels and the next mipmap's.
@@ -645,73 +716,8 @@ impl ProcessedBitmaps {
                         }
                     }
                 }
-
-                Ok(())
-            })?;
-
-            macro_rules! iterate_mipmaps {
-                ($function:expr) => {
-                    iterate_base_map_and_mipmaps((b.width / 2).max(1), (b.height / 2).max(1), 1, 1, final_mipmap_count - 1, $function)
-                }
-            }
-
-            let (base_map_pixels, mipmap_pixels) = b.pixels_float.split_at_mut(b.width * b.height);
-
-            // Next, fade to gray on mipmaps
-            if let Some(fade) = options.detail_fade_factor {
-                if final_mipmap_count > 0 {
-                    let fade = fade.clamp(0.0, 1.0) as f32;
-                    let mipmap_count_float = final_mipmap_count as f32;
-                    let overall_fade_factor = mipmap_count_float - fade * (mipmap_count_float - 1.0 + (1.0 - fade));
-
-                    // Get the fade color
-                    let (r,g,b) = match options.detail_fade_color {
-                        DetailFadeColor::Gray => (127.0 / 255.0, 127.0 / 255.0, 127.0 / 255.0),
-                        DetailFadeColor::Average => {
-                            let mut average = ColorRGB::default();
-                            for p in &base_map_pixels[..] {
-                                average.r += p.r;
-                                average.g += p.g;
-                                average.b += p.b;
-                            }
-                            let sum = base_map_pixels.len() as f32;
-                            (average.r / sum, average.g / sum, average.b / sum)
-                        }
-                    };
-
-                    // Do it!
-                    iterate_mipmaps!(|m| {
-                        // The amount we fade depends on the mipmap. We can use alpha blending to calculate this.
-                        let fade_to_gray = ColorARGB {
-                            a: (((m.index + 1) as f32) / overall_fade_factor).min(1.0),
-                            r,
-                            g,
-                            b
-                        };
-                        for px in &mut mipmap_pixels[m.pixel_offset..m.pixel_offset + m.size] {
-                            *px = (*px).alpha_blend(fade_to_gray);
-                        }
-                    });
-                }
-            }
-
-            // Lastly, do alpha bias on mipmaps
-            if let Some(alpha_bias) = options.alpha_bias {
-                if final_mipmap_count > 0 {
-                    let alpha_bias = alpha_bias.clamp(-1.0, 1.0) as f32;
-                    let mipmap_count_float = final_mipmap_count as f32;
-
-                    iterate_mipmaps!(|m| {
-                        let delta = alpha_bias * ((m.index + 1) as f32) / mipmap_count_float;
-                        for p in &mut mipmap_pixels[m.pixel_offset..m.pixel_offset + m.size] {
-                            p.a = (p.a + delta).clamp(0.0, 1.0);
-                        }
-                    });
-                }
-            }
+            });
         }
-
-        Ok(())
     }
 }
 
