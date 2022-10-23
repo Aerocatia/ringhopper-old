@@ -9,6 +9,7 @@ use crate::engines::h1::{TagGroup, TagReference};
 use crate::types::tag::TagGroupFn;
 
 /// Struct used to associate a tag to a file.
+#[derive(Clone, PartialEq)]
 pub struct TagFile {
     /// Internal tag path in the virtual tags directory.
     pub tag_path: TagReference,

@@ -16,6 +16,7 @@ use std::process::ExitCode;
 use std::path::*;
 use std::io::Cursor;
 
+#[derive(Copy, Clone)]
 struct BitmapOptions {
     encoding_format: Option<BitmapFormat>,
     usage: Option<BitmapUsage>,
@@ -104,7 +105,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         Argument { long: "square-sheets", short: 'Q', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.square-sheets.description"), parameter: None, multiple: false },
         Argument { long: "gamma-corrected-mipmaps", short: 'G', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.gamma-corrected-mipmaps.description"), parameter: None, multiple: false },
         Argument { long: "fade-to-average", short: 'V', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.fade-to-average.description"), parameter: None, multiple: false },
-    ], &[get_compiled_string!("arguments.specifier.tag_batch_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags())?;
+    ], &[get_compiled_string!("arguments.specifier.tag_batch_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags().uses_threads())?;
     let tag_path = &parsed_args.extra[0];
 
     let parse_f32 = |what: &str| {
@@ -189,39 +190,92 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         }
     };
 
-    let data_dir = Path::new(&parsed_args.named["data"][0]);
-    if TagFile::uses_batching(tag_path) {
-        let mut success = 0usize;
-        let mut total = 0usize;
-        let mut errors = 0usize;
-
-        for i in TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &tag_path, Some(TagGroup::Bitmap))? {
-            let do_single_bitmap = match std::panic::catch_unwind(|| {
-                return do_single_bitmap(&i, &data_dir, &options, false);
-            }) {
-                Ok(n) => n,
-                Err(_) => {
-                    panic!("Panicked when doing {}", i.tag_path);
-                }
-            };
-            match do_single_bitmap {
-                Ok(_) => {
-                    success += 1;
-                }
-                Err(e) => {
-                    eprintln_error_pre!("Could not generate bitmaps for {tag}: {error}", tag=i.tag_path, error=e);
-                    errors += 1;
-                }
-            }
-            total += 1;
+    let max_threads: usize = match parse_u16("threads")? {
+        Some(t) => {
+            ((t / 2) as usize).max(1)
+        },
+        None => match std::thread::available_parallelism() {
+            Ok(n) => (n.get() / 2).max(1),
+            Err(_) => 1
         }
+    };
+
+    let data_dir = Path::new(&parsed_args.named["data"][0]).to_owned();
+    let log_mutex = std::sync::Arc::new(std::sync::Mutex::new(true));
+    if TagFile::uses_batching(tag_path) {
+        let success = std::sync::Arc::new(std::sync::Mutex::new(0usize));
+        let total = std::sync::Arc::new(std::sync::Mutex::new(0usize));
+        let errors = std::sync::Arc::new(std::sync::Mutex::new(0usize));
+        let warnings = std::sync::Arc::new(std::sync::Mutex::new(0usize));
+        let log_mutex = log_mutex.clone();
+
+        let tags = TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &tag_path, Some(TagGroup::Bitmap))?;
+        let tag_count = tags.len();
+        let current_tag_index = std::sync::Arc::new(std::sync::Mutex::new(0usize));
+
+        let mut threads = Vec::new();
+        let tags = std::sync::Arc::new(std::sync::Mutex::new(tags));
+        for _ in 0..max_threads {
+            let success = success.clone();
+            let total = total.clone();
+            let errors = errors.clone();
+            let warnings = warnings.clone();
+            let tags = tags.clone();
+            let current_tag_index = current_tag_index.clone();
+            let data_dir = data_dir.clone();
+            let log_mutex = log_mutex.clone();
+
+            threads.push(std::thread::spawn(move || {
+                loop {
+                    let index: usize = {
+                        let mut i = current_tag_index.lock().unwrap();
+                        if *i == tag_count {
+                            return;
+                        }
+                        *i += 1;
+                        *i - 1
+                    };
+
+                    let mut warnings_tmp = 0;
+                    let tag = tags.lock().unwrap()[index].clone();
+
+                    let do_single_bitmap = do_single_bitmap(&tag, &data_dir, &options, false, &mut warnings_tmp, &log_mutex);
+                    match do_single_bitmap {
+                        Ok(_) => {
+                            *success.lock().unwrap() += 1;
+                        }
+                        Err(e) => {
+                            let l = log_mutex.lock().unwrap();
+                            eprintln_error_pre!("Could not generate bitmaps for {tag}: {error}", tag=tag.tag_path, error=e);
+                            *errors.lock().unwrap() += 1;
+                            drop(l)
+                        }
+                    }
+                    *total.lock().unwrap() += 1;
+                    *warnings.lock().unwrap() += warnings_tmp;
+                }
+            }))
+        }
+
+        for i in threads {
+            i.join().unwrap();
+        }
+
+        let total = *total.lock().unwrap();
+        let errors = *errors.lock().unwrap();
+        let warnings = *warnings.lock().unwrap();
+        let success = *success.lock().unwrap();
 
         if total == 0 {
             Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_no_tags_found"))))
         }
         else if errors > 0 {
-            println_warn!("Generated bitmaps for {count} tag(s) with {error} error(s)", count=success, error=errors);
+            println_warn!("Generated bitmaps for {count} tag(s) with {warning} warning(s) and {error} error(s)", count=success, error=errors, warning=warnings);
             Ok(ExitCode::FAILURE)
+        }
+        else if warnings > 0 {
+            println_warn!("Generated bitmaps for {count} tag(s) with {warning} warnings(s)", count=success, warning=warnings);
+            Ok(ExitCode::SUCCESS)
         }
         else {
             println_success!("Successfully generated bitmaps for {count} tag(s)", count=success);
@@ -231,7 +285,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
     else {
         let tag_path = TagReference::from_path_and_group(tag_path, TagGroup::Bitmap)?;
         let file_path = Path::new(&parsed_args.named["tags"][0]).join(tag_path.to_string());
-        do_single_bitmap(&TagFile { tag_path, file_path }, Path::new(&parsed_args.named["data"][0]), &options, true)?;
+        do_single_bitmap(&TagFile { tag_path, file_path }, Path::new(&parsed_args.named["data"][0]), &options, true, &mut 0, &log_mutex)?;
         Ok(ExitCode::SUCCESS)
     }
 }
@@ -290,7 +344,7 @@ fn load_tiff(path: &Path) -> ErrorMessageResult<Image> {
     Ok(Image { width, height, pixels })
 }
 
-fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, show_extended_info: bool) -> ErrorMessageResult<()> {
+fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, show_extended_info: bool, warnings: &mut usize, log_mutex: &std::sync::Arc<std::sync::Mutex<bool>>) -> ErrorMessageResult<()> {
     // Load the bitmap tag
     let mut bitmap_tag = if file.file_path.exists() {
         *Bitmap::from_tag_file(&read_file(&file.file_path)?)?.data
@@ -357,8 +411,17 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     let color_plate_options = ColorPlateOptions {
         input_type: color_plate_type,
         use_sequence_dividers_for_registration_point: !bitmap_tag.flags.filthy_sprite_bug_fix,
-        preferred_sprite_spacing: options.sprite_spacing.map(|f| f as usize),
-        force_square_sheets: options.square_sheets
+        preferred_sprite_spacing: match options.sprite_spacing {
+            Some(n) => n as usize,
+            None => match options.mipmap_count {
+                Some(1) => 1,
+                _ => 4
+            }
+        },
+        force_square_sheets: options.square_sheets,
+        bake_sprite_sheets: bitmap_tag._type == BitmapType::Sprites,
+        sprite_budget_count: match bitmap_tag.sprite_budget_count { 0 => None, n => Some(n as usize) },
+        sprite_budget_length: bitmap_tag.sprite_budget_size.to_length() as usize,
     };
     let color_plate = ColorPlate::read_color_plate(&image.pixels, image.width, image.height, &color_plate_options)?;
 
@@ -412,6 +475,9 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
 
     let mut warn_monochrome = false;
     let mut bitmap_lengths = Vec::with_capacity(processed_result.bitmaps.len());
+    let mut contains_fully_transparent_bitmaps = false;
+    let mut contains_varying_alpha = false;
+    let mut contains_zero_alpha_color = false;
 
     for b in processed_result.bitmaps {
         // Check to make sure it isn't too large to be addressed.
@@ -425,8 +491,9 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         // Determine the best encoding format
         let mut is_monochrome = true;
         let mut alpha_equals_luminosity = true;
-        let mut contains_varying_alpha = false;
+        let mut varying_alpha = false;
         let mut transparent = false;
+        let mut fully_transparent = true;
         let mut white = true;
         for p in &b.pixels {
             let y8 = p.to_y8();
@@ -444,18 +511,33 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
             }
 
             match p.a {
-                // if it is not 0 or 255, then it is not 1-bit alpha
-                0x01..=0xFE => {
-                    contains_varying_alpha = true;
-                    transparent = true;
-                }
-                // if it is 0, then it may be 1-bit alpha
+                // if it is 0, then it may be 1-bit alpha. Also have a DXT1-specific check
                 0x00 => {
                     transparent = true;
+                    if p.r > 0 || p.g > 0 || p.b > 0 {
+                        contains_zero_alpha_color = true;
+                    }
+                },
+
+                // if it is not 0 or 255, then it is not 1-bit alpha
+                0x01..=0xFE => {
+                    varying_alpha = true;
+                    fully_transparent = false;
+                    transparent = true;
                 }
-                0xFF => ()
+
+                0xFF => fully_transparent = false
             }
         }
+
+        if fully_transparent {
+            contains_fully_transparent_bitmaps = true;
+        }
+
+        if varying_alpha {
+            contains_varying_alpha = true;
+        }
+
         let format = if !bitmap_tag.flags.disable_height_map_compression && (bitmap_tag.usage == BitmapUsage::HeightMap || bitmap_tag.usage == BitmapUsage::VectorMap) {
             BitmapEncoding::P8HCE
         }
@@ -466,7 +548,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
                 BitmapFormat::DXT5 => if !transparent { BitmapEncoding::BC1 } else { BitmapEncoding::BC3 },
 
                 BitmapFormat::_16bit => if !transparent { BitmapEncoding::R5G6B5 }
-                                        else if !contains_varying_alpha { BitmapEncoding::A1R5G5B5 }
+                                        else if !varying_alpha { BitmapEncoding::A1R5G5B5 }
                                         else { BitmapEncoding::A4R4G4B4 }
 
                 BitmapFormat::_32bit => if !transparent { BitmapEncoding::X8R8G8B8 }
@@ -478,6 +560,8 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
                                             else { BitmapEncoding::A8Y8 }
             }
         };
+
+        let format = BitmapEncoding::P8HCE;
 
         // Set these weird flags
         let mut flags = BitmapDataFlags::default();
@@ -591,12 +675,13 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         }
     }
 
-    // Warn if we did something that may not be what we wanted.
-    if warn_monochrome {
-        eprintln_warn_pre!("Monochrome was requested, but the input is not monochrome.");
-    }
-
     // Get all sequences and print them.
+    make_parent_directories(&file.file_path)?;
+    write_file(&file.file_path, &bitmap_tag.into_tag_file()?)?;
+
+    let l = log_mutex.lock().unwrap();
+
+    // Print all extended info.
     if show_extended_info {
         for i in 0..bitmap_tag.bitmap_group_sequence.len() {
             let seq = &bitmap_tag.bitmap_group_sequence.blocks[i];
@@ -649,10 +734,31 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         println!("Total: {size}", size=format_size(bitmap_tag.processed_pixel_data.len()));
     }
 
-    make_parent_directories(&file.file_path)?;
-    write_file(&file.file_path, &bitmap_tag.into_tag_file()?)?;
+    // Warn if we did something that may not be what we wanted.
+    if contains_fully_transparent_bitmaps && bitmap_tag.encoding_format != BitmapFormat::DXT1 {
+        eprintln_warn_pre!("One or more bitmaps are fully transparent. While valid, the output may be different from some versions of tool.exe which would change this to be fully opaque, instead. Make sure to check the bitmap to ensure this is what you want!");
+        *warnings += 1;
+    }
+    if warn_monochrome {
+        eprintln_warn_pre!("Monochrome was requested, but one or more bitmaps are not monochrome.");
+        *warnings += 1;
+    }
+    if bitmap_tag.encoding_format == BitmapFormat::DXT1 {
+        if contains_varying_alpha {
+            eprintln_warn_pre!("DXT1 was requested, but one or more bitmaps do not have 1-bit alpha and had to be crunched into 1-bit alpha.");
+            *warnings += 1;
+        }
+        if contains_zero_alpha_color {
+            eprintln_warn_pre!("DXT1 was requested, but one or more bitmaps have fully transparent pixels with color which were set to black.");
+            if contains_fully_transparent_bitmaps {
+                eprintln_warn!("... and one or more bitmaps are fully transparent, thus they are now fully black.");
+            }
+            *warnings += 1;
+        }
+    }
 
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=file.tag_path);
+    drop(l);
 
     Ok(())
 }

@@ -74,7 +74,7 @@ pub struct ProcessingOptions {
     /// If `Some`, sharpen the base map and mipmaps by a factor after doing mipmap generation.
     pub sharpen_factor: Option<f64>,
 
-    /// If `Some`, blur the base map and mipmaps by a factor before doing mipmap generation.
+    /// If `Some`, blur the base map by a factor before doing mipmap generation.
     pub blur_factor: Option<f64>,
 
     /// If `Some`, modify the alpha by this factor after doing mipmap generation.

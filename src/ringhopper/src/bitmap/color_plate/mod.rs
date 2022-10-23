@@ -1,9 +1,13 @@
 use crate::error::{ErrorMessageResult, ErrorMessage};
 use crate::types::*;
+use self::sprite::process_sprites;
+
 use super::Sprite;
 
 #[cfg(test)]
 mod tests;
+
+mod sprite;
 
 /// Reader for color plates.
 #[derive(Clone)]
@@ -51,8 +55,17 @@ pub struct ColorPlateOptions {
     /// and uses vertical dummy space properly.
     pub use_sequence_dividers_for_registration_point: bool,
 
+    /// Bake all textures into sprite sheets.
+    pub bake_sprite_sheets: bool,
+
+    /// Max length of sprite sheets to bake. Ignored if `sprite_budget_count` is `None`.
+    pub sprite_budget_length: usize,
+
+    /// Max number of sprite sheets to bake.
+    pub sprite_budget_count: Option<usize>,
+
     /// Preferred sprite spacing to use.
-    pub preferred_sprite_spacing: Option<usize>,
+    pub preferred_sprite_spacing: usize,
 
     /// Force square sprite sheets even if they are sub-optimal.
     ///
@@ -124,6 +137,11 @@ impl ColorPlate {
                     return Ok(color_plate);
                 }
             }
+        }
+
+        // If we make it to this point but we're trying to bake sprite sheets, bail.
+        if options.bake_sprite_sheets {
+            return Err(ErrorMessage::StaticString("Sprite sheets cannot be generated without a valid color plate."));
         }
 
         match options.input_type {
@@ -499,6 +517,8 @@ impl ColorPlate {
 
         self.bitmaps = bitmaps;
         self.sequences = sequences;
+
+        process_sprites(self)?;
 
         Ok(())
     }

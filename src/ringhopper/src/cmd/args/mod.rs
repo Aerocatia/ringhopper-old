@@ -26,6 +26,9 @@ pub struct ArgumentConstraints {
     /// True if the tags dirs are needed.
     pub needs_tags: bool,
 
+    /// True if thread count can be specified.
+    pub threads: bool,
+
     /// True if overwriting can be specified.
     pub overwrite: bool,
 
@@ -70,6 +73,13 @@ impl ArgumentConstraints {
     pub fn can_overwrite(self) -> ArgumentConstraints {
         let mut s = self;
         s.overwrite = true;
+        s
+    }
+
+    /// Set overwrite to true.
+    pub fn uses_threads(self) -> ArgumentConstraints {
+        let mut s = self;
+        s.threads = true;
         s
     }
 
@@ -123,6 +133,7 @@ const STANDARD_ARGUMENTS: &'static [Argument] = &[
     Argument { long: "tags", short: 't', description: get_compiled_string!("arguments.tags.description_single"), parameter: Some("dir"), multiple: false },
     Argument { long: "engine", short: 'e', description: get_compiled_string!("arguments.engine.description"), parameter: Some("engine"), multiple: false },
 
+    Argument { long: "threads", short: 'j', description: get_compiled_string!("arguments.threads.description"), parameter: Some("threads"), multiple: false },
     Argument { long: "overwrite", short: 'o', description: get_compiled_string!("arguments.overwrite.description"), parameter: None, multiple: false }
 ];
 
@@ -151,7 +162,8 @@ impl ParsedArguments {
             // Concatenate all arguments
             let mut available_arguments = STANDARD_ARGUMENTS.to_vec();
             available_arguments.retain(|n| {
-                !(n.short == 'o' && !constraints.overwrite)
+                !(n.short == 'o' && !constraints.overwrite) &&
+                !(n.short == 'j' && !constraints.threads)
 
                 // note that we allow --data, --maps, and --tags in all verbs as these define important directories and might be passed in scripts, etc.,
                 // thus we can just ignore them if they aren't used
@@ -271,7 +283,7 @@ impl ParsedArguments {
                     a.short.partial_cmp(&b.short).unwrap()
                 });
 
-                // Hide --data, --maps, --tags if unused
+                // Hide unused parameters
                 available_arguments.retain(|n| {
                     !(n.short == 't' && (
                         !constraints.needs_tags ||

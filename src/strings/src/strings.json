@@ -14,6 +14,7 @@
     "arguments.help.description": "View all allowed arguments.",
     "arguments.maps.description": "Specify a maps directory. Default: \"maps\"",
     "arguments.overwrite.description": "Overwrite if the output file already exists.",
+    "arguments.threads.description": "Specify the number of processor threads to use. By default, all available threads are used.",
     "arguments.tags.description_multi": "Specify a tags directory. Use multiple times to specify multiple tags directories. Default: \"tags\"",
     "arguments.tags.description_single": "Specify a tags directory. Default: \"tags\"",
 
