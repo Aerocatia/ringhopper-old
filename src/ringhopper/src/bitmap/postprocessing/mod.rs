@@ -160,9 +160,9 @@ impl ProcessedBitmaps {
         processed_bitmaps.generate_heightmaps();
         processed_bitmaps.generate_mipmaps();
         processed_bitmaps.detail_fade();
-        processed_bitmaps.alpha_bias();
         processed_bitmaps.perform_sharpen();
         processed_bitmaps.truncate_zero_alpha();
+        processed_bitmaps.alpha_bias();
         processed_bitmaps.vectorize();
         processed_bitmaps.consolidate_textures();
 
@@ -207,7 +207,11 @@ impl ProcessedBitmaps {
         processed_bitmaps
     }
 
-    /// If a bitmap has zero alpha, set to black.
+    /// If a bitmap has zero alpha, set to black. (alpha blend usage)
+    ///
+    /// NOTE: This function is very broken and has two issues:
+    /// 1. It resizes bitmaps on load, effectively treating 0 alpha pixels as a second dummy space.
+    /// 2. Postprocessing is only done on mipmaps, not the base map as seen with effects\particles\solid\bitmaps\panel debris.bitmap
     fn truncate_zero_alpha(&mut self) {
         const BLACK: ColorARGB = ColorARGB { a: 0.0, r: 0.0, g: 0.0, b: 0.0 };
 
@@ -216,11 +220,13 @@ impl ProcessedBitmaps {
         }
 
         for b in &mut self.bitmaps {
-            for p in &mut b.pixels_float {
-                if p.a == 0.0 {
-                    *p = BLACK;
+            iterate_mipmaps!(b, |m| {
+                for p in &mut b.pixels_float[m.pixel_offset..m.pixel_offset+m.size] {
+                    if p.a == 0.0 {
+                        *p = BLACK;
+                    }
                 }
-            }
+            })
         }
     }
 
@@ -394,7 +400,16 @@ impl ProcessedBitmaps {
                 capacity += self.bitmaps[b].pixels_float.len();
             }
 
-            let mut new_bitmap = ProcessedBitmap { pixels: Vec::new(), height, width, depth, mipmaps, faces, pixels_float: Vec::with_capacity(capacity), registration_point: first_bitmap.registration_point };
+            let mut new_bitmap = ProcessedBitmap {
+                pixels: Vec::new(),
+                height,
+                width,
+                depth,
+                mipmaps,
+                faces,
+                pixels_float: Vec::with_capacity(capacity),
+                registration_point: Point2D::default() // registration point is dropped for cubemaps and 3D textures
+            };
             iterate_base_map_and_mipmaps(width, height, 1, 1, mipmaps, |m| {
                 for b in &self.bitmaps[first_bitmap_index..first_bitmap_index+s.bitmap_count] {
                     new_bitmap.pixels_float.extend_from_slice(&b.pixels_float[m.pixel_offset..m.pixel_offset+m.size]);
@@ -578,7 +593,7 @@ impl ProcessedBitmaps {
                         b
                     };
                     for px in &mut mipmap_pixels[m.pixel_offset..m.pixel_offset + m.size] {
-                        *px = (*px).alpha_blend(fade_to_gray);
+                        *px = ColorARGB::from_rgb(px.a, ColorARGB::from_rgb(1.0, px.rgb()).alpha_blend(fade_to_gray).rgb());
                     }
                 });
             }

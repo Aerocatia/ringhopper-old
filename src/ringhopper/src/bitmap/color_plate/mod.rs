@@ -1,6 +1,5 @@
 use crate::error::{ErrorMessageResult, ErrorMessage};
 use crate::types::*;
-use self::sprite::process_sprites;
 
 use super::Sprite;
 
@@ -17,6 +16,9 @@ pub struct ColorPlate {
 
     /// Sequences found in the color plate.
     pub sequences: Vec<ColorPlateSequence>,
+
+    /// Human-readable warnings from generation.
+    pub warnings: Vec<ErrorMessage>,
 
     pub(super) options: ColorPlateOptions,
     background_color: Option<ColorARGBInt>,
@@ -69,8 +71,54 @@ pub struct ColorPlateOptions {
 
     /// Force square sprite sheets even if they are sub-optimal.
     ///
-    /// This is to work around rendering bugs in all major versions of the game.
-    pub force_square_sheets: bool
+    /// This is to work around rendering bugs in all major versions of Halo: CE.
+    pub force_square_sheets: bool,
+
+    /// Sprite sheet type to bake.
+    pub sprite_sheet_usage: SpriteUsage,
+
+    /// Remove edges that have zero alpha pixels.
+    pub trim_zero_alpha_pixels: bool
+}
+
+/// Determine the sprite sheet background to use.
+///
+/// All sprites are alpha-blended onto this sprite sheet.
+#[derive(Copy, Clone, Default, PartialEq)]
+pub enum SpriteUsage {
+    /// Generate sprite sheets with the background set to 0/255 on all channels.
+    ///
+    /// This is generally the most common sprite sheet as it provides the most flexibility in terms of usage.
+    #[default]
+    BlendAddSubtractMax,
+
+    /// Generate sprite sheets with the background set to 127/255 on all channels.
+    MultiplyMin,
+
+    /// Generate sprite sheets with the background set to 255/255 on all channels.
+    DoubleMultiply
+}
+
+impl From<crate::engines::h1::definitions::BitmapSpriteUsage> for SpriteUsage {
+    fn from(usage: crate::engines::h1::definitions::BitmapSpriteUsage) -> SpriteUsage {
+        use crate::engines::h1::definitions::BitmapSpriteUsage;
+        match usage {
+            BitmapSpriteUsage::BlendAddSubtractMax => SpriteUsage::BlendAddSubtractMax,
+            BitmapSpriteUsage::MultiplyMin => SpriteUsage::MultiplyMin,
+            BitmapSpriteUsage::DoubleMultiply => SpriteUsage::DoubleMultiply,
+        }
+    }
+}
+
+impl SpriteUsage {
+    /// Get the background color associated with this sprite usage type.
+    pub fn get_background_color(self) -> ColorARGBInt {
+        match self {
+            Self::BlendAddSubtractMax => ColorARGBInt { a: 0, r: 0, g: 0, b: 0 },
+            Self::MultiplyMin => ColorARGBInt { a: 127, r: 127, g: 127, b: 127 },
+            Self::DoubleMultiply => ColorARGBInt { a: 255, r: 255, g: 255, b: 255 }
+        }
+    }
 }
 
 impl ColorPlate {
@@ -143,9 +191,12 @@ impl ColorPlate {
         if options.bake_sprite_sheets {
             return Err(ErrorMessage::StaticString("Sprite sheets cannot be generated without a valid color plate."));
         }
+        else if options.input_type == ColorPlateInputType::ThreeDimensionalTextures {
+            return Err(ErrorMessage::StaticString("3D textures cannot be generated without a valid color plate."));
+        }
 
         match options.input_type {
-            ColorPlateInputType::TwoDimensionalTextures | ColorPlateInputType::ThreeDimensionalTextures => {
+            ColorPlateInputType::TwoDimensionalTextures => {
                 if !width.is_power_of_two() || !height.is_power_of_two() {
                     return Err(ErrorMessage::AllocatedString(format!("Input bitmap is neither a regular color plate nor non-power-of-two ({width} x {height})", width=width, height=height)));
                 }
@@ -169,14 +220,15 @@ impl ColorPlate {
             ColorPlateInputType::Cubemaps => {
                 color_plate.init_unrolled_cubemap(pixels, width, height)?;
                 color_plate.sequences.push(ColorPlateSequence { first_bitmap: Some(0), bitmap_count: 6, start_y: 0, end_y: height, sprites: Vec::new() });
-            }
+            },
+            ColorPlateInputType::ThreeDimensionalTextures => unreachable!()
         };
         Ok(color_plate)
     }
 
     /// Get if the color should be rendered as transparent.
     fn renders_transparent(&self, color: ColorARGBInt) -> bool {
-        self.is_background_or_sequence_divider(color) || self.is_dummy_space(color)
+        self.is_background_or_sequence_divider(color) || self.is_dummy_space(color) || (color.a == 0 && self.options.trim_zero_alpha_pixels)
     }
 
     /// Get if the color is background or sequence divider.
@@ -210,7 +262,7 @@ impl ColorPlate {
 
     /// Initialize a blank color plate.
     fn new(options: &ColorPlateOptions) -> ColorPlate {
-        ColorPlate { bitmaps: Vec::new(), sequences: Vec::new(), background_color: None, sequence_divider_color: None, dummy_space_color: None, options: *options }
+        ColorPlate { bitmaps: Vec::new(), sequences: Vec::new(), background_color: None, sequence_divider_color: None, dummy_space_color: None, options: *options, warnings: Vec::new() }
     }
 
     /// Generate sequences, expecting a full color plate (that is, with the sequence divider color defined).
@@ -363,7 +415,7 @@ impl ColorPlate {
                 let real_right;
 
                 // Get the real dimensions if we use dummy space.
-                if self.dummy_space_color.is_some() {
+                if self.dummy_space_color.is_some() || self.options.trim_zero_alpha_pixels {
                     let row_contains_pixels = |column: usize| -> bool {
                         for pixel in &get_row(column)[virtual_left..virtual_right] {
                             if self.renders_transparent(*pixel) {
@@ -518,7 +570,9 @@ impl ColorPlate {
         self.bitmaps = bitmaps;
         self.sequences = sequences;
 
-        process_sprites(self)?;
+        let mut warnings = Vec::new();
+        self::sprite::SpriteProcessor::process_sprites(self, &mut warnings)?;
+        self.warnings.append(&mut warnings);
 
         Ok(())
     }
@@ -544,7 +598,7 @@ impl ColorPlate {
                 pixels: output_pixels,
                 width: length,
                 height: length,
-                registration_point: Point2D { x: 0.5, y: 0.5 }
+                registration_point: Point2D::default() // cubemaps do not have a registration point
             }
         }
 

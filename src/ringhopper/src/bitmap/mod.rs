@@ -140,7 +140,7 @@ pub fn iterate_encoded_base_map_and_mipmaps_with_err<F>(compression: BitmapEncod
 }
 
 /// Sprite found in a color plate.
-#[derive(Copy, Clone, Default, PartialEq)]
+#[derive(Copy, Clone, Default, PartialEq, Debug)]
 pub struct Sprite {
     /// Index of the bitmap the sprite is located in.
     pub bitmap_index: usize,

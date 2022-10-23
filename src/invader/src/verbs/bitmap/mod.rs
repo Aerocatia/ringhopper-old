@@ -31,7 +31,7 @@ struct BitmapOptions {
     sprite_budget_count: Option<u16>,
     blur_filter_size: Option<f32>,
     alpha_bias: Option<f32>,
-    mipmap_count: Option<u16>,
+    map_count: Option<u16>,
     sprite_usage: Option<BitmapSpriteUsage>,
     sprite_spacing: Option<u16>,
 
@@ -62,7 +62,7 @@ impl BitmapOptions {
         set_if_set!(sprite_budget_count, sprite_budget_count);
         set_if_set!(blur_filter_size, blur_filter_size);
         set_if_set!(alpha_bias, alpha_bias);
-        set_if_set!(mipmap_count, mipmap_count);
+        set_if_set!(map_count, mipmap_count);
         set_if_set!(sprite_usage, sprite_usage);
         set_if_set!(sprite_spacing, sprite_spacing);
 
@@ -88,7 +88,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         Argument { long: "blur-filter-size", short: 'b', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.blur-filter-size.description"), parameter: Some("px"), multiple: false },
         Argument { long: "alpha-bias", short: 'A', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.alpha-bias.description"), parameter: Some("bias"), multiple: false },
         Argument { long: "sprite-budget-count", short: 'C', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sprite-budget-count.description"), parameter: Some("count"), multiple: false },
-        Argument { long: "mipmap-count", short: 'M', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.mipmap-count.description"), parameter: Some("count"), multiple: false },
+        Argument { long: "map-count", short: 'M', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.map-count.description"), parameter: Some("count"), multiple: false },
         Argument { long: "sprite-spacing", short: 'P', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sprite-spacing.description"), parameter: Some("spacing"), multiple: false },
 
         Argument { long: "dithering", short: 'D', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.dithering.description"), parameter: Some("on/off"), multiple: false },
@@ -160,7 +160,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         alpha_bias: parse_f32("alpha-bias")?,
 
         sprite_budget_count: parse_u16("sprite-budget-count")?,
-        mipmap_count: parse_u16("mipmap-count")?,
+        map_count: parse_u16("map-count")?,
         sprite_spacing: parse_u16("sprite-spacing")?,
 
         enable_diffusion_dithering: parse_bool("dithering")?,
@@ -411,25 +411,29 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     let color_plate_options = ColorPlateOptions {
         input_type: color_plate_type,
         use_sequence_dividers_for_registration_point: !bitmap_tag.flags.filthy_sprite_bug_fix,
-        preferred_sprite_spacing: match options.sprite_spacing {
-            Some(n) => n as usize,
-            None => match options.mipmap_count {
-                Some(1) => 1,
+        preferred_sprite_spacing: match bitmap_tag.sprite_spacing {
+            0 => match bitmap_tag.mipmap_count {
+                1 => 1,
                 _ => 4
-            }
+            },
+            n => n as usize,
         },
         force_square_sheets: options.square_sheets,
         bake_sprite_sheets: bitmap_tag._type == BitmapType::Sprites,
         sprite_budget_count: match bitmap_tag.sprite_budget_count { 0 => None, n => Some(n as usize) },
         sprite_budget_length: bitmap_tag.sprite_budget_size.to_length() as usize,
+        sprite_sheet_usage: bitmap_tag.sprite_usage.into(),
+        trim_zero_alpha_pixels: bitmap_tag.usage == BitmapUsage::AlphaBlend
     };
-    let color_plate = ColorPlate::read_color_plate(&image.pixels, image.width, image.height, &color_plate_options)?;
+
+    let mut color_plate = ColorPlate::read_color_plate(&image.pixels, image.width, image.height, &color_plate_options)?;
+    let color_plate_warnings = {
+        let mut w = Vec::new();
+        w.append(&mut color_plate.warnings);
+        w
+    };
 
     let processed_result = ProcessedBitmaps::process_color_plate(color_plate, &processing_options);
-    if bitmap_tag._type == BitmapType::Sprites {
-        return Err(ErrorMessage::StaticString("Sprites not yet implemented!"));
-    }
-
     bitmap_tag.bitmap_group_sequence.blocks.clear();
     bitmap_tag.bitmap_data.blocks.clear();
     bitmap_tag.processed_pixel_data.clear();
@@ -561,8 +565,6 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
             }
         };
 
-        let format = BitmapEncoding::P8HCE;
-
         // Set these weird flags
         let mut flags = BitmapDataFlags::default();
         flags.power_of_two_dimensions = bitmap_tag._type != BitmapType::InterfaceBitmaps; // power of two dimensions = not interface bitmaps
@@ -683,52 +685,71 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
 
     // Print all extended info.
     if show_extended_info {
-        for i in 0..bitmap_tag.bitmap_group_sequence.len() {
-            let seq = &bitmap_tag.bitmap_group_sequence.blocks[i];
-            println!("Sequence #{sequence}: {bitmap_count} bitmap(s)", sequence=i, bitmap_count=seq.bitmap_count);
+        let describe_bitmap = |b: usize| {
+            let bitmap = &bitmap_tag.bitmap_data[b];
+            let format_info = match bitmap.format {
+                BitmapDataFormat::A8 => "A8 (8-bit monochrome)",
+                BitmapDataFormat::Y8 => "Y8 (8-bit monochrome)",
+                BitmapDataFormat::AY8 => "AY8 (8-bit monochrome)",
+                BitmapDataFormat::A8Y8 => "A8Y8 (16-bit monochrome)",
 
-            if seq.bitmap_count > 0 {
-                let first = seq.first_bitmap_index.unwrap() as usize;
-                let end = first + seq.bitmap_count as usize;
-                for b in first..end {
-                    let bitmap = &bitmap_tag.bitmap_data[b];
-                    let format_info = match bitmap.format {
-                        BitmapDataFormat::A8 => "A8 (8-bit monochrome)",
-                        BitmapDataFormat::Y8 => "Y8 (8-bit monochrome)",
-                        BitmapDataFormat::AY8 => "AY8 (8-bit monochrome)",
-                        BitmapDataFormat::A8Y8 => "A8Y8 (16-bit monochrome)",
+                BitmapDataFormat::P8 => "P8 (8-bit palettized)",
 
-                        BitmapDataFormat::P8 => "P8 (8-bit palettized)",
+                BitmapDataFormat::R5G6B5 => "R5G6B5 (16-bit color)",
+                BitmapDataFormat::A1R5G5B5 => "A1R5G5B5 (16-bit color)",
+                BitmapDataFormat::A4R4G4B4 => "A4R4G4B4 (16-bit color)",
 
-                        BitmapDataFormat::R5G6B5 => "R5G6B5 (16-bit color)",
-                        BitmapDataFormat::A1R5G5B5 => "A1R5G5B5 (16-bit color)",
-                        BitmapDataFormat::A4R4G4B4 => "A4R4G4B4 (16-bit color)",
+                BitmapDataFormat::X8R8G8B8 => "X8R8G8B8 (32-bit color)",
+                BitmapDataFormat::A8R8G8B8 => "A8R8G8B8 (32-bit color)",
 
-                        BitmapDataFormat::X8R8G8B8 => "X8R8G8B8 (32-bit color)",
-                        BitmapDataFormat::A8R8G8B8 => "A8R8G8B8 (32-bit color)",
+                BitmapDataFormat::DXT1 => "DXT1 (4 bpp S3TC)",
+                BitmapDataFormat::DXT3 => "DXT3 (8 bpp S3TC)",
+                BitmapDataFormat::DXT5 => "DXT5 (8 bpp S3TC)",
 
-                        BitmapDataFormat::DXT1 => "DXT1 (4 bpp S3TC)",
-                        BitmapDataFormat::DXT3 => "DXT3 (8 bpp S3TC)",
-                        BitmapDataFormat::DXT5 => "DXT5 (8 bpp S3TC)",
+                _ => panic!()
+            };
 
-                        _ => panic!()
-                    };
+            println!("    Bitmap #{bitmap}: {width}x{height}{depth}, {mipmaps} mipmap(s), {format_info} - {size}",
+                     bitmap=b,
+                     width=bitmap.width,
+                     height=bitmap.height,
+                     mipmaps=bitmap.mipmap_count,
+                     depth = match bitmap.depth {
+                        1 => String::new(),
+                        n => format!("x{n}")
+                     },
+                     format_info=format_info,
+                     size=format_size(bitmap_lengths[b]));
+        };
 
-                    println!("    Bitmap #{bitmap}: {width}x{height}{depth}, {mipmaps} mipmap(s), {format_info} - {size}",
-                             bitmap=b,
-                             width=bitmap.width,
-                             height=bitmap.height,
-                             mipmaps=bitmap.mipmap_count,
-                             depth = match bitmap.depth {
-                                1 => String::new(),
-                                n => format!("x{n}")
-                             },
-                             format_info=format_info,
-                             size=format_size(bitmap_lengths[b]));
-                }
+        if bitmap_tag._type == BitmapType::Sprites {
+            println!("Sprite sheets: {bitmap_count}", bitmap_count=bitmap_tag.bitmap_data.len());
+            for b in 0..bitmap_tag.bitmap_data.len() {
+                describe_bitmap(b);
             }
-
             println!();
+
+            for i in 0..bitmap_tag.bitmap_group_sequence.len() {
+                let seq = &bitmap_tag.bitmap_group_sequence.blocks[i];
+                println!("Sequence #{sequence}: {sprite_count} sprite(s)", sequence=i, sprite_count=seq.sprites.len());
+            }
+            println!();
+        }
+        else {
+            for i in 0..bitmap_tag.bitmap_group_sequence.len() {
+                let seq = &bitmap_tag.bitmap_group_sequence.blocks[i];
+                println!("Sequence #{sequence}: {bitmap_count} bitmap(s)", sequence=i, bitmap_count=seq.bitmap_count);
+
+                if seq.bitmap_count > 0 {
+                    let first = seq.first_bitmap_index.unwrap() as usize;
+                    let end = first + seq.bitmap_count as usize;
+                    for b in first..end {
+                        describe_bitmap(b);
+                    }
+                }
+
+                println!();
+            }
         }
 
         println!("Total: {size}", size=format_size(bitmap_tag.processed_pixel_data.len()));
@@ -755,6 +776,10 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
             }
             *warnings += 1;
         }
+    }
+    for w in color_plate_warnings {
+        eprintln_warn_pre!("{}", w);
+        *warnings += 1;
     }
 
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=file.tag_path);
@@ -790,14 +815,17 @@ fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
         },
 
         max_mipmaps: {
-            if bitmap_tag._type == BitmapType::InterfaceBitmaps || bitmap_tag.usage == BitmapUsage::LightMap {
+            if bitmap_tag._type == BitmapType::Sprites && (bitmap_tag.mipmap_count == 0 || bitmap_tag.mipmap_count > 2) {
+                Some(2)
+            }
+            else if bitmap_tag.mipmap_count == 0 {
+                None
+            }
+            else if bitmap_tag._type == BitmapType::InterfaceBitmaps || bitmap_tag.usage == BitmapUsage::LightMap {
                 Some(0)
             }
             else {
-                match bitmap_tag.mipmap_count {
-                    n if n > 0 => Some(n as usize - 1),
-                    _ => None
-                }
+                Some(bitmap_tag.mipmap_count as usize - 1)
             }
         },
 
@@ -806,9 +834,9 @@ fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
             n => Some(n as f64)
         },
 
-        truncate_zero_alpha: bitmap_tag.usage == BitmapUsage::AlphaBlend,
         vectorize: bitmap_tag.usage == BitmapUsage::VectorMap,
         nearest_neighbor_alpha_mipmap: bitmap_tag.usage == BitmapUsage::VectorMap,
+        truncate_zero_alpha: bitmap_tag.usage == BitmapUsage::AlphaBlend,
     }
 }
 
