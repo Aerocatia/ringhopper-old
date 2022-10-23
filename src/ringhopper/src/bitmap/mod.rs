@@ -1,5 +1,6 @@
 mod color_plate;
 use crate::error::ErrorMessageResult;
+use crate::types::{Point2D,Point2DUInt};
 
 pub use self::color_plate::*;
 
@@ -136,4 +137,23 @@ pub fn iterate_encoded_base_map_and_mipmaps_with_err<F>(compression: BitmapEncod
         effective_pixel_offset += effective_size;
         Ok(())
     })
+}
+
+/// Sprite found in a color plate.
+#[derive(Copy, Clone, Default, PartialEq)]
+pub struct Sprite {
+    /// Index of the bitmap the sprite is located in.
+    pub bitmap_index: usize,
+
+    /// Position on the bitmap.
+    pub position: Point2DUInt,
+
+    /// Width in pixels.
+    pub width: usize,
+
+    /// Height in pixels.
+    pub height: usize,
+
+    /// Registration point.
+    pub registration_point: Point2D
 }

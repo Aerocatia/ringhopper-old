@@ -1,5 +1,6 @@
 use crate::error::{ErrorMessageResult, ErrorMessage};
 use crate::types::*;
+use super::Sprite;
 
 #[cfg(test)]
 mod tests;
@@ -7,14 +8,16 @@ mod tests;
 /// Reader for color plates.
 #[derive(Clone)]
 pub struct ColorPlate {
+    /// Bitmaps found in the color plate.
     pub bitmaps: Vec<ColorPlateBitmap>,
+
+    /// Sequences found in the color plate.
     pub sequences: Vec<ColorPlateSequence>,
 
-    pub(super) input_type: ColorPlateInputType,
+    pub(super) options: ColorPlateOptions,
     background_color: Option<ColorARGBInt>,
     sequence_divider_color: Option<ColorARGBInt>,
-    dummy_space_color: Option<ColorARGBInt>,
-    reg_point_hack: bool
+    dummy_space_color: Option<ColorARGBInt>
 }
 
 /// Options for the color plate scanner.
@@ -30,20 +33,40 @@ pub enum ColorPlateInputType {
     /// Scan for potential non-power-of-two textures.
     NonPowerOfTwoTextures,
 
-    /// Scan cubemaps.
+    /// Scan for cubemaps.
     ///
     /// Cubemaps must be power-of-two. They can be arranged as a sequence or in an unrolled format.
     Cubemaps
 }
 
+/// Options for sprite processing.
+#[derive(Default, Copy, Clone)]
+pub struct ColorPlateOptions {
+    /// Bitmap input type of the color plate.
+    pub input_type: ColorPlateInputType,
+
+    /// Use the sequence dividers for calculating registration point, ignoring vertical dummy space.
+    ///
+    /// This is the inverse of Halo: CE's "filthy sprite bug fix" which, when enabled, ignores the sequence dividers
+    /// and uses vertical dummy space properly.
+    pub use_sequence_dividers_for_registration_point: bool,
+
+    /// Preferred sprite spacing to use.
+    pub preferred_sprite_spacing: Option<usize>,
+
+    /// Force square sprite sheets even if they are sub-optimal.
+    ///
+    /// This is to work around rendering bugs in all major versions of the game.
+    pub force_square_sheets: bool
+}
+
 impl ColorPlate {
     /// Read the color plate.
     ///
-    /// If `reg_point_hack` is set, use the bitmap, itself, for determining the registration point Y.
-    pub fn read_color_plate(pixels: &[ColorARGBInt], width: usize, height: usize, input_type: ColorPlateInputType, reg_point_hack: bool) -> ErrorMessageResult<ColorPlate> {
+    pub fn read_color_plate(pixels: &[ColorARGBInt], width: usize, height: usize, options: &ColorPlateOptions) -> ErrorMessageResult<ColorPlate> {
         debug_assert_eq!(pixels.len(), width.checked_mul(height).unwrap(), "input bitmap width and height do not match pixel count");
 
-        let mut color_plate = ColorPlate::new(input_type, reg_point_hack);
+        let mut color_plate = ColorPlate::new(options);
 
         if width == 0 || height == 0 {
             return Ok(color_plate);
@@ -103,7 +126,7 @@ impl ColorPlate {
             }
         }
 
-        match input_type {
+        match options.input_type {
             ColorPlateInputType::TwoDimensionalTextures | ColorPlateInputType::ThreeDimensionalTextures => {
                 if !width.is_power_of_two() || !height.is_power_of_two() {
                     return Err(ErrorMessage::AllocatedString(format!("Input bitmap is neither a regular color plate nor non-power-of-two ({width} x {height})", width=width, height=height)));
@@ -114,7 +137,7 @@ impl ColorPlate {
                     height,
                     registration_point: Point2D { x: 0.5, y: 0.5 }
                 });
-                color_plate.sequences.push(ColorPlateSequence { first_bitmap: Some(0), bitmap_count: 1, start_y: 0, end_y: height });
+                color_plate.sequences.push(ColorPlateSequence { first_bitmap: Some(0), bitmap_count: 1, start_y: 0, end_y: height, sprites: Vec::new() });
             },
             ColorPlateInputType::NonPowerOfTwoTextures => {
                 color_plate.bitmaps.push(ColorPlateBitmap {
@@ -123,11 +146,11 @@ impl ColorPlate {
                     height,
                     registration_point: Point2D { x: 0.5, y: 0.5 }
                 });
-                color_plate.sequences.push(ColorPlateSequence { first_bitmap: Some(0), bitmap_count: 1, start_y: 0, end_y: height });
+                color_plate.sequences.push(ColorPlateSequence { first_bitmap: Some(0), bitmap_count: 1, start_y: 0, end_y: height, sprites: Vec::new() });
             },
             ColorPlateInputType::Cubemaps => {
                 color_plate.init_unrolled_cubemap(pixels, width, height)?;
-                color_plate.sequences.push(ColorPlateSequence { first_bitmap: Some(0), bitmap_count: 6, start_y: 0, end_y: height });
+                color_plate.sequences.push(ColorPlateSequence { first_bitmap: Some(0), bitmap_count: 6, start_y: 0, end_y: height, sprites: Vec::new() });
             }
         };
         Ok(color_plate)
@@ -168,8 +191,8 @@ impl ColorPlate {
     }
 
     /// Initialize a blank color plate.
-    fn new(input_type: ColorPlateInputType, reg_point_hack: bool) -> ColorPlate {
-        ColorPlate { bitmaps: Vec::new(), sequences: Vec::new(), background_color: None, sequence_divider_color: None, dummy_space_color: None, input_type, reg_point_hack }
+    fn new(options: &ColorPlateOptions) -> ColorPlate {
+        ColorPlate { bitmaps: Vec::new(), sequences: Vec::new(), background_color: None, sequence_divider_color: None, dummy_space_color: None, options: *options }
     }
 
     /// Generate sequences, expecting a full color plate (that is, with the sequence divider color defined).
@@ -204,7 +227,7 @@ impl ColorPlate {
                 }
             }
 
-            sequences.push(ColorPlateSequence { first_bitmap: None, bitmap_count: 0, start_y: y + 1, end_y: height });
+            sequences.push(ColorPlateSequence { first_bitmap: None, bitmap_count: 0, start_y: y + 1, end_y: height, sprites: Vec::new() });
         }
 
         self.fix_sequence_indices(&mut sequences);
@@ -231,7 +254,7 @@ impl ColorPlate {
                 }
             }
 
-            sequences.push(ColorPlateSequence { first_bitmap: None, bitmap_count: 0, start_y: y + 1, end_y: height });
+            sequences.push(ColorPlateSequence { first_bitmap: None, bitmap_count: 0, start_y: y + 1, end_y: height, sprites: Vec::new() });
         }
 
         self.fix_sequence_indices(&mut sequences);
@@ -389,7 +412,7 @@ impl ColorPlate {
                 }
 
                 // If it's non-power-of-two
-                if self.input_type != ColorPlateInputType::NonPowerOfTwoTextures && !bitmap_width.is_power_of_two() && !bitmap_height.is_power_of_two() {
+                if self.options.input_type != ColorPlateInputType::NonPowerOfTwoTextures && !bitmap_width.is_power_of_two() && !bitmap_height.is_power_of_two() {
                     return Err(ErrorMessage::AllocatedString(format!("Tried to process a non-power-of-two texture {width}x{height} @ x={x}, y={y}", width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)))
                 }
 
@@ -409,7 +432,7 @@ impl ColorPlate {
 
                 // Get the registration point
                 let mid_x = (virtual_left + virtual_right) as f32 / 2.0;
-                let mid_y = if !self.reg_point_hack {
+                let mid_y = if self.options.use_sequence_dividers_for_registration_point {
                     mid_y // use sequence mid_y
                 }
                 else {
@@ -437,7 +460,7 @@ impl ColorPlate {
         }
 
         // Cubemaps should have 0 or 6 bitmaps per sequence.
-        if self.input_type == ColorPlateInputType::Cubemaps {
+        if self.options.input_type == ColorPlateInputType::Cubemaps {
             for i in 0..sequences.len() {
                 let s = &sequences[i];
                 let bitmaps = s.bitmap_count;
@@ -448,7 +471,7 @@ impl ColorPlate {
         }
 
         // 3D textures should have a power-of-two bitmaps per sequence.
-        if self.input_type == ColorPlateInputType::ThreeDimensionalTextures {
+        if self.options.input_type == ColorPlateInputType::ThreeDimensionalTextures {
             for i in 0..sequences.len() {
                 let s = &sequences[i];
                 let bitmaps = s.bitmap_count;
@@ -459,7 +482,7 @@ impl ColorPlate {
         }
 
         // 3D textures AND cubemaps should have identical sized bitmaps per sequence.
-        if self.input_type == ColorPlateInputType::Cubemaps || self.input_type == ColorPlateInputType::ThreeDimensionalTextures {
+        if self.options.input_type == ColorPlateInputType::Cubemaps || self.options.input_type == ColorPlateInputType::ThreeDimensionalTextures {
             for i in 0..sequences.len() {
                 let s = &sequences[i];
                 if let Some(n) = s.first_bitmap {
@@ -541,12 +564,20 @@ pub struct ColorPlateRegistrationCoordinates {
 }
 
 /// Sequence defined by a color plate.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct ColorPlateSequence {
+    /// Index of the first bitmap, if present.
     pub first_bitmap: Option<usize>,
+
+    /// Number of bitmaps in the sequence.
     pub bitmap_count: usize,
+
+    /// Row that begins the sequence, inclusive.
     pub start_y: usize,
 
     /// Row that terminates the sequence, non-inclusive
-    pub end_y: usize
+    pub end_y: usize,
+
+    /// Sprites found in the sequence.
+    pub sprites: Vec<Sprite>
 }

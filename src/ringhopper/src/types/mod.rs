@@ -125,7 +125,7 @@ impl String32 {
     }
 }
 
-/// Point with two X/Y integers.
+/// Point with two X/Y shorts.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct Point2DInt {
     /// X value.
@@ -133,6 +133,16 @@ pub struct Point2DInt {
 
     /// Y value.
     pub y: i16
+}
+
+/// Point with two X/Y unsigned shorts.
+#[derive(Copy, Clone, Default, Debug, PartialEq)]
+pub struct Point2DUInt {
+    /// X value.
+    pub x: u16,
+
+    /// Y value.
+    pub y: u16
 }
 
 /// Rectangle with two Point2DInts defining the bounds of the rectangle.

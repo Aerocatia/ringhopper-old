@@ -52,12 +52,18 @@ fn load_tiff(file: &'static [u8]) -> TestBitmap {
 
 #[test]
 fn test_cubemap() {
+    let cubemap_options = {
+        let mut options = ColorPlateOptions::default();
+        options.input_type = ColorPlateInputType::Cubemaps;
+        options
+    };
+
     let test_bitmap = load_tiff(include_bytes!("test_cube_color_unrolled.tif"));
     assert_eq!(128, test_bitmap.width);
     assert_eq!(96, test_bitmap.height);
 
     // Make sure the data is correct
-    let unrolled = ColorPlate::read_color_plate(&test_bitmap.pixels, test_bitmap.width, test_bitmap.height, ColorPlateInputType::Cubemaps).unwrap();
+    let unrolled = ColorPlate::read_color_plate(&test_bitmap.pixels, test_bitmap.width, test_bitmap.height, &cubemap_options).unwrap();
     assert_eq!(1, unrolled.sequences.len());
     assert_eq!(6, unrolled.bitmaps.len());
     assert_eq!(6, unrolled.sequences[0].bitmap_count);
@@ -90,7 +96,7 @@ fn test_cubemap() {
     // Let's try this with an unrolled cubemap where the height of the bitmap is larger than the unrolled cubemap. This should work.
     let mut pixels_longer = test_bitmap.pixels;
     pixels_longer.resize(pixels_longer.len() + 32 * test_bitmap.width, ColorARGBInt { a: 0, r: 0, g: 0, b: 0 });
-    let unrolled_2 = ColorPlate::read_color_plate(&pixels_longer, 128, 128, ColorPlateInputType::Cubemaps).unwrap();
+    let unrolled_2 = ColorPlate::read_color_plate(&pixels_longer, 128, 128, &cubemap_options).unwrap();
     assert!(unrolled.bitmaps == unrolled_2.bitmaps, "extra tall unrolled cubemap needs to match");
 
     // Try it with the cubemap in plate format and compare it. This should work, too, and have the same data.
@@ -98,7 +104,7 @@ fn test_cubemap() {
     assert_eq!(199, test_bitmap_plate.width);
     assert_eq!(36, test_bitmap_plate.height);
 
-    let plate = ColorPlate::read_color_plate(&test_bitmap_plate.pixels, test_bitmap_plate.width, test_bitmap_plate.height, ColorPlateInputType::Cubemaps).unwrap();
+    let plate = ColorPlate::read_color_plate(&test_bitmap_plate.pixels, test_bitmap_plate.width, test_bitmap_plate.height, &cubemap_options).unwrap();
     assert_eq!(1, plate.sequences.len());
     assert_eq!(6, plate.bitmaps.len());
     assert_eq!(6, plate.sequences[0].bitmap_count);

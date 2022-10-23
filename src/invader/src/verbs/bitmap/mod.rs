@@ -22,7 +22,7 @@ struct BitmapOptions {
     enable_diffusion_dithering: Option<bool>,
     disable_height_map_compression: Option<bool>,
     uniform_sprite_sequences: Option<bool>,
-    filthy_sprite_bug_fix: Option<bool>,
+    reg_point_from_texture: Option<bool>,
     detail_fade_factor: Option<f32>,
     sharpen_amount: Option<f32>,
     bump_height: Option<f32>,
@@ -74,7 +74,7 @@ impl BitmapOptions {
         }
         set_flag_if_set!(enable_diffusion_dithering, enable_diffusion_dithering);
         set_flag_if_set!(uniform_sprite_sequences, uniform_sprite_sequences);
-        set_flag_if_set!(filthy_sprite_bug_fix, filthy_sprite_bug_fix);
+        set_flag_if_set!(reg_point_from_texture, filthy_sprite_bug_fix);
         set_flag_if_set!(disable_height_map_compression, disable_height_map_compression);
     }
 }
@@ -92,7 +92,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
 
         Argument { long: "dithering", short: 'D', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.dithering.description"), parameter: Some("on/off"), multiple: false },
         Argument { long: "palettization", short: 'p', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.palettization.description"), parameter: Some("on/off"), multiple: false },
-        Argument { long: "filthy-sprite-bug-fix", short: 'r', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.filthy-sprite-bug-fix.description"), parameter: Some("on/off"), multiple: false },
+        Argument { long: "reg-point-from-texture", short: 'r', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.reg-point-from-texture.description"), parameter: Some("on/off"), multiple: false },
 
         Argument { long: "format", short: 'f', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.format.description"), parameter: Some("format"), multiple: false },
         Argument { long: "sprite-budget-size", short: 'B', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sprite-budget-size.description"), parameter: Some("length"), multiple: false },
@@ -165,7 +165,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         enable_diffusion_dithering: parse_bool("dithering")?,
         disable_height_map_compression: parse_bool("disable-palettization")?,
         uniform_sprite_sequences: parse_bool("uniform-sprite-sequences")?,
-        filthy_sprite_bug_fix: parse_bool("filthy-sprite-bug-fix")?,
+        reg_point_from_texture: parse_bool("reg-point-from-texture")?,
 
         encoding_format: parse_enum_cli!("format")?,
         sprite_budget_size: match parse_u16("sprite-budget-size")? {
@@ -347,14 +347,20 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         BitmapType::Sprites | BitmapType::InterfaceBitmaps => ColorPlateInputType::NonPowerOfTwoTextures,
     };
 
-    // Read the color plate!
-    let color_plate = ColorPlate::read_color_plate(&image.pixels, image.width, image.height, color_plate_type, bitmap_tag.flags.filthy_sprite_bug_fix)?;
-
     // Process the color plate on our bitmap tag.
     let mut processing_options = make_bitmap_processing_options(&bitmap_tag);
     processing_options.bumpmap_algorithm = options.bump_algorithm;
     processing_options.gamma_corrected_mipmaps = options.gamma_corrected_mipmaps;
     processing_options.detail_fade_color = options.detail_fade_color;
+
+    // Read the color plate!
+    let color_plate_options = ColorPlateOptions {
+        input_type: color_plate_type,
+        use_sequence_dividers_for_registration_point: !bitmap_tag.flags.filthy_sprite_bug_fix,
+        preferred_sprite_spacing: options.sprite_spacing.map(|f| f as usize),
+        force_square_sheets: options.square_sheets
+    };
+    let color_plate = ColorPlate::read_color_plate(&image.pixels, image.width, image.height, &color_plate_options)?;
 
     let processed_result = ProcessedBitmaps::process_color_plate(color_plate, &processing_options);
     if bitmap_tag._type == BitmapType::Sprites {
@@ -365,22 +371,42 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     bitmap_tag.bitmap_data.blocks.clear();
     bitmap_tag.processed_pixel_data.clear();
 
-    let u16_max = u16::MAX as usize;
+    const U16_MAX: usize = u16::MAX as usize;
+    const MAX_BITMAPS: usize = U16_MAX - 1;
 
     // Insert sequences.
     for s in processed_result.sequences {
-        if s.first_bitmap.is_some() && s.first_bitmap.unwrap() > u16_max {
-            return Err(ErrorMessage::AllocatedString(format!("Maximum bitmap index in a sequence exceeded ({index} > {max})", max=u16_max, index=s.first_bitmap.unwrap())));
+        if s.first_bitmap.is_some() && s.first_bitmap.unwrap() > MAX_BITMAPS {
+            return Err(ErrorMessage::AllocatedString(format!("Maximum bitmap index in a sequence exceeded ({index} > {max})", max=MAX_BITMAPS, index=s.first_bitmap.unwrap())));
         }
-        if s.bitmap_count > u16_max {
-            return Err(ErrorMessage::AllocatedString(format!("Maximum bitmap count in a sequence exceeded ({count} > {max})", max=u16_max, count=s.bitmap_count)));
+        if s.bitmap_count > MAX_BITMAPS {
+            return Err(ErrorMessage::AllocatedString(format!("Maximum bitmap count in a sequence exceeded ({count} > {max})", max=MAX_BITMAPS, count=s.bitmap_count)));
         }
 
         bitmap_tag.bitmap_group_sequence.blocks.push(BitmapGroupSequence {
             name: String32::default(),
             first_bitmap_index: s.first_bitmap.map(|f| f as u16),
             bitmap_count: s.bitmap_count as u16,
-            sprites: Reflexive { blocks: Vec::new() }
+            sprites: Reflexive { blocks: {
+                let mut v = Vec::with_capacity(s.sprites.len());
+                for s in s.sprites {
+                    let (bitmap_width, bitmap_height) = {
+                        let b = &processed_result.bitmaps[s.bitmap_index];
+                        (b.width as f32, b.height as f32)
+                    };
+                    v.push({
+                        BitmapGroupSprite {
+                            bitmap_index: Some(s.bitmap_index as u16),
+                            left: (s.position.x as f32) / bitmap_width,
+                            right: ((s.position.x as usize + s.width) as f32) / bitmap_width,
+                            top: (s.position.y as f32) / bitmap_height,
+                            bottom: ((s.position.y as usize + s.height) as f32) / bitmap_height,
+                            registration_point: s.registration_point
+                        }
+                    });
+                }
+                v
+            }}
         })
     }
 
@@ -389,8 +415,8 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
 
     for b in processed_result.bitmaps {
         // Check to make sure it isn't too large to be addressed.
-        if b.width > u16_max || b.height > u16_max || b.depth > u16_max {
-            return Err(ErrorMessage::AllocatedString(format!("Maximum bitmap dimensions exceeded ({width}x{height}x{depth} > {max}x{max}x{max})", max=u16_max, width=b.width, height=b.height, depth=b.depth)));
+        if b.width > U16_MAX || b.height > U16_MAX || b.depth > U16_MAX {
+            return Err(ErrorMessage::AllocatedString(format!("Maximum bitmap dimensions exceeded ({width}x{height}x{depth} > {max}x{max}x{max})", max=U16_MAX, width=b.width, height=b.height, depth=b.depth)));
         }
 
         let mut data = BitmapData::default();
@@ -531,7 +557,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         // Note that the stock HEK cannot handle color plates larger than 29999 pixels on one dimension, but this (luckily) has no effect on reading tags, merely the color plate.
         //
         // Also note that guerilla.exe displays these as signed, although the 30000+ check appears to check as if it was unsigned?
-        if image.width <= u16_max && image.height <= u16_max {
+        if image.width <= U16_MAX && image.height <= U16_MAX {
             use flate2::{Compress, FlushCompress};
 
             // Try to compress with deflate

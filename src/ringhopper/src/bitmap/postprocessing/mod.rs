@@ -97,13 +97,16 @@ pub struct ProcessingOptions {
 }
 
 /// Final processed bitmap sequence.
-#[derive(Copy, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct ProcessedSequence {
     /// First bitmap in the sequence, if set.
     pub first_bitmap: Option<usize>,
 
     /// Number of bitmaps in the sequence.
-    pub bitmap_count: usize
+    pub bitmap_count: usize,
+
+    /// Sprites, if present.
+    pub sprites: Vec<Sprite>
 }
 
 /// Bitmap postprocessor which can generate mipmaps and do postprocessing.
@@ -113,7 +116,13 @@ pub struct ProcessedBitmaps {
     pub sequences: Vec<ProcessedSequence>,
 
     /// All processed bitmaps.
-    pub bitmaps: Vec<ProcessedBitmap>
+    pub bitmaps: Vec<ProcessedBitmap>,
+
+    /// Options used to process the bitmaps.
+    options: ProcessingOptions,
+
+    /// Input type for the color plate.
+    color_plate_type: ColorPlateInputType
 }
 
 // Wrap around the dimensions
@@ -145,18 +154,17 @@ impl ProcessedBitmaps {
     /// Process the color plate, returning a final set of bitmaps.
     pub fn process_color_plate(color_plate: ColorPlate, options: &ProcessingOptions) -> ProcessedBitmaps {
         // Load the processed bitmaps.
-        let color_plate_type = color_plate.input_type;
-        let mut processed_bitmaps = ProcessedBitmaps::load_color_plate(color_plate);
+        let mut processed_bitmaps = ProcessedBitmaps::load_color_plate(color_plate, options);
 
-        processed_bitmaps.perform_blur(options);
-        processed_bitmaps.generate_heightmaps(options);
-        processed_bitmaps.generate_mipmaps(options);
-        processed_bitmaps.detail_fade(options);
-        processed_bitmaps.alpha_bias(options);
-        processed_bitmaps.perform_sharpen(options);
-        processed_bitmaps.truncate_zero_alpha(options);
-        processed_bitmaps.vectorize(options);
-        processed_bitmaps.consolidate_textures(color_plate_type);
+        processed_bitmaps.perform_blur();
+        processed_bitmaps.generate_heightmaps();
+        processed_bitmaps.generate_mipmaps();
+        processed_bitmaps.detail_fade();
+        processed_bitmaps.alpha_bias();
+        processed_bitmaps.perform_sharpen();
+        processed_bitmaps.truncate_zero_alpha();
+        processed_bitmaps.vectorize();
+        processed_bitmaps.consolidate_textures();
 
         // Finally, convert to integer RGB
         for i in &mut processed_bitmaps.bitmaps {
@@ -171,10 +179,12 @@ impl ProcessedBitmaps {
     }
 
     /// Use the color plate data to make a set of processed bitmaps.
-    fn load_color_plate(color_plate: ColorPlate) -> ProcessedBitmaps {
+    fn load_color_plate(color_plate: ColorPlate, options: &ProcessingOptions) -> ProcessedBitmaps {
         let mut processed_bitmaps = ProcessedBitmaps {
             sequences: Vec::new(),
-            bitmaps: Vec::new()
+            bitmaps: Vec::new(),
+            options: *options,
+            color_plate_type: color_plate.options.input_type
         };
 
         processed_bitmaps.bitmaps.reserve_exact(color_plate.bitmaps.len());
@@ -191,17 +201,17 @@ impl ProcessedBitmaps {
 
         // Copy in the sequences.
         for s in color_plate.sequences {
-            processed_bitmaps.sequences.push(ProcessedSequence { first_bitmap: s.first_bitmap, bitmap_count: s.bitmap_count })
+            processed_bitmaps.sequences.push(ProcessedSequence { first_bitmap: s.first_bitmap, bitmap_count: s.bitmap_count, sprites: s.sprites })
         }
 
         processed_bitmaps
     }
 
     /// If a bitmap has zero alpha, set to black.
-    fn truncate_zero_alpha(&mut self, options: &ProcessingOptions) {
+    fn truncate_zero_alpha(&mut self) {
         const BLACK: ColorARGB = ColorARGB { a: 0.0, r: 0.0, g: 0.0, b: 0.0 };
 
-        if !options.truncate_zero_alpha {
+        if !self.options.truncate_zero_alpha {
             return
         }
 
@@ -215,8 +225,8 @@ impl ProcessedBitmaps {
     }
 
     /// Perform a blur. This factors in gamma compression.
-    fn perform_blur(&mut self, options: &ProcessingOptions) {
-        let blur = match options.blur_factor {
+    fn perform_blur(&mut self) {
+        let blur = match self.options.blur_factor {
             Some(it) => it,
             _ => return,
         };
@@ -277,8 +287,8 @@ impl ProcessedBitmaps {
         }
     }
 
-    fn perform_sharpen(&mut self, options: &ProcessingOptions) {
-        let sharpen_factor = match options.sharpen_factor {
+    fn perform_sharpen(&mut self) {
+        let sharpen_factor = match self.options.sharpen_factor {
             Some(it) => it.clamp(0.0, 1.0),
             _ => return,
         };
@@ -352,9 +362,11 @@ impl ProcessedBitmaps {
     }
 
     /// Consolidate cubemaps and 3D textures into one texture.
-    fn consolidate_textures(&mut self, color_plate_type: ColorPlateInputType) {
-        if color_plate_type != ColorPlateInputType::ThreeDimensionalTextures && color_plate_type != ColorPlateInputType::Cubemaps {
-            return;
+    fn consolidate_textures(&mut self) {
+        match self.color_plate_type {
+            ColorPlateInputType::ThreeDimensionalTextures => (),
+            ColorPlateInputType::Cubemaps => (),
+            _ => return
         }
 
         let mut new_bitmaps = Vec::new();
@@ -362,7 +374,7 @@ impl ProcessedBitmaps {
 
         for s in &self.sequences {
             if s.first_bitmap.is_none() {
-                new_sequences.push(*s);
+                new_sequences.push(s.clone());
                 continue;
             }
 
@@ -370,7 +382,7 @@ impl ProcessedBitmaps {
             let first_bitmap = &self.bitmaps[first_bitmap_index];
             let width = first_bitmap.width;
             let height = first_bitmap.height;
-            let (depth, faces) = match color_plate_type {
+            let (depth, faces) = match self.color_plate_type {
                 ColorPlateInputType::Cubemaps => (1, s.bitmap_count),
                 ColorPlateInputType::ThreeDimensionalTextures => (s.bitmap_count, 1),
                 _ => unreachable!()
@@ -389,7 +401,7 @@ impl ProcessedBitmaps {
                 }
             });
 
-            new_sequences.push(ProcessedSequence { first_bitmap: Some(new_bitmaps.len()), bitmap_count: 1 });
+            new_sequences.push(ProcessedSequence { first_bitmap: Some(new_bitmaps.len()), bitmap_count: 1, sprites: s.sprites.clone() });
             new_bitmaps.push(new_bitmap);
         }
 
@@ -446,8 +458,8 @@ impl ProcessedBitmaps {
     }
 
     /// Vectorize bitmaps.
-    fn vectorize(&mut self, options: &ProcessingOptions) {
-        if !options.vectorize {
+    fn vectorize(&mut self) {
+        if !self.options.vectorize {
             return;
         }
 
@@ -459,12 +471,12 @@ impl ProcessedBitmaps {
     }
 
     /// Generate heightmaps from monochrome input.
-    fn generate_heightmaps(&mut self, options: &ProcessingOptions) {
-        if options.bumpmap_height.is_none() {
+    fn generate_heightmaps(&mut self) {
+        if self.options.bumpmap_height.is_none() {
             return;
         }
 
-        let h = options.bumpmap_height.unwrap() as f32;
+        let h = self.options.bumpmap_height.unwrap() as f32;
 
         for b in &mut self.bitmaps {
             let mut new_pixels = Vec::with_capacity(b.pixels_float.len());
@@ -490,7 +502,7 @@ impl ProcessedBitmaps {
 
                     let (dx, dy, dz);
 
-                    match options.bumpmap_algorithm {
+                    match self.options.bumpmap_algorithm {
                         BumpmapAlgorithm::Fast => {
                             dx = (left - center).max(0.0) - (right - center).max(0.0);
                             dy = (top - center).max(0.0) - (bottom - center).max(0.0);
@@ -527,8 +539,8 @@ impl ProcessedBitmaps {
     }
 
     /// Do detail fade on mipmaps.
-    fn detail_fade(&mut self, options: &ProcessingOptions) {
-        let fade = match options.detail_fade_factor {
+    fn detail_fade(&mut self) {
+        let fade = match self.options.detail_fade_factor {
             Some(it) => it,
             _ => return,
         };
@@ -542,7 +554,7 @@ impl ProcessedBitmaps {
                 let overall_fade_factor = mipmap_count_float - fade * (mipmap_count_float - 1.0 + (1.0 - fade));
 
                 // Get the fade color
-                let (r,g,b) = match options.detail_fade_color {
+                let (r,g,b) = match self.options.detail_fade_color {
                     DetailFadeColor::Gray => (127.0 / 255.0, 127.0 / 255.0, 127.0 / 255.0),
                     DetailFadeColor::Average => {
                         let mut average = ColorRGB::default();
@@ -574,8 +586,8 @@ impl ProcessedBitmaps {
     }
 
     /// Do alpha bias on mipmaps.
-    fn alpha_bias(&mut self, options: &ProcessingOptions) {
-        let alpha_bias = match options.alpha_bias {
+    fn alpha_bias(&mut self) {
+        let alpha_bias = match self.options.alpha_bias {
             Some(it) => it,
             _ => return,
         };
@@ -596,7 +608,10 @@ impl ProcessedBitmaps {
     }
 
     /// Generate mipmaps.
-    fn generate_mipmaps(&mut self, options: &ProcessingOptions) {
+    fn generate_mipmaps(&mut self) {
+        let gamma_corrected_mipmaps = self.options.gamma_corrected_mipmaps;
+        let nearest_neighbor_alpha_mipmap = self.options.nearest_neighbor_alpha_mipmap;
+
         for b in &mut self.bitmaps {
             // Get the highest dimension.
             //
@@ -631,7 +646,7 @@ impl ProcessedBitmaps {
             let maximum_mipmap_count = log2_u16(b.height.max(b.width) as u16) as usize;
 
             // Override this.
-            let final_mipmap_count = if let Some(n) = options.max_mipmaps {
+            let final_mipmap_count = if let Some(n) = self.options.max_mipmaps {
                 maximum_mipmap_count.min(n)
             }
             else {
@@ -673,7 +688,7 @@ impl ProcessedBitmaps {
                                     let copied_color = &map_pixels[x_prev + y_prev * m.width];
 
                                     // square it to account for sRGB to prevent darkening of gradients
-                                    if options.gamma_corrected_mipmaps {
+                                    if gamma_corrected_mipmaps {
                                         total_color.a += copied_color.a.powi(2);
                                         total_color.r += copied_color.r.powi(2);
                                         total_color.g += copied_color.g.powi(2);
@@ -699,7 +714,7 @@ impl ProcessedBitmaps {
                             total_color.b /= count as f32;
 
                             // Then square-root if we were using gamma correction
-                            if options.gamma_corrected_mipmaps {
+                            if gamma_corrected_mipmaps {
                                 total_color.a = total_color.a.sqrt();
                                 total_color.r = total_color.r.sqrt();
                                 total_color.g = total_color.g.sqrt();
@@ -711,7 +726,7 @@ impl ProcessedBitmaps {
                     }
 
                     // Nearest neighbor alpha?
-                    if options.nearest_neighbor_alpha_mipmap {
+                    if nearest_neighbor_alpha_mipmap {
                         for y in 0..next_map_height {
                             for x in 0..next_map_width {
                                 next_map_pixels[x + y * next_map_width].a = map_pixels[x*2 + y*2 * m.width].a;
