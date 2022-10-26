@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+use crate::bitmap::iterate_base_map_and_mipmaps;
 use crate::{types::ColorARGBInt, bitmap::CurrentBitmap};
 use crate::engines::h1::P8_PALETTE;
 
@@ -128,11 +129,88 @@ impl BitmapEncoding {
     ///
     /// This will panic if `pixels` is too small. On debug builds, it will also panic if `pixels` is too large. Take
     /// care that you pass a correct buffer size and the correct dimensions.
-    pub fn encode(self, pixels: &[ColorARGBInt], width: usize, height: usize, depth: usize, faces: usize, mipmaps: usize) -> Vec<u8> {
+    pub fn encode(self, pixels: &[ColorARGBInt], width: usize, height: usize, depth: usize, faces: usize, mipmaps: usize, use_dithering: bool) -> Vec<u8> {
         debug_assert_eq!(pixels.len(), BitmapEncoding::A8R8G8B8.calculate_effective_pixel_count(width, height, depth, faces, mipmaps), "input pixel count is incorrect");
 
-        let mut output = Vec::new();
+        if use_dithering && self.supports_dithering() {
+            let mut pixels = pixels.to_owned();
 
+            // Do dithering based on https://en.wikipedia.org/wiki/Floyd–Steinberg_dithering
+            iterate_base_map_and_mipmaps(width, height, depth, faces, mipmaps, |m| {
+                if m.width < 3 || m.height < 2 {
+                    return;
+                }
+
+                let face_len = m.width * m.height;
+                for p in (m.pixel_offset .. m.pixel_offset + m.size).step_by(face_len) {
+                    let new_dithered = &mut pixels[p..p+face_len];
+
+                    for y in 0..m.height {
+                        for x in 0..m.width {
+                            // Skip pixels at the left, right, and bottom edges since those cannot be dithered further very well
+                            if x == 0 || x == m.width - 1 || y == m.height - 1 {
+                                continue;
+                            }
+
+                            let pixel = x + y * m.width;
+                            let pixel_right = pixel + 1;
+                            let pixel_below_middle = pixel + m.width;
+                            let pixel_below_left = pixel_below_middle - 1;
+                            let pixel_below_right = pixel_below_middle + 1;
+
+                            // Get the pixel we have
+                            let original_pixel = new_dithered[pixel];
+
+                            // Encode that pixel to and from
+                            let error_pixel = self.decode(&self.encode(&new_dithered[pixel..pixel+1], 1, 1, 1, 1, 0, false), 1, 1, 1, 1, 0)[0];
+
+                            // Get the error.
+                            let alpha_error = original_pixel.a as f32 - error_pixel.a as f32;
+                            let red_error = original_pixel.r as f32 - error_pixel.r as f32;
+                            let green_error = original_pixel.g as f32 - error_pixel.g as f32;
+                            let blue_error = original_pixel.b as f32 - error_pixel.b as f32;
+
+                            // Pass on the error to the next pixels in this manner
+                            //
+                            //             X 7     (where X is our current pixel)
+                            //           3 5 1
+                            //
+                            macro_rules! apply_error {
+                                ($pixel:expr, $channel:tt, $error:expr, $multiply:expr) => {
+                                    let delta = $error * $multiply / 16.0;
+                                    let new_channel = &mut new_dithered[$pixel].$channel;
+                                    *new_channel = (*new_channel as f32 + delta).round().clamp(0.0, u8::MAX as f32) as u8;
+                                }
+                            }
+
+                            apply_error!(pixel_right, a, alpha_error, 7.0);
+                            apply_error!(pixel_below_left, a, alpha_error, 3.0);
+                            apply_error!(pixel_below_middle, a, alpha_error, 5.0);
+                            apply_error!(pixel_below_right, a, alpha_error, 1.0);
+
+                            apply_error!(pixel_right, r, red_error, 7.0);
+                            apply_error!(pixel_below_left, r, red_error, 3.0);
+                            apply_error!(pixel_below_middle, r, red_error, 5.0);
+                            apply_error!(pixel_below_right, r, red_error, 1.0);
+
+                            apply_error!(pixel_right, g, green_error, 7.0);
+                            apply_error!(pixel_below_left, g, green_error, 3.0);
+                            apply_error!(pixel_below_middle, g, green_error, 5.0);
+                            apply_error!(pixel_below_right, g, green_error, 1.0);
+
+                            apply_error!(pixel_right, b, blue_error, 7.0);
+                            apply_error!(pixel_below_left, b, blue_error, 3.0);
+                            apply_error!(pixel_below_middle, b, blue_error, 5.0);
+                            apply_error!(pixel_below_right, b, blue_error, 1.0);
+                        }
+                    }
+                }
+            });
+
+            return self.encode(&pixels, height, width, depth, faces, mipmaps, false);
+        }
+
+        let mut output = Vec::new();
         if !self.is_block_compression() {
             output.reserve_exact(pixels.len() * self.bytes_per_block());
 
@@ -191,7 +269,7 @@ impl BitmapEncoding {
                     // Set up our parameters
                     let mut params = Params::default();
                     params.algorithm = Algorithm::IterativeClusterFit;
-                    let mut rgba = BitmapEncoding::A8B8G8R8.encode(pixels, width, height, depth, faces, mipmaps);
+                    let mut rgba = BitmapEncoding::A8B8G8R8.encode(pixels, width, height, depth, faces, mipmaps, false);
                     const UNCOMPRESSED_BPP: usize = BitmapEncoding::A8B8G8R8.bits_per_pixel() / 8;
 
                     // Set alpha to 255 unless it is 0
@@ -405,6 +483,15 @@ impl BitmapEncoding {
         let new_height = height / blockh + match height % blockh { 0 => 0, _ => 1 };
 
         (new_width, new_height)
+    }
+
+    /// Get whether or not the format supports dithering.
+    pub fn supports_dithering(self) -> bool {
+        match self {
+            Self::A1R5G5B5 | Self::A4R4G4B4 | Self::R5G6B5 => true,
+            Self::P8HCE => true,
+            _ => false
+        }
     }
 }
 

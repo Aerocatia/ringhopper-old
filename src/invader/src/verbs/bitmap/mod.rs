@@ -34,6 +34,7 @@ struct BitmapOptions {
     map_count: Option<u16>,
     sprite_usage: Option<BitmapSpriteUsage>,
     sprite_spacing: Option<u16>,
+    bitmap_type: Option<BitmapType>,
 
     // These are not saved
     square_sheets: bool,
@@ -65,6 +66,7 @@ impl BitmapOptions {
         set_if_set!(map_count, mipmap_count);
         set_if_set!(sprite_usage, sprite_usage);
         set_if_set!(sprite_spacing, sprite_spacing);
+        set_if_set!(bitmap_type, _type);
 
         macro_rules! set_flag_if_set {
             ($tag_field:tt, $option:tt) => {
@@ -90,6 +92,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         Argument { long: "sprite-budget-count", short: 'C', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sprite-budget-count.description"), parameter: Some("count"), multiple: false },
         Argument { long: "map-count", short: 'M', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.map-count.description"), parameter: Some("count"), multiple: false },
         Argument { long: "sprite-spacing", short: 'P', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sprite-spacing.description"), parameter: Some("spacing"), multiple: false },
+        Argument { long: "type", short: 'T', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.type.description"), parameter: Some("type"), multiple: false },
 
         Argument { long: "dithering", short: 'D', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.dithering.description"), parameter: Some("on/off"), multiple: false },
         Argument { long: "palettization", short: 'p', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.palettization.description"), parameter: Some("on/off"), multiple: false },
@@ -175,6 +178,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         },
         sprite_usage: parse_enum_cli!("sprite-usage")?,
         usage: parse_enum_cli!("usage")?,
+        bitmap_type: parse_enum_cli!("type")?,
 
         square_sheets: parsed_args.named.contains_key("square-sheets"),
         regenerate: parsed_args.named.contains_key("regenerate"),
@@ -588,10 +592,10 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
                 let argb_luma = ColorARGB { a: argb.a, r: luma, g: luma, b: luma }.gamma_compress().into();
                 encoded_luma.push(argb_luma);
             }
-            format.encode(&encoded_luma, b.width, b.height, b.depth, b.faces, b.mipmaps)
+            format.encode(&encoded_luma, b.width, b.height, b.depth, b.faces, b.mipmaps, bitmap_tag.flags.enable_diffusion_dithering)
         }
         else {
-            format.encode(&b.pixels, b.width, b.height, b.depth, b.faces, b.mipmaps)
+            format.encode(&b.pixels, b.width, b.height, b.depth, b.faces, b.mipmaps, bitmap_tag.flags.enable_diffusion_dithering)
         };
 
         let encoded_len = encoded.len();

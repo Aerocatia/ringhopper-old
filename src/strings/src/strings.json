@@ -110,6 +110,7 @@
     "engine.h1.verbs.bitmap.arguments.sprite-spacing.description": "Set the sprite spacing in pixels; 0 is automatic. Default (new tag): 0",
     "engine.h1.verbs.bitmap.arguments.sprite-usage.description": "Set the type of sprite sheet. Can be: blend-add-subtract-max, multiply-min, or double-multiply. Default (new tag): blend-add-subtract-max",
     "engine.h1.verbs.bitmap.arguments.square-sheets.description": "Force square sprite sheets (works around particles being incorrectly stretched). This setting does not persist.",
+    "engine.h1.verbs.bitmap.arguments.type.description": "Specify the type. Can be: 2d-textures, 3d-textures, cube-maps, sprites, interface-bitmaps",
     "engine.h1.verbs.bitmap.arguments.usage.description": "Set the postprocessing method. Can be: alpha-blend, default, height-map, detail-map, light-map, vector-map. Default (new tag): default",
 
     "engine.h1.verbs.convert.error_could_not_convert_tag": "Could not convert {tag}: {error}",

@@ -49,7 +49,7 @@ fn test_encoding_decoding_match() {
         px.b = 127;
     }
 
-    let encoded = BitmapEncoding::A8R8G8B8.encode(&pxs, 16, 16, 1, 1, 0);
+    let encoded = BitmapEncoding::A8R8G8B8.encode(&pxs, 16, 16, 1, 1, 0, false);
     let decoded = BitmapEncoding::A8R8G8B8.decode(&encoded, 16, 16, 1, 1, 0);
     assert_eq!(pxs, &decoded[..]);
 
@@ -66,15 +66,15 @@ fn test_encoding_decoding_match() {
         ColorARGBInt { a: 255, r: 0, g: 0, b: 0 }
     ];
 
-    let encoded = BitmapEncoding::R5G6B5.encode(&pxs, pxs.len(), 1, 1, 1, 0);
+    let encoded = BitmapEncoding::R5G6B5.encode(&pxs, pxs.len(), 1, 1, 1, 0, false);
     let decoded = BitmapEncoding::R5G6B5.decode(&encoded, pxs.len(), 1, 1, 1, 0);
     assert_eq!(&pxs[1..], &decoded[1..]); // since R5G6B5 discards alpha, we ignore the first pixel for this comparison as it has alpha
 
-    let encoded = BitmapEncoding::A1R5G5B5.encode(&pxs, pxs.len(), 1, 1, 1, 0);
+    let encoded = BitmapEncoding::A1R5G5B5.encode(&pxs, pxs.len(), 1, 1, 1, 0, false);
     let decoded = BitmapEncoding::A1R5G5B5.decode(&encoded, pxs.len(), 1, 1, 1, 0);
     assert_eq!(pxs, &decoded[..]);
 
-    let encoded = BitmapEncoding::A4R4G4B4.encode(&pxs, pxs.len(), 1, 1, 1, 0);
+    let encoded = BitmapEncoding::A4R4G4B4.encode(&pxs, pxs.len(), 1, 1, 1, 0, false);
     let decoded = BitmapEncoding::A4R4G4B4.decode(&encoded, pxs.len(), 1, 1, 1, 0);
     assert_eq!(pxs, &decoded[..]);
 
@@ -89,7 +89,7 @@ fn test_encoding_decoding_match() {
         px.b = i;
     }
 
-    let encoded = BitmapEncoding::AY8.encode(&pxs, 16, 16, 1, 1, 0);
+    let encoded = BitmapEncoding::AY8.encode(&pxs, 16, 16, 1, 1, 0, false);
     let decoded = BitmapEncoding::AY8.decode(&encoded, 16, 16, 1, 1, 0);
     assert_eq!(pxs, &decoded[..]);
 }
