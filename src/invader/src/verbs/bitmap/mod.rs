@@ -250,7 +250,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
                         }
                         Err(e) => {
                             let l = log_mutex.lock().unwrap();
-                            eprintln_error_pre!("Could not generate bitmaps for {tag}: {error}", tag=tag.tag_path, error=e);
+                            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.bitmap.error_could_not_generate_bitmaps"), tag=tag.tag_path, error=e);
                             *errors.lock().unwrap() += 1;
                             drop(l)
                         }
@@ -274,15 +274,15 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
             Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_no_tags_found"))))
         }
         else if errors > 0 {
-            println_warn!("Generated bitmaps for {count} tag(s) with {warning} warning(s) and {error} error(s)", count=success, error=errors, warning=warnings);
+            println_warn!(get_compiled_string!("engine.h1.verbs.bitmap.generated_bitmaps_with_warnings_and_errors"), count=success, error=errors, warning=warnings);
             Ok(ExitCode::FAILURE)
         }
         else if warnings > 0 {
-            println_warn!("Generated bitmaps for {count} tag(s) with {warning} warnings(s)", count=success, warning=warnings);
+            println_warn!(get_compiled_string!("engine.h1.verbs.bitmap.generated_bitmaps_with_warnings"), count=success, warning=warnings);
             Ok(ExitCode::SUCCESS)
         }
         else {
-            println_success!("Successfully generated bitmaps for {count} tag(s)", count=success);
+            println_success!(get_compiled_string!("engine.h1.verbs.bitmap.generated_bitmaps"), count=success);
             Ok(ExitCode::SUCCESS)
         }
     }
@@ -313,7 +313,7 @@ fn load_tiff(path: &Path) -> ErrorMessageResult<Image> {
 
     let raw_pixels_vec = match raw_pixels {
         DecodingResult::U8(p) => p,
-        _ => return Err(ErrorMessage::StaticString("Only TIFFs with 8-bit channels are supported!"))
+        _ => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_8_bit_color_tiff")))
     };
 
     let mut pixels = Vec::with_capacity(width * height);
@@ -328,7 +328,7 @@ fn load_tiff(path: &Path) -> ErrorMessageResult<Image> {
     };
 
     if bit_depth != 8 {
-        return Err(ErrorMessage::StaticString("Only TIFFs with 8-bit channels are supported!"))
+        return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_8_bit_color_tiff")))
     }
 
     let (conversion_function, bytes_per_pixel): (fn (input_bytes: &[u8]) -> ColorARGBInt, usize) = match color_type {
@@ -336,7 +336,7 @@ fn load_tiff(path: &Path) -> ErrorMessageResult<Image> {
         ColorType::GrayA(_) => (|pixels| ColorARGBInt::from_a8y8(((pixels[1] as u16) << 8) | (pixels[0] as u16)), 2),
         ColorType::RGB(_) => (|pixels| ColorARGBInt { a: 255, r: pixels[0], g: pixels[1], b: pixels[2] } , 3),
         ColorType::RGBA(_) => (|pixels| ColorARGBInt { a: pixels[3], r: pixels[0], g: pixels[1], b: pixels[2] }, 4),
-        _ => return Err(ErrorMessage::StaticString("Only RGB(A) and grayscale are supported!"))
+        _ => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_rgba_grayscale")))
     };
 
     for i in (0..raw_pixels_vec.len()).step_by(bytes_per_pixel) {
@@ -354,7 +354,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         *Bitmap::from_tag_file(&read_file(&file.file_path)?)?.data
     }
     else if options.regenerate {
-        return Err(ErrorMessage::AllocatedString(format!("{tag} does not exist and thus cannot be regenerated.", tag=file.tag_path.get_path_with_extension())))
+        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_cannot_regenerate_missing_tag"), tag=file.tag_path.get_path_with_extension())))
     }
     else {
         let mut tag = Bitmap::default();
@@ -368,7 +368,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     let image = if options.regenerate {
         // Check if we have a color plate.
         if bitmap_tag.compressed_color_plate_data.is_empty() {
-            return Err(ErrorMessage::AllocatedString(format!("{tag} does has no color plate data and thus cannot be regenerated.", tag=file.tag_path.get_path_with_extension())))
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_cannot_regenerate_missing_color_plate"), tag=file.tag_path.get_path_with_extension())))
         }
 
         // Regenerate
@@ -448,10 +448,10 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     // Insert sequences.
     for s in processed_result.sequences {
         if s.first_bitmap.is_some() && s.first_bitmap.unwrap() > MAX_BITMAPS {
-            return Err(ErrorMessage::AllocatedString(format!("Maximum bitmap index in a sequence exceeded ({index} > {max})", max=MAX_BITMAPS, index=s.first_bitmap.unwrap())));
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_exceeded_bitmap_index"), max=MAX_BITMAPS, index=s.first_bitmap.unwrap())));
         }
         if s.bitmap_count > MAX_BITMAPS {
-            return Err(ErrorMessage::AllocatedString(format!("Maximum bitmap count in a sequence exceeded ({count} > {max})", max=MAX_BITMAPS, count=s.bitmap_count)));
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_exceeded_bitmap_count"), max=MAX_BITMAPS, count=s.bitmap_count)));
         }
 
         bitmap_tag.bitmap_group_sequence.blocks.push(BitmapGroupSequence {
@@ -490,7 +490,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     for b in processed_result.bitmaps {
         // Check to make sure it isn't too large to be addressed.
         if b.width > U16_MAX || b.height > U16_MAX || b.depth > U16_MAX {
-            return Err(ErrorMessage::AllocatedString(format!("Maximum bitmap dimensions exceeded ({width}x{height}x{depth} > {max}x{max}x{max})", max=U16_MAX, width=b.width, height=b.height, depth=b.depth)));
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_exceeded_dimensions"), max=U16_MAX, width=b.width, height=b.height, depth=b.depth)));
         }
 
         let mut data = BitmapData::default();
@@ -727,7 +727,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         };
 
         if bitmap_tag._type == BitmapType::Sprites {
-            println!("Sprite sheets: {bitmap_count}", bitmap_count=bitmap_tag.bitmap_data.len());
+            println!(get_compiled_string!("engine.h1.verbs.bitmap.output_sprite_sheets"), bitmap_count=bitmap_tag.bitmap_data.len());
             for b in 0..bitmap_tag.bitmap_data.len() {
                 describe_bitmap(b);
             }
@@ -735,14 +735,14 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
 
             for i in 0..bitmap_tag.bitmap_group_sequence.len() {
                 let seq = &bitmap_tag.bitmap_group_sequence.blocks[i];
-                println!("Sequence #{sequence}: {sprite_count} sprite(s)", sequence=i, sprite_count=seq.sprites.len());
+                println!(get_compiled_string!("engine.h1.verbs.bitmap.output_sequences_sprites"), sequence=i, sprite_count=seq.sprites.len());
             }
             println!();
         }
         else {
             for i in 0..bitmap_tag.bitmap_group_sequence.len() {
                 let seq = &bitmap_tag.bitmap_group_sequence.blocks[i];
-                println!("Sequence #{sequence}: {bitmap_count} bitmap(s)", sequence=i, bitmap_count=seq.bitmap_count);
+                println!(get_compiled_string!("engine.h1.verbs.bitmap.output_sequences_bitmaps"), sequence=i, bitmap_count=seq.bitmap_count);
 
                 if seq.bitmap_count > 0 {
                     let first = seq.first_bitmap_index.unwrap() as usize;
@@ -760,23 +760,19 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     }
 
     // Warn if we did something that may not be what we wanted.
-    if contains_fully_transparent_bitmaps && bitmap_tag.encoding_format != BitmapFormat::DXT1 {
-        eprintln_warn_pre!("One or more bitmaps are fully transparent. While valid, the output may be different from some versions of tool.exe which would change this to be fully opaque, instead. Make sure to check the bitmap to ensure this is what you want!");
-        *warnings += 1;
-    }
     if warn_monochrome {
-        eprintln_warn_pre!("Monochrome was requested, but one or more bitmaps are not monochrome.");
+        eprintln_warn_pre!(get_compiled_string!("engine.h1.verbs.bitmap.warning_monochrome_non_monochrome"));
         *warnings += 1;
     }
     if bitmap_tag.encoding_format == BitmapFormat::DXT1 {
         if contains_varying_alpha {
-            eprintln_warn_pre!("DXT1 was requested, but one or more bitmaps do not have 1-bit alpha and had to be crunched into 1-bit alpha.");
+            eprintln_warn_pre!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_alpha_loss"));
             *warnings += 1;
         }
         if contains_zero_alpha_color {
-            eprintln_warn_pre!("DXT1 was requested, but one or more bitmaps have fully transparent pixels with color which were set to black.");
+            eprintln_warn_pre!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_color_loss"));
             if contains_fully_transparent_bitmaps {
-                eprintln_warn!("... and one or more bitmaps are fully transparent, thus they are now fully black.");
+                eprintln_warn!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_color_loss_entire_bitmap"));
             }
             *warnings += 1;
         }

@@ -64,7 +64,7 @@ impl SpriteProcessor {
 
         // Failure?
         if total_pixel_usage > max_pixel_usage {
-            return Err(ErrorMessage::AllocatedString(format!("Maximum budget exceeded ({total} / {max} pixels)", total=total_pixel_usage, max=max_pixel_usage)));
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_sprite_max_budget_exceeded"), total=total_pixel_usage, max=max_pixel_usage)));
         }
 
         // Add new bitmaps
@@ -232,7 +232,7 @@ impl SpriteProcessor {
 
                         // If we can't even fit it in a sheet by itself, then get rekt
                         if !next_sheet.add_sprite_to_sheet(*sprite, &color_plate, true) {
-                            return Err(ErrorMessage::AllocatedString(format!("Could not fit all sprites in sequence {} in {}x{} sprite sheets", si, max_length, max_length)));
+                            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_sprite_sheet_cannot_fit"), sequence=si, length=max_length)));
                         }
                     }
                 }
@@ -241,7 +241,7 @@ impl SpriteProcessor {
 
         // If we split it across multiple sheets, complain but continue
         if split_across > 0 {
-            self.warnings.push(ErrorMessage::AllocatedString(format!("{split_across} sequence(s) had to be split across multiple sheets\nThis is valid but may cause issues", split_across=split_across)));
+            self.warnings.push(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.warning_sequence_split_across_textures"), split_across=split_across)));
         }
 
         // Done

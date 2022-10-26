@@ -1,3 +1,5 @@
+use strings::get_compiled_string;
+
 use crate::error::{ErrorMessageResult, ErrorMessage};
 use crate::types::*;
 
@@ -189,16 +191,16 @@ impl ColorPlate {
 
         // If we make it to this point but we're trying to bake sprite sheets, bail.
         if options.bake_sprite_sheets {
-            return Err(ErrorMessage::StaticString("Sprite sheets cannot be generated without a valid color plate."));
+            return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.bitmap.error_sprite_sheets_need_color_plate")));
         }
         else if options.input_type == ColorPlateInputType::ThreeDimensionalTextures {
-            return Err(ErrorMessage::StaticString("3D textures cannot be generated without a valid color plate."));
+            return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.bitmap.error_3d_textures_need_color_plate")));
         }
 
         match options.input_type {
             ColorPlateInputType::TwoDimensionalTextures => {
                 if !width.is_power_of_two() || !height.is_power_of_two() {
-                    return Err(ErrorMessage::AllocatedString(format!("Input bitmap is neither a regular color plate nor non-power-of-two ({width} x {height})", width=width, height=height)));
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_bad_color_plate"), width=width, height=height)));
                 }
                 color_plate.bitmaps.push(ColorPlateBitmap {
                     pixels: pixels.to_owned(),
@@ -272,7 +274,7 @@ impl ColorPlate {
 
         // There needs to be a sequence divider on the second row.
         if !pixels[width].same_color(sequence_divider_color) {
-            return Err(ErrorMessage::StaticString("Expected a sequence divider on the second row (y=1)"))
+            return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.bitmap.error_missing_sequence_divider")))
         }
 
         let mut sequences = Vec::new();
@@ -286,14 +288,14 @@ impl ColorPlate {
                     continue;
                 }
                 else {
-                    return Err(ErrorMessage::AllocatedString(format!("Invalid starting pixel on row y={y} (expected background or sequence divider)", y=y)))
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_improper_first_pixel"), y=y)))
                 }
             }
 
             // Check each pixel. If we find an invalid pixel, bad!
             for x in 0..width {
                 if !row[x].same_color(sequence_divider_color) {
-                    return Err(ErrorMessage::AllocatedString(format!("Sequence divider on row y={y} is broken at x={x}", y=y, x=x)))
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_broken_sequence_divider"), y=y, x=x)))
                 }
             }
 
@@ -314,7 +316,7 @@ impl ColorPlate {
 
             // Check the first pixel. It MUST be the background color.
             if !row[0].same_color(background_color) {
-                return Err(ErrorMessage::AllocatedString(format!("Invalid starting pixel on row y={y} (expected background or sequence divider)", y=y)))
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_improper_first_pixel"), y=y)))
             }
 
             // Check each pixel. If we find a non-background color, go to the next row.
@@ -483,7 +485,7 @@ impl ColorPlate {
 
                 // If it's non-power-of-two
                 if self.options.input_type != ColorPlateInputType::NonPowerOfTwoTextures && !bitmap_width.is_power_of_two() && !bitmap_height.is_power_of_two() {
-                    return Err(ErrorMessage::AllocatedString(format!("Tried to process a non-power-of-two texture {width}x{height} @ x={x}, y={y}", width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)))
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_non_power_of_two_texture"), width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)))
                 }
 
                 // Increment
@@ -491,13 +493,13 @@ impl ColorPlate {
 
                 // Do not allow zero-width or zero-height bitmaps.
                 if bitmap_width == 0 || bitmap_height == 0 {
-                    return Err(ErrorMessage::AllocatedString(format!("Tried to process a {width}x{height} texture @ x={x}, y={y}", width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)));
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_null_texture"), x=virtual_left, y=virtual_top)));
                 }
 
                 const MAX_DIMENSION: usize = (i16::MAX as usize) + 1;
 
                 if bitmap_height > MAX_DIMENSION || bitmap_width > MAX_DIMENSION {
-                    return Err(ErrorMessage::AllocatedString(format!("Tried to process a {width}x{height} texture which is too large @ x={x}, y={y}", width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)));
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_texture_too_large"), width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)));
                 }
 
                 // Get the registration point
@@ -535,7 +537,7 @@ impl ColorPlate {
                 let s = &sequences[i];
                 let bitmaps = s.bitmap_count;
                 if s.first_bitmap.is_some() && bitmaps != 6 {
-                    return Err(ErrorMessage::AllocatedString(format!("Expected 0 or 6 bitmaps in sequence #{sequence}. Found {bitmaps} instead.", bitmaps=bitmaps, sequence=i)));
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_cubemap_wrong_map_count"), bitmaps=bitmaps, sequence=i)));
                 }
             }
         }
@@ -546,7 +548,7 @@ impl ColorPlate {
                 let s = &sequences[i];
                 let bitmaps = s.bitmap_count;
                 if !bitmaps.is_power_of_two() {
-                    return Err(ErrorMessage::AllocatedString(format!("Expected power-of-two number of bitmaps in sequence #{sequence}. Found {bitmaps} instead.", bitmaps=bitmaps, sequence=i)));
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_3d_textures_non_power_of_two_bitmap_count"), bitmaps=bitmaps, sequence=i)));
                 }
             }
         }
@@ -560,7 +562,7 @@ impl ColorPlate {
                         let this = &bitmaps[b];
                         let next = &bitmaps[b + 1];
                         if this.width != next.width || this.height != next.height {
-                            return Err(ErrorMessage::AllocatedString(format!("Sequence #{sequence} has different-sized bitmaps in it.", sequence=i)));
+                            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_multi_texture_needs_same_sized_bitmaps"), sequence=i)));
                         }
                     }
                 }
@@ -580,7 +582,7 @@ impl ColorPlate {
     fn init_unrolled_cubemap(&mut self, pixels: &[ColorARGBInt], width: usize, height: usize) -> ErrorMessageResult<()> {
         let face_width = width / 4;
         if !width.is_power_of_two() || height < face_width * 3 {
-            return Err(ErrorMessage::StaticString("Input cubemap is neither a regular color plate nor a valid unrolled cubemap"));
+            return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.bitmap.error_bad_cubemap_input")));
         }
 
         fn read_face(pixels: &[ColorARGBInt], left: usize, top: usize, length: usize, width: usize, get_pixel: fn (offset_x: usize, offset_y: usize, length: usize) -> (usize, usize)) -> ColorPlateBitmap {
