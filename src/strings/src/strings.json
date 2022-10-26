@@ -59,9 +59,9 @@
     "engine.h1.types.gbxmodel.error_invalid_local_nodes": "The model's local nodes are invalid.",
     "engine.h1.types.gbxmodel.error_cannot_regenerate_compressed_vertices_local_nodes": "Cannot generate compressed vertices due to having too many nodes. This is valid, but the model won't work on Xbox ({node_count} > {limit})",
 
-    "engine.h1.types.bitmap.error_cannot_convert_sprite_length": "{input} does not correspond to a valid sprite budget length (expected one of: {valid_lengths})",
     "engine.h1.types.bitmap.error_3d_textures_need_color_plate": "3D textures cannot be generated without a valid color plate.",
     "engine.h1.types.bitmap.error_3d_textures_non_power_of_two_bitmap_count": "Expected power-of-two number of bitmaps in sequence #{sequence}. Found {bitmaps} instead.",
+    "engine.h1.types.bitmap.error_cannot_convert_sprite_length": "{input} does not correspond to a valid sprite budget length (expected one of: {valid_lengths})",
     "engine.h1.types.bitmap.error_bad_color_plate": "Input bitmap is neither a regular color plate nor non-power-of-two ({width} x {height})",
     "engine.h1.types.bitmap.error_bad_cubemap_input": "Input cubemap is neither a regular color plate nor a valid unrolled cubemap",
     "engine.h1.types.bitmap.error_broken_sequence_divider": "Sequence divider on row y={y} is broken at x={x}",
@@ -75,6 +75,7 @@
     "engine.h1.types.bitmap.error_sprite_sheet_cannot_fit": "Could not fit all sprites in sequence {sequence} in {length} x {length} sprite sheets",
     "engine.h1.types.bitmap.error_sprite_sheets_need_color_plate": "Sprite sheets cannot be generated without a valid color plate.",
     "engine.h1.types.bitmap.error_texture_too_large": "Tried to process a {width}x{height} texture which is too large @ x={x}, y={y}",
+    "engine.h1.types.bitmap.warning_bitmap_deleted_zero_alpha": "Removed a fully transparent bitmap due to alpha blend @ x={x}, y={y}",
     "engine.h1.types.bitmap.warning_sequence_split_across_textures": "{split_across} sequence(s) had to be split across multiple sheets to fit the budget. This is valid but may cause issues.",
 
     "engine.h1.types.tag.header.error": "Error parsing the tag header: {reason}",

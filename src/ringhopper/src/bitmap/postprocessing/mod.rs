@@ -220,8 +220,9 @@ impl ProcessedBitmaps {
         }
 
         for b in &mut self.bitmaps {
+            let pixels_float = &mut b.pixels_float[b.width * b.height * b.depth * b.faces..];
             iterate_mipmaps!(b, |m| {
-                for p in &mut b.pixels_float[m.pixel_offset..m.pixel_offset+m.size] {
+                for p in &mut pixels_float[m.pixel_offset..m.pixel_offset+m.size] {
                     if p.a == 0.0 {
                         *p = BLACK;
                     }

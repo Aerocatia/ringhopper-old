@@ -84,8 +84,6 @@ pub struct ColorPlateOptions {
 }
 
 /// Determine the sprite sheet background to use.
-///
-/// All sprites are alpha-blended onto this sprite sheet.
 #[derive(Copy, Clone, Default, PartialEq)]
 pub enum SpriteUsage {
     /// Generate sprite sheets with the background set to 0/255 on all channels.
@@ -94,10 +92,12 @@ pub enum SpriteUsage {
     #[default]
     BlendAddSubtractMax,
 
-    /// Generate sprite sheets with the background set to 127/255 on all channels.
+    /// Generate sprite sheets with the background set to 255/255 on all channels.
+    ///
+    /// Sprites are alpha blended onto the sheet, thus they will not have any transparency on the sprite sheet.
     MultiplyMin,
 
-    /// Generate sprite sheets with the background set to 255/255 on all channels.
+    /// Generate sprite sheets with the background set to 127/255 on all channels.
     DoubleMultiply
 }
 
@@ -117,8 +117,8 @@ impl SpriteUsage {
     pub fn get_background_color(self) -> ColorARGBInt {
         match self {
             Self::BlendAddSubtractMax => ColorARGBInt { a: 0, r: 0, g: 0, b: 0 },
-            Self::MultiplyMin => ColorARGBInt { a: 127, r: 127, g: 127, b: 127 },
-            Self::DoubleMultiply => ColorARGBInt { a: 255, r: 255, g: 255, b: 255 }
+            Self::MultiplyMin => ColorARGBInt { a: 255, r: 255, g: 255, b: 255 },
+            Self::DoubleMultiply => ColorARGBInt { a: 127, r: 127, g: 127, b: 127 },
         }
     }
 }
@@ -230,7 +230,7 @@ impl ColorPlate {
 
     /// Get if the color should be rendered as transparent.
     fn renders_transparent(&self, color: ColorARGBInt) -> bool {
-        self.is_background_or_sequence_divider(color) || self.is_dummy_space(color) || (color.a == 0 && self.options.trim_zero_alpha_pixels)
+        self.is_background_or_sequence_divider(color) || self.is_dummy_space(color)
     }
 
     /// Get if the color is background or sequence divider.
@@ -411,13 +411,13 @@ impl ColorPlate {
                 }
                 let virtual_bottom = y; // non-inclusive
 
-                let real_top;
-                let real_bottom;
-                let real_left;
-                let real_right;
+                let mut real_top;
+                let mut real_bottom;
+                let mut real_left;
+                let mut real_right;
 
                 // Get the real dimensions if we use dummy space.
-                if self.dummy_space_color.is_some() || self.options.trim_zero_alpha_pixels {
+                if self.dummy_space_color.is_some() {
                     let row_contains_pixels = |column: usize| -> bool {
                         for pixel in &get_row(column)[virtual_left..virtual_right] {
                             if self.renders_transparent(*pixel) {
@@ -466,6 +466,52 @@ impl ColorPlate {
                     real_right = virtual_right;
                 }
 
+                // Do not pass zero-width or zero-height bitmaps.
+                if real_top == real_bottom || real_left == real_right {
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_null_texture"), x=virtual_left, y=virtual_top)));
+                }
+
+                // If we are trimming zero-alpha pixels, crop the edges
+                if self.options.trim_zero_alpha_pixels {
+                    macro_rules! side_check {
+                        ($iter:expr) => {(||{
+                            for x in $iter {
+                                for y in real_top..real_bottom {
+                                    if pixels[get_pixel_index(x,y)].a != 0 {
+                                        return Some(x);
+                                    }
+                                }
+                            }
+                            None
+                        })()}
+                    }
+
+                    macro_rules! vert_check {
+                        ($iter:expr) => {(||{
+                            for y in $iter {
+                                for p in &get_row(y)[real_left..real_right] {
+                                    if p.a != 0 {
+                                        return Some(y);
+                                    }
+                                }
+                            }
+                            None
+                        })()}
+                    }
+
+                    real_left = side_check!(real_left..real_right).unwrap_or(real_right);
+                    real_right = side_check!((real_left..real_right).rev()).unwrap_or(real_left);
+
+                    real_top = vert_check!(real_top..real_bottom).unwrap_or(real_bottom);
+                    real_bottom = vert_check!((real_top..real_bottom).rev()).unwrap_or(real_top);
+
+                    // Warn if we just deleted everything.
+                    if real_top == real_bottom || real_left == real_right {
+                        self.warnings.push(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.warning_bitmap_deleted_zero_alpha"), x=virtual_left, y=virtual_top)));
+                        continue;
+                    }
+                }
+
                 let mut bitmap_pixels = Vec::new();
                 let bitmap_width = real_right - real_left;
                 let bitmap_height = real_bottom - real_top;
@@ -490,11 +536,6 @@ impl ColorPlate {
 
                 // Increment
                 s.bitmap_count += 1;
-
-                // Do not allow zero-width or zero-height bitmaps.
-                if bitmap_width == 0 || bitmap_height == 0 {
-                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_null_texture"), x=virtual_left, y=virtual_top)));
-                }
 
                 const MAX_DIMENSION: usize = (i16::MAX as usize) + 1;
 

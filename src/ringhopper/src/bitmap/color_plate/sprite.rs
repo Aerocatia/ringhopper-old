@@ -479,12 +479,14 @@ impl UnbakedSpriteSheet {
 
         // If we're doing multiply, do alpha blend. Otherwise do a simple replace.
         let blend_function = match sprite_usage {
-            SpriteUsage::BlendAddSubtractMax => |bg: &mut ColorARGBInt, fg: ColorARGBInt| *bg = fg,
-            _ => |bg: &mut ColorARGBInt, fg: ColorARGBInt| {
+            // alpha blend
+            SpriteUsage::MultiplyMin => |bg: &mut ColorARGBInt, fg: ColorARGBInt| {
                 let bg_float: ColorARGB = (*bg).into();
                 let fg_float: ColorARGB = fg.into();
                 *bg = bg_float.alpha_blend(fg_float).into()
-            }
+            },
+            _ => |bg: &mut ColorARGBInt, fg: ColorARGBInt| *bg = fg,
+
         };
 
         // Go through each sprite
