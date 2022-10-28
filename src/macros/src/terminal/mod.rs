@@ -91,7 +91,7 @@ macro_rules! set_error_mode_for_stream {
 macro_rules! println_color {
     ($mode:expr, $($fmt:tt)*) => {{
         print_color!($mode, $($fmt)*);
-        println!();
+        print_color!($mode, "\n");
     }}
 }
 
@@ -100,7 +100,7 @@ macro_rules! println_color {
 macro_rules! eprintln_color {
     ($mode:expr, $($fmt:tt)*) => {{
         eprint_color!($mode, $($fmt)*);
-        eprintln!();
+        eprint_color!($mode, "\n");
     }}
 }
 
