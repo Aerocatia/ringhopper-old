@@ -128,6 +128,7 @@
     "engine.h1.verbs.recover.error_no_tags_recovered": "No tags were recovered due to {error} error(s).",
     "engine.h1.verbs.recover.error_no_tags_found": "No recoverable tags were found.",
     "engine.h1.verbs.recover.error_parent_dir_incorrect": "Parent directory does not match the file name of the tag.",
+    "engine.h1.verbs.recover.error_shader_index_out_of_bounds": "Shader index is out of bounds for part #{part} (${shader} >= ${shader_count})",
     "engine.h1.verbs.recover.no_source_data": "Tag does not contain any source data to recover.",
     "engine.h1.verbs.recover.recovered_all_tags": "Recovered {count} tag(s).",
     "engine.h1.verbs.recover.recovered_some_tags_with_errors": "Recovered {count} tag(s) with {error} error(s).",

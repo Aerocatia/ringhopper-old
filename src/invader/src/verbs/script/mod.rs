@@ -245,11 +245,7 @@ pub fn script_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         }
     };
 
-    let tags = match TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &parsed_args.extra[0], Some(TagGroup::Scenario)) {
-        Ok(n) => n,
-        Err(e) => panic!("{}", e)
-    };
-
+    let tags = TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &parsed_args.extra[0], Some(TagGroup::Scenario))?;
     let options = ScriptOptions {
         reload_scripts: parsed_args.named.contains_key("reload-scripts"),
         exclude_global_scripts: parsed_args.named.contains_key("exclude-global-scripts"),

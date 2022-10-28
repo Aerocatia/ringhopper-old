@@ -120,11 +120,13 @@ fn make_jms(model: &Model, permutation: &str, lod: usize) -> ErrorMessageResult<
                     }
                 }
 
-                for p in &geometry.parts {
+                for pi in 0..geometry.parts.len() {
+                    let p = &geometry.parts[pi];
+
                     // Is the shader valid?
                     let shader_index = p.shader_index.try_unwrap_index()?;
                     if shader_index >= model.shaders.blocks.len() {
-                        panic!()
+                        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.recover.error_shader_index_out_of_bounds"), part=pi, shader=shader_index, shader_count=model.shaders.blocks.len())));
                     }
 
                     // Here we go

@@ -25,11 +25,7 @@ fn strip_tag(path: &std::path::Path) -> ErrorMessageResult<bool> {
 pub fn strip_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode> {
     let parsed_args = ParsedArguments::parse_arguments(args, &[], &[get_compiled_string!("arguments.specifier.tag_batch_with_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_tags().multiple_tags_directories())?;
 
-    let tags = match TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &parsed_args.extra[0], None) {
-        Ok(n) => n,
-        Err(e) => panic!("{}", e)
-    };
-
+    let tags = TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &parsed_args.extra[0], None)?;
     let mut count = 0usize;
     let mut processed = 0usize;
     let mut error_count = 0usize;

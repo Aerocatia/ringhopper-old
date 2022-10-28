@@ -133,11 +133,7 @@ pub fn convert_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessag
 
     let overwrite = parsed_args.named.get("overwrite").is_some();
 
-    let tags = match TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &parsed_args.extra[0], None) {
-        Ok(n) => n,
-        Err(e) => panic!("{}", e)
-    };
-
+    let tags = TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &parsed_args.extra[0], None)?;
     let group = match TagGroup::from_str(&parsed_args.extra[1]) {
         Some(n) => n,
         None => {
