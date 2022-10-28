@@ -33,6 +33,24 @@ pub fn get_colors_enabled(streamtype: OutputType) -> bool {
     }
 }
 
+pub fn get_seperate_stderr() -> bool {
+    // Check environment variable
+    match std::env::var("RINGHOPPER_USE_STDERR_STREAM") {
+        Ok(n) => {
+            if n == "1" {
+                true
+            }
+            else if n == "0" {
+                false
+            }
+            else {
+                false
+            }
+        }
+        _ => false
+    }
+}
+
 /// Error mode to print with.
 #[derive(Copy, Clone)]
 pub enum ErrorMode {
@@ -100,9 +118,18 @@ macro_rules! print_color {
 #[macro_export]
 macro_rules! eprint_color {
     ($mode:expr, $($fmt:tt)*) => {{
-        set_error_mode_for_stream!($mode, &mut std::io::stderr(), OutputType::Stderr);
-        eprint!($($fmt)*);
-        set_error_mode_for_stream!(ErrorMode::Normal, &mut std::io::stderr(), OutputType::Stderr);
+        if !get_seperate_stderr() {
+            // By default, use stdout.
+            //
+            // Mixing output streams and maintaining order is not reliable on many terminals, but it may be useful
+            // having it as an option via environmental variables (e.g. Six Shooter).
+            print_color!($mode, $($fmt)*);
+        }
+        else {
+            set_error_mode_for_stream!($mode, &mut std::io::stderr(), OutputType::Stderr);
+            eprint!($($fmt)*);
+            set_error_mode_for_stream!(ErrorMode::Normal, &mut std::io::stderr(), OutputType::Stderr);
+        }
     }}
 }
 
