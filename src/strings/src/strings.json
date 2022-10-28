@@ -143,8 +143,8 @@
     "engine.h1.verbs.bitmap.output_sprite_sheets": "Sprite sheets: {bitmap_count}",
     "engine.h1.verbs.bitmap.output_sequences_bitmaps": "Sequence #{sequence}: {bitmap_count} bitmap(s)",
     "engine.h1.verbs.bitmap.output_sequences_sprites": "Sequence #{sequence}: {sprite_count} sprite(s)",
-    "engine.h1.verbs.bitmap.warning_dxt1_alpha_loss": "DXT1 was requested, but one or more bitmaps do not have 1-bit alpha and had to be crunched into 1-bit alpha.",
-    "engine.h1.verbs.bitmap.warning_dxt1_color_loss": "DXT1 was requested, but one or more bitmaps have fully transparent pixels with color which were set to black.",
+    "engine.h1.verbs.bitmap.warning_dxt1_alpha_loss": "DXT1 was requested, but one or more bitmaps' base maps do not have 1-bit alpha and had to be crunched into 1-bit alpha.",
+    "engine.h1.verbs.bitmap.warning_dxt1_color_loss": "DXT1 was requested, but one or more bitmaps' base maps have fully transparent pixels with color which were set to black.",
     "engine.h1.verbs.bitmap.warning_dxt1_color_loss_entire_bitmap": "... and one or more bitmaps are fully transparent, thus they are now fully black.",
     "engine.h1.verbs.bitmap.warning_monochrome_non_monochrome": "Monochrome was requested, but one or more bitmaps are not monochrome.",
 

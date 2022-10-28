@@ -484,6 +484,8 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
 
     let mut warn_monochrome = false;
     let mut bitmap_lengths = Vec::with_capacity(processed_result.bitmaps.len());
+
+    // Applies to base maps.
     let mut contains_fully_transparent_bitmaps = false;
     let mut contains_varying_alpha = false;
     let mut contains_zero_alpha_color = false;
@@ -503,49 +505,61 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         let mut varying_alpha = false;
         let mut transparent = false;
         let mut fully_transparent = true;
+        let mut zero_alpha_color = false;
         let mut white = true;
-        for p in &b.pixels {
-            let y8 = p.to_y8();
 
-            if !p.same_color(ColorARGBInt::from_y8(y8)) {
-                is_monochrome = false;
-            }
+        iterate_base_map_and_mipmaps(b.width, b.height, b.depth, b.faces, b.mipmaps, |m| {
+            for p in &b.pixels[m.pixel_offset..m.pixel_offset+m.size] {
+                let y8 = p.to_y8();
 
-            if *p != ColorARGBInt::from_ay8(y8) {
-                alpha_equals_luminosity = false;
-            }
-
-            if y8 < 0xFF {
-                white = false;
-            }
-
-            match p.a {
-                // if it is 0, then it may be 1-bit alpha. Also have a DXT1-specific check
-                0x00 => {
-                    transparent = true;
-                    if p.r > 0 || p.g > 0 || p.b > 0 {
-                        contains_zero_alpha_color = true;
-                    }
-                },
-
-                // if it is not 0 or 255, then it is not 1-bit alpha
-                0x01..=0xFE => {
-                    varying_alpha = true;
-                    fully_transparent = false;
-                    transparent = true;
+                if !p.same_color(ColorARGBInt::from_y8(y8)) {
+                    is_monochrome = false;
                 }
 
-                0xFF => fully_transparent = false
+                if *p != ColorARGBInt::from_ay8(y8) {
+                    alpha_equals_luminosity = false;
+                }
+
+                if y8 < 0xFF {
+                    white = false;
+                }
+
+                match p.a {
+                    // if it is 0, then it may be 1-bit alpha. Also have a DXT1-specific check
+                    0x00 => {
+                        transparent = true;
+                        if p.r > 0 || p.g > 0 || p.b > 0 {
+                            zero_alpha_color = true;
+                        }
+                    },
+
+                    // if it is not 0 or 255, then it is not 1-bit alpha
+                    0x01..=0xFE => {
+                        varying_alpha = true;
+                        fully_transparent = false;
+                        transparent = true;
+                    }
+
+                    0xFF => fully_transparent = false
+                }
             }
-        }
 
-        if fully_transparent {
-            contains_fully_transparent_bitmaps = true;
-        }
-
-        if varying_alpha {
-            contains_varying_alpha = true;
-        }
+            // For warning checks
+            //
+            // We only want to check the base map, as anything else is not something the user is directly responsible
+            // for, such as semi-transparent pixels in mipmaps on DXT1 due to interpolation.
+            if m.index == 0 {
+                if fully_transparent {
+                    contains_fully_transparent_bitmaps = true;
+                }
+                if varying_alpha {
+                    contains_varying_alpha = true;
+                }
+                if zero_alpha_color {
+                    contains_zero_alpha_color = true;
+                }
+            }
+        });
 
         let format = if !bitmap_tag.flags.disable_height_map_compression && (bitmap_tag.usage == BitmapUsage::HeightMap || bitmap_tag.usage == BitmapUsage::VectorMap) {
             BitmapEncoding::P8HCE
