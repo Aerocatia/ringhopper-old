@@ -274,7 +274,7 @@ impl ColorPlate {
 
         // There needs to be a sequence divider on the second row.
         if !pixels[width].same_color(sequence_divider_color) {
-            return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.types.bitmap.error_missing_sequence_divider")))
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_missing_sequence_divider"), actual_color=pixels[width].rgb(), expected_color=sequence_divider_color.rgb())))
         }
 
         let mut sequences = Vec::new();
@@ -288,14 +288,14 @@ impl ColorPlate {
                     continue;
                 }
                 else {
-                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_improper_first_pixel"), y=y)))
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_improper_first_pixel"), y=y, actual_color=row[0].rgb())))
                 }
             }
 
             // Check each pixel. If we find an invalid pixel, bad!
             for x in 0..width {
                 if !row[x].same_color(sequence_divider_color) {
-                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_broken_sequence_divider"), y=y, x=x)))
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_broken_sequence_divider"), y=y, x=x, actual_color=row[0].rgb(), expected_color=sequence_divider_color.rgb())))
                 }
             }
 
@@ -316,7 +316,7 @@ impl ColorPlate {
 
             // Check the first pixel. It MUST be the background color.
             if !row[0].same_color(background_color) {
-                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_improper_first_pixel"), y=y)))
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_improper_first_pixel"), y=y, actual_color=row[0].rgb())))
             }
 
             // Check each pixel. If we find a non-background color, go to the next row.

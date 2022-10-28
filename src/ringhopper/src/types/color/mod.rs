@@ -1,4 +1,5 @@
 use crate::types::Point3D;
+use std::fmt::{Display, Formatter};
 
 #[cfg(test)]
 mod tests;
@@ -35,6 +36,12 @@ pub struct ColorRGBInt {
 impl From<ColorRGB> for ColorRGBInt {
     fn from(item: ColorRGB) -> Self {
         Self { r: (item.r * 255.0 + 0.5) as u8, g: (item.g * 255.0 + 0.5) as u8, b: (item.b * 255.0 + 0.5) as u8 }
+    }
+}
+
+impl Display for ColorRGBInt {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
     }
 }
 
@@ -108,6 +115,11 @@ macro_rules! parse_16_bit {
 
 
 impl ColorARGBInt {
+    /// Get the RGB channels to work with.
+    pub const fn rgb(self) -> ColorRGBInt {
+        ColorRGBInt { r: self.r, g: self.g, b: self.b }
+    }
+
     /// Encode into A8R8G8B8 (8-bit color components with alpha).
     pub const fn to_a8r8g8b8(self) -> u32 {
         ((self.a as u32) << 24) | ((self.r as u32) << 16) | ((self.g as u32) << 8) | ((self.b as u32) << 0)
