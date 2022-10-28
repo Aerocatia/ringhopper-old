@@ -269,6 +269,7 @@ impl BitmapEncoding {
                     // Set up our parameters
                     let mut params = Params::default();
                     params.algorithm = Algorithm::IterativeClusterFit;
+                    params.weights = [1.0, 1.0, 1.0]; // weigh each channel equally (may look slightly worse on some textures but better for multipurposes)
                     let mut rgba = BitmapEncoding::A8B8G8R8.encode(pixels, width, height, depth, faces, mipmaps, false);
                     const UNCOMPRESSED_BPP: usize = BitmapEncoding::A8B8G8R8.bits_per_pixel() / 8;
 
