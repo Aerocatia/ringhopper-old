@@ -314,13 +314,8 @@ impl ColorPlate {
         'rowscan: for y in 0..height {
             let row = &pixels[y * width..(y+1) * width];
 
-            // Check the first pixel. It MUST be the background color.
-            if !row[0].same_color(background_color) {
-                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_improper_first_pixel"), y=y, actual_color=row[0].rgb())))
-            }
-
             // Check each pixel. If we find a non-background color, go to the next row.
-            for pixel in &row[1..] {
+            for pixel in &row[..] {
                 if !pixel.same_color(background_color) {
                     continue 'rowscan;
                 }
@@ -390,10 +385,9 @@ impl ColorPlate {
                 let mut y = s.start_y;
                 let row_contains_pixels = |column: usize| -> bool {
                     for pixel in &get_row(column)[virtual_left..virtual_right] {
-                        if self.is_background_or_sequence_divider(*pixel) {
-                            continue
+                        if !self.is_background_or_sequence_divider(*pixel) {
+                            return true;
                         }
-                        return true;
                     }
                     false
                 };
@@ -418,12 +412,11 @@ impl ColorPlate {
 
                 // Get the real dimensions if we use dummy space.
                 if self.dummy_space_color.is_some() {
-                    let row_contains_pixels = |column: usize| -> bool {
-                        for pixel in &get_row(column)[virtual_left..virtual_right] {
-                            if self.renders_transparent(*pixel) {
-                                continue
+                    let row_contains_pixels = |row: usize| -> bool {
+                        for pixel in &get_row(row)[virtual_left..virtual_right] {
+                            if !self.renders_transparent(*pixel) {
+                                return true;
                             }
-                            return true;
                         }
                         false
                     };
@@ -433,18 +426,19 @@ impl ColorPlate {
                         y_real += 1;
                     }
                     real_top = y_real;
-                    while y_real < virtual_bottom && row_contains_pixels(y_real) {
-                        y_real += 1;
+
+                    y_real = virtual_bottom - 1;
+                    while y_real >= real_top && !row_contains_pixels(y_real) {
+                        y_real -= 1;
                     }
-                    real_bottom = y_real;
+                    real_bottom = y_real + 1;
 
                     // Now do columns
                     let column_contains_pixels = |column: usize| -> bool {
                         for y in real_top..real_bottom {
-                            if self.renders_transparent(pixels[get_pixel_index(column,y)]) {
-                                continue
+                            if !self.renders_transparent(pixels[get_pixel_index(column,y)]) {
+                                return true;
                             }
-                            return true;
                         }
                         false
                     };
@@ -454,10 +448,12 @@ impl ColorPlate {
                         x_real += 1;
                     }
                     real_left = x_real;
-                    while x_real < virtual_right && column_contains_pixels(x_real) {
-                        x_real += 1;
+
+                    x_real = virtual_right - 1;
+                    while x_real >= real_left && !column_contains_pixels(x_real) {
+                        x_real -= 1;
                     }
-                    real_right = x_real;
+                    real_right = x_real + 1;
                 }
                 else {
                     real_top = virtual_top;
@@ -499,11 +495,13 @@ impl ColorPlate {
                         })()}
                     }
 
-                    real_left = side_check!(real_left..real_right).unwrap_or(real_right);
-                    real_right = side_check!((real_left..real_right).rev()).unwrap_or(real_left);
+                    let left_to_right = real_left..real_right;
+                    real_left = side_check!(left_to_right.clone()).unwrap_or(real_right);
+                    real_right = side_check!(left_to_right.clone().rev()).unwrap_or(real_left);
 
-                    real_top = vert_check!(real_top..real_bottom).unwrap_or(real_bottom);
-                    real_bottom = vert_check!((real_top..real_bottom).rev()).unwrap_or(real_top);
+                    let top_to_bottom = real_top..real_bottom;
+                    real_top = vert_check!(top_to_bottom.clone()).unwrap_or(real_bottom);
+                    real_bottom = vert_check!(top_to_bottom.clone().rev()).unwrap_or(real_top);
 
                     // Warn if we just deleted everything.
                     if real_top == real_bottom || real_left == real_right {
