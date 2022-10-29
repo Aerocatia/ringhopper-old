@@ -2,7 +2,7 @@ use ringhopper::error::*;
 use ringhopper::file::TagFile;
 use ringhopper::engines::h1::definitions::*;
 use ringhopper::engines::h1::TagFileSerializeFn;
-use strings::get_compiled_string;
+use ringhopper_proc::get_compiled_string;
 use std::path::Path;
 use crate::file::*;
 use crate::string::*;

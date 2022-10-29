@@ -1,7 +1,6 @@
-extern crate strings;
-extern crate macros;
 extern crate rat_in_a_tube;
 extern crate texpresso;
+extern crate ringhopper_proc;
 
 #[cfg(target_os = "windows")]
 extern crate windows;

@@ -11,8 +11,8 @@ publish = false
 
 [dependencies]
 ringhopper = { path = "../ringhopper" }
-macros = { path = "../macros", package = "ringhopper-macros" }
-strings = { path = "../strings", package = "ringhopper-strings" }
+macros = { path = "macros", package = "ringhopper-macros" }
+ringhopper-proc = { path = "../ringhopper/proc", package = "ringhopper-proc" }
 encoding = "0.2"
 tiff = "0.7"
 png = "0.17"

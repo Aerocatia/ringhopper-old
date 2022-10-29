@@ -6,7 +6,7 @@ use crate::types::*;
 use crate::types::tag::TagGroupFn;
 use crate::engines::h1::types::{TagGroup, TagReference, Index};
 use crate::types::tag::TagBlockFn;
-use strings::get_compiled_string;
+use ringhopper_proc::*;
 
 use std::any::Any;
 

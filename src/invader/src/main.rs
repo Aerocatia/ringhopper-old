@@ -3,13 +3,13 @@ extern crate ringhopper;
 use std::str::FromStr;
 use ringhopper::error::*;
 
-extern crate strings;
+extern crate ringhopper_proc;
 extern crate macros;
 extern crate flate2;
 extern crate tiff;
 extern crate png;
 
-use strings::*;
+use ringhopper_proc::*;
 
 mod cmd;
 use cmd::*;

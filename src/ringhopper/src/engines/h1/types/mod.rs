@@ -1,4 +1,5 @@
-use strings::*;
+
+use ringhopper_proc::*;
 
 mod groups;
 pub use self::groups::*;

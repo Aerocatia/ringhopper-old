@@ -2,7 +2,8 @@ use crate::engines::h1::definitions::*;
 use crate::engines::h1::*;
 use crate::error::*;
 use crate::types::*;
-use strings::*;
+
+use ringhopper_proc::*;
 
 /// Maximum number of nodes that can be addressed by a compressed vertex.
 ///

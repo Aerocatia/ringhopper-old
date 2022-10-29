@@ -6,9 +6,7 @@ use crate::error::*;
 use crate::types::*;
 use crate::engines::h1::TagReference;
 
-use macros::*;
-use macros::terminal::*;
-use strings::*;
+use ringhopper_proc::*;
 
 use rat_in_a_tube::{Compiler, NodeData, NodeType, PrimitiveType, ValueType, CompiledNode, CompileError};
 
@@ -291,7 +289,7 @@ impl ScriptCompiler for Scenario {
                 }
             }
             if contains_non_ascii {
-                eprintln_warn!(get_compiled_string!("engine.h1.types.scenario.contains_non_ascii"), file=source.name.to_str());
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.scenario.contains_non_ascii"), file=source.name.to_str())));
             }
 
             compiler.read_script_data(&format!("{}.hsc", source.name.to_str()), &source_copy)

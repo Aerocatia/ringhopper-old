@@ -1,4 +1,4 @@
-use strings::*;
+use ringhopper_proc::*;
 use std::process::ExitCode;
 use crate::cmd::*;
 use ringhopper::error::{ErrorMessageResult, ErrorMessage};

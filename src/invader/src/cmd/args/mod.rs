@@ -4,7 +4,7 @@ use macros::terminal::*;
 use std::collections::HashMap;
 use std::path::Path;
 
-use strings::get_compiled_string;
+use ringhopper_proc::get_compiled_string;
 use ringhopper::engines::h1::EngineTarget;
 use ringhopper::error::*;
 

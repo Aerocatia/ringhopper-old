@@ -4,7 +4,7 @@ use ringhopper::engines::h1::definitions::*;
 use ringhopper::engines::h1::TagFileSerializeFn;
 use ringhopper::types::ReflexiveFn;
 use std::path::Path;
-use strings::*;
+use ringhopper_proc::*;
 use crate::file::*;
 use super::RecoverResult;
 

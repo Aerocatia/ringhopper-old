@@ -1,4 +1,4 @@
-use strings::get_compiled_string;
+use ringhopper_proc::get_compiled_string;
 
 /// Verbs define different actions that can be called by the driver for an engine module.
 #[derive(Copy, Clone, PartialEq, PartialOrd)]

@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::fs::File;
 use ringhopper::error::*;
-use strings::*;
+use ringhopper_proc::*;
 use std::io::*;
 
 /// Helper function for converting a string slice into a [`Path`] vector.

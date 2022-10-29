@@ -1,7 +1,6 @@
 use rat_in_a_tube::CompileTarget;
 
-extern crate ringhopper_proc;
-use self::ringhopper_proc::*;
+use ringhopper_proc::*;
 
 load_target_json_def!();
 

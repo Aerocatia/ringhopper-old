@@ -2,7 +2,8 @@
 
 use std::path::Path;
 use crate::error::*;
-use strings::*;
+
+use ringhopper_proc::*;
 
 use std::path::PathBuf;
 use crate::engines::h1::{TagGroup, TagReference};

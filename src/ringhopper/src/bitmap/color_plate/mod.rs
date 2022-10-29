@@ -1,4 +1,4 @@
-use strings::get_compiled_string;
+use ringhopper_proc::*;
 
 use crate::error::{ErrorMessageResult, ErrorMessage};
 use crate::types::*;

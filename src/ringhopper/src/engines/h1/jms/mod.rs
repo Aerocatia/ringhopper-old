@@ -5,7 +5,8 @@ use crate::error::*;
 use std::convert::TryInto;
 use std::str::FromStr;
 use std::fmt::Display;
-use strings::*;
+
+use ringhopper_proc::*;
 
 #[cfg(test)]
 mod tests;

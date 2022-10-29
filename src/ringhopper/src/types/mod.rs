@@ -15,8 +15,7 @@ mod color;
 pub use self::color::*;
 
 use crate::error::*;
-
-use strings::get_compiled_string;
+use ringhopper_proc::*;
 
 /// FourCC type (aliased to a 32-bit unsigned integer)
 pub type FourCC = u32;

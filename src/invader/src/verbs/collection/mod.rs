@@ -7,7 +7,7 @@ use ringhopper::types::tag::TagGroupFn;
 use macros::terminal::*;
 use crate::file::*;
 use ringhopper::error::{ErrorMessage, ErrorMessageResult};
-use strings::get_compiled_string;
+use ringhopper_proc::get_compiled_string;
 
 macro_rules! make_collection_tag {
     ($parser:ty, $input:expr) => {{

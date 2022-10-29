@@ -1,7 +1,7 @@
 [package]
 name = "ringhopper"
 authors = ["Snowy Mouse"]
-version = "0.1.0"
+version = "0.1.1"
 description = "Library for modding Halo: Combat Evolved"
 license = "GPL-3.0-only"
 repository = "https://git.sr.ht/~snowymouse/invader"
@@ -11,10 +11,7 @@ exclude = ["proc"]
 encoding = "0.2"
 rat-in-a-tube = "0.2.0"
 texpresso = "2.0"
-
-strings = { path = "../strings", package = "ringhopper-strings", version = "0.1.0" }
-macros = { path = "../macros", package = "ringhopper-macros", version = "0.1.0" }
-ringhopper-proc = { path = "proc", package = "ringhopper-proc", version = "0.1.0" }
+ringhopper-proc = { path = "proc", package = "ringhopper-proc", version = "0.1.1" }
 
 [dev-dependencies]
 tiff = "0.7"

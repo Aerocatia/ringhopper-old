@@ -1,7 +1,7 @@
 use ringhopper::engines::h1::{TagGroup, TagReference, TagFileSerializeFn, EngineTarget};
 use ringhopper::engines::h1::*;
 use ringhopper::engines::h1::definitions::*;
-use strings::*;
+use ringhopper_proc::*;
 use std::process::ExitCode;
 use crate::cmd::*;
 use ringhopper::error::{ErrorMessageResult, ErrorMessage};

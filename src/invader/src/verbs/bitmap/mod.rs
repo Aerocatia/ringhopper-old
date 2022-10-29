@@ -1,7 +1,7 @@
 use macros::*;
 use macros::terminal::*;
 use ringhopper::types::*;
-use strings::*;
+use ringhopper_proc::*;
 use crate::cmd::*;
 use ringhopper::error::*;
 use ringhopper::file::*;

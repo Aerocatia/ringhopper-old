@@ -1,4 +1,4 @@
-use strings::*;
+use ringhopper_proc::*;
 use ringhopper::error::*;
 use ringhopper::file::TagFile;
 use ringhopper::engines::h1::definitions::*;

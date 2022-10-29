@@ -1,5 +1,5 @@
 [workspace]
-members = [ "src/ringhopper", "src/invader", "src/macros", "src/strings" ]
+members = [ "src/ringhopper", "src/invader" ]
 
 [profile.release]
 lto = true
