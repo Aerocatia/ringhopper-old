@@ -10,7 +10,7 @@ use macros::*;
 use macros::terminal::*;
 use strings::*;
 
-use riat::{Compiler, NodeData, NodeType, PrimitiveType, ValueType, CompiledNode, CompileError};
+use rat_in_a_tube::{Compiler, NodeData, NodeType, PrimitiveType, ValueType, CompiledNode, CompileError};
 
 /// Trait for compiling scripts for scenario tags.
 pub trait ScriptCompiler {
@@ -273,7 +273,7 @@ fn handle_node<'a, F>(scenario: &Scenario,
 
 impl ScriptCompiler for Scenario {
     fn compile_scripts<F>(&mut self, target: &EngineTarget, hud_message_text: &HUDMessageText, hud_globals: &HUDGlobals, resolve_object_fn: &mut F) -> ErrorMessageResult<Vec<CompileError>> where F: FnMut(&str) -> ErrorMessageResult<Option<TagGroup>> {
-        let mut compiler = Compiler::new(target.script_compile_target, riat::CompileEncoding::UTF8);
+        let mut compiler = Compiler::new(target.script_compile_target);
 
         // Load scripts
         for source in &mut self.source_files {

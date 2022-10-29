@@ -1,6 +1,4 @@
 extern crate ringhopper;
-use ringhopper::engines::*;
-use ringhopper::cmd::*;
 
 use std::str::FromStr;
 use ringhopper::error::*;
@@ -13,42 +11,104 @@ extern crate png;
 
 use strings::*;
 
+mod cmd;
+use cmd::*;
+
+use ringhopper::error::ErrorMessageResult;
+use std::process::ExitCode;
+use macros::terminal::*;
+
 mod verbs;
 use verbs::*;
 
 mod file;
 mod string;
 
-use std::process::ExitCode;
+fn print_usage(path: &str, lookup: &str) {
+    eprintln!("{}", env!("invader_version"));
 
-/// [EngineModuleFn] interface for Halo: Combat Evolved.
-#[derive(Default)]
-pub struct HaloCE {}
+    eprintln!(get_compiled_string!("command_usage.error"), path=path);
+    eprintln!();
 
-impl EngineModuleFn for HaloCE {
-    fn get_verb_function(&self, verb: Verb) -> Option<VerbFn> {
-        match verb {
-            Verb::Bitmap => Some(bitmap::bitmap_verb),
-            Verb::Convert => Some(convert::convert_verb),
-            Verb::ListEngines => Some(list_engines::list_engines_verb),
-            Verb::Recover => Some(recover::recover_verb),
-            Verb::Script => Some(script::script_verb),
-            Verb::Strip => Some(strip::strip_verb),
-            Verb::Strings => Some(unicode_strings::unicode_strings_verb),
-            Verb::TagCollection => Some(collection::collection_verb),
-            Verb::UICollection => Some(collection::collection_verb),
-            Verb::UnicodeStrings => Some(unicode_strings::unicode_strings_verb),
+    if !lookup.is_empty() {
+        eprintln_error_pre!(get_compiled_string!("command_usage.error_no_verbs_matched"), lookup=lookup)
+    }
 
-            _ => None
+    eprintln!(get_compiled_string!("command_usage.error_available_verbs"));
+
+    let mut verbs_listed = 0usize;
+    for v in ALL_VERBS {
+        if get_verb_function(v.verb).is_some() {
+            verbs_listed += 1;
+            eprint!("    {: <20}  ", v.verb.get_name());
+            let pos = 4 + 15 + 2 + 3 + 2;
+            print_word_wrap(v.verb.get_description(), pos, pos, OutputType::Stderr);
+            eprintln!();
         }
     }
-    fn get_version(&self) -> &'static str {
-        env!("invader_version")
+
+    if verbs_listed == 0 {
+        eprintln_warn!("    {}", get_compiled_string!("command_usage.error_no_verbs_available"));
     }
+
+    eprintln!();
+    eprintln!(get_compiled_string!("command_usage.error_get_help"), path=path);
 }
 
 fn main() -> ExitCode {
-    ringhopper::cmd::main_fn(&HaloCE::default())
+    let args: Vec<String> = std::env::args().collect();
+    let mut args_ref: Vec<&str> = Vec::new();
+    for a in &args {
+        args_ref.push(a);
+    }
+
+    // No arguments?
+    if args.len() == 1 {
+        print_usage(args_ref[0], "");
+        ExitCode::from(1)
+    }
+
+    // Try to match an argument then!
+    else if let Some(v) = Verb::from_input(args_ref[1]) {
+        if let Some(f) = get_verb_function(v) {
+            match f(&v, &args_ref[2..], &format!("{} {}", args_ref[0], v.get_name())) {
+                Ok(n) => n,
+                Err(e) => {
+                    let string = e.to_string();
+                    if !string.is_empty() {
+                        eprintln_error_pre!("{string}");
+                    }
+
+                    ExitCode::FAILURE
+                }
+            }
+        }
+        else {
+            eprintln_error_pre!(get_compiled_string!("command_usage.error_verb_unsupported"), verb=v.get_name());
+            ExitCode::from(2)
+        }
+    }
+    else {
+        print_usage(&args[0], &args[1]);
+        ExitCode::from(2)
+    }
+}
+
+fn get_verb_function(verb: Verb) -> Option<VerbFn> {
+    match verb {
+        Verb::Bitmap => Some(bitmap::bitmap_verb),
+        Verb::Convert => Some(convert::convert_verb),
+        Verb::ListEngines => Some(list_engines::list_engines_verb),
+        Verb::Recover => Some(recover::recover_verb),
+        Verb::Script => Some(script::script_verb),
+        Verb::Strip => Some(strip::strip_verb),
+        Verb::Strings => Some(unicode_strings::unicode_strings_verb),
+        Verb::TagCollection => Some(collection::collection_verb),
+        Verb::UICollection => Some(collection::collection_verb),
+        Verb::UnicodeStrings => Some(unicode_strings::unicode_strings_verb),
+
+        _ => None
+    }
 }
 
 /// Parse a string into a value.

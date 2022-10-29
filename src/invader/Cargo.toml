@@ -1,5 +1,6 @@
 [package]
 name = "invader"
+authors = ["Snowy Mouse"]
 version = "0.1.0"
 autobins = false
 description = "The free Halo: Combat Evolved modding toolkit"
@@ -8,8 +9,8 @@ build = "build.rs"
 
 [dependencies]
 ringhopper = { path = "../ringhopper" }
-macros = { path = "../macros" }
-strings = { path = "../strings" }
+macros = { path = "../macros", package = "ringhopper-macros" }
+strings = { path = "../strings", package = "ringhopper-strings" }
 encoding = "0.2"
 tiff = "0.7"
 png = "0.17"

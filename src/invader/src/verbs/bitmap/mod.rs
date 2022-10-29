@@ -2,7 +2,7 @@ use macros::*;
 use macros::terminal::*;
 use ringhopper::types::*;
 use strings::*;
-use ringhopper::cmd::*;
+use crate::cmd::*;
 use ringhopper::error::*;
 use ringhopper::file::*;
 use ringhopper::bitmap::*;

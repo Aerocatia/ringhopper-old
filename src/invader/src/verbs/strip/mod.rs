@@ -1,6 +1,6 @@
 use strings::*;
 use std::process::ExitCode;
-use ringhopper::cmd::*;
+use crate::cmd::*;
 use ringhopper::error::{ErrorMessageResult, ErrorMessage};
 use ringhopper::file::*;
 use crate::file::*;

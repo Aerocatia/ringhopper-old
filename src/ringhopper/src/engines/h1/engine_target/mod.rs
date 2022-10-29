@@ -1,4 +1,4 @@
-use riat::CompileTarget;
+use rat_in_a_tube::CompileTarget;
 
 extern crate h1_engine_target_codegen;
 h1_engine_target_codegen::load_json_def!();

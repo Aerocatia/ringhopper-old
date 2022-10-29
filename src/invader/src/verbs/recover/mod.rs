@@ -1,6 +1,6 @@
 use strings::*;
 use std::process::ExitCode;
-use ringhopper::cmd::*;
+use crate::cmd::*;
 use ringhopper::engines::h1::TagGroup;
 use ringhopper::error::ErrorMessage;
 use ringhopper::file::TagFile;

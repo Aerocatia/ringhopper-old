@@ -1,6 +1,4 @@
 {
-    "format_ringhopper_version": "{project} {version}.r{commit_count}.{commit_hash})",
-
     "general.error_tag_not_found": "Tag {tag} not found.",
 
     "arguments.error_directory_missing": "Directory \"{dir}\" does not exist.",

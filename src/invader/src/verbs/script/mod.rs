@@ -3,7 +3,7 @@ use ringhopper::engines::h1::*;
 use ringhopper::engines::h1::definitions::*;
 use strings::*;
 use std::process::ExitCode;
-use ringhopper::cmd::*;
+use crate::cmd::*;
 use ringhopper::error::{ErrorMessageResult, ErrorMessage};
 use ringhopper::file::*;
 use ringhopper::types::*;
