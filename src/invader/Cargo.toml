@@ -6,6 +6,8 @@ autobins = false
 description = "The free Halo: Combat Evolved modding toolkit"
 license = "GPL-3.0-only"
 build = "build.rs"
+repository = "https://git.sr.ht/~snowymouse/invader"
+publish = false
 
 [dependencies]
 ringhopper = { path = "../ringhopper" }

@@ -4,9 +4,9 @@ authors = ["Snowy Mouse"]
 version = "0.1.0"
 description = "Strings used in Ringhopper's text output"
 license = "GPL-3.0-only"
+repository = "https://git.sr.ht/~snowymouse/invader"
 
 [lib]
-doc = false
 proc-macro = true
 
 [dependencies]

@@ -1,7 +1,9 @@
 use rat_in_a_tube::CompileTarget;
 
-extern crate h1_engine_target_codegen;
-h1_engine_target_codegen::load_json_def!();
+extern crate ringhopper_proc;
+use self::ringhopper_proc::*;
+
+load_target_json_def!();
 
 /// Type of base memory address.
 #[derive(Copy, Clone, PartialEq)]

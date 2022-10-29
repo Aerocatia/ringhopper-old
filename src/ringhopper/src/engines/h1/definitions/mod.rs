@@ -1,7 +1,8 @@
 //! Halo: Combat Evolved tag definitions.
 
-extern crate h1_code_generator;
-use self::h1_code_generator::load_json_def;
+extern crate ringhopper_proc;
+use self::ringhopper_proc::*;
+
 use crate::bitmap::BitmapEncoding;
 use crate::engines::h1::{TagSerialize, TagFileSerializeFn, TagReference, ScenarioScriptNodeValue, Index, TagID, Pointer, TAG_FILE_HEADER_LEN, TagGroup, ParsedTagFile, TagFileHeader};
 use crate::error::*;
@@ -12,7 +13,7 @@ use strings::*;
 
 use std::convert::{TryFrom, From};
 
-load_json_def!();
+load_definition_json_def!();
 
 // Convert model geometry parts to gbxmodel
 impl From<ModelGeometryPart> for GBXModelGeometryPart {

@@ -1,7 +1,8 @@
 [package]
-name = "h1_engine_target_codegen"
+name = "ringhopper-proc"
+authors = ["Snowy Mouse"]
 version = "0.1.0"
-description = "Code generator"
+description = "Procedural macros for the Ringhopper Halo modding crate"
 license = "GPL-3.0-only"
 
 [lib]
