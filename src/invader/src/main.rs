@@ -9,6 +9,7 @@ extern crate strings;
 extern crate macros;
 extern crate flate2;
 extern crate tiff;
+extern crate png;
 
 use strings::*;
 

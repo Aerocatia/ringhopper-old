@@ -8,8 +8,6 @@ use ringhopper::file::*;
 use ringhopper::bitmap::*;
 use ringhopper::engines::h1::definitions::*;
 use ringhopper::engines::h1::{*, TagReference};
-use tiff::decoder::*;
-use tiff::{TiffResult, ColorType};
 use crate::file::*;
 use std::convert::TryInto;
 use std::process::ExitCode;
@@ -302,8 +300,12 @@ struct Image {
 }
 
 fn load_tiff(path: &Path) -> ErrorMessageResult<Image> {
+    use tiff::decoder::*;
+    use tiff::{TiffResult, ColorType};
+
     let file = read_file(&path)?;
 
+    // Read the image, converting a TIFF error to a Ringhopper error.
     let (raw_pixels, color_type, width, height) = (|| -> TiffResult<(DecodingResult, ColorType, usize, usize)> {
         let mut decoder = Decoder::new(Cursor::new(&file))?;
         let (width,height) = decoder.dimensions()?;
@@ -312,13 +314,14 @@ fn load_tiff(path: &Path) -> ErrorMessageResult<Image> {
         Ok((image, color_type, width as usize, height as usize))
     })().map_err(|e| ErrorMessage::AllocatedString(e.to_string()))?;
 
+    // Read pixels
     let raw_pixels_vec = match raw_pixels {
         DecodingResult::U8(p) => p,
-        _ => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_8_bit_color_tiff")))
+        _ => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_8_bit_color")))
     };
 
+    // Read bit depth
     let mut pixels = Vec::with_capacity(width * height);
-
     let bit_depth = match color_type {
         ColorType::Gray(n) => n,
         ColorType::RGB(n) => n,
@@ -327,11 +330,11 @@ fn load_tiff(path: &Path) -> ErrorMessageResult<Image> {
         ColorType::RGBA(n) => n,
         ColorType::CMYK(n) => n
     };
-
     if bit_depth != 8 {
-        return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_8_bit_color_tiff")))
+        return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_8_bit_color")))
     }
 
+    // Convert pixels to ARGB
     let (conversion_function, bytes_per_pixel): (fn (input_bytes: &[u8]) -> ColorARGBInt, usize) = match color_type {
         ColorType::Gray(_) => (|pixels| ColorARGBInt::from_y8(pixels[0]), 1),
         ColorType::GrayA(_) => (|pixels| ColorARGBInt::from_a8y8(((pixels[1] as u16) << 8) | (pixels[0] as u16)), 2),
@@ -339,13 +342,60 @@ fn load_tiff(path: &Path) -> ErrorMessageResult<Image> {
         ColorType::RGBA(_) => (|pixels| ColorARGBInt { a: pixels[3], r: pixels[0], g: pixels[1], b: pixels[2] }, 4),
         _ => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_rgba_grayscale")))
     };
-
     for i in (0..raw_pixels_vec.len()).step_by(bytes_per_pixel) {
         pixels.push(conversion_function(&raw_pixels_vec[i..]))
     }
 
+    // Assert that we have the correct pixel count
     debug_assert_eq!(width * height, pixels.len());
 
+    // Done!
+    Ok(Image { width, height, pixels })
+}
+
+fn load_png(path: &Path) -> ErrorMessageResult<Image> {
+    use png::*;
+
+    let file = read_file(&path)?;
+
+    // Read the image, converting a PNG error to a Ringhopper error.
+    let (raw_pixels_vec, color_type, bit_depth, width, height) = (|| -> Result<(Vec<u8>, ColorType, BitDepth, usize, usize), DecodingError> {
+        let decoder = Decoder::new(Cursor::new(&file));
+        let mut reader = decoder.read_info()?;
+        let mut raw_pixels = vec![0; reader.output_buffer_size()];
+        let info = reader.next_frame(&mut raw_pixels)?;
+        let color_type = info.color_type;
+        let bit_depth = info.bit_depth;
+        Ok((raw_pixels, color_type, bit_depth, info.width as usize, info.height as usize))
+    })().map_err(|e| ErrorMessage::AllocatedString(e.to_string()))?;
+
+    // Get the bit depth
+    let bit_depth = match bit_depth {
+        BitDepth::One => 1,
+        BitDepth::Two => 2,
+        BitDepth::Four => 4,
+        BitDepth::Eight => 8,
+        BitDepth::Sixteen => 16
+    };
+    if bit_depth != 8 {
+        return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_8_bit_color")))
+    }
+
+    let mut pixels = Vec::with_capacity(width * height);
+
+    // Convert pixels to ARGB
+    let (conversion_function, bytes_per_pixel): (fn (input_bytes: &[u8]) -> ColorARGBInt, usize) = match color_type {
+        ColorType::Grayscale => (|pixels| ColorARGBInt::from_y8(pixels[0]), 1),
+        ColorType::GrayscaleAlpha => (|pixels| ColorARGBInt::from_a8y8(((pixels[1] as u16) << 8) | (pixels[0] as u16)), 2),
+        ColorType::Rgb => (|pixels| ColorARGBInt { a: 255, r: pixels[0], g: pixels[1], b: pixels[2] } , 3),
+        ColorType::Rgba => (|pixels| ColorARGBInt { a: pixels[3], r: pixels[0], g: pixels[1], b: pixels[2] }, 4),
+        _ => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_rgba_grayscale")))
+    };
+    for i in (0..raw_pixels_vec.len()).step_by(bytes_per_pixel) {
+        pixels.push(conversion_function(&raw_pixels_vec[i..]))
+    }
+
+    // Done!
     Ok(Image { width, height, pixels })
 }
 
@@ -355,7 +405,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         *Bitmap::from_tag_file(&read_file(&file.file_path)?)?.data
     }
     else if options.regenerate {
-        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_cannot_regenerate_missing_tag"), tag=file.tag_path.get_path_with_extension())))
+        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_cannot_regenerate_missing_tag"), tag=file.tag_path)))
     }
     else {
         let mut tag = Bitmap::default();
@@ -369,7 +419,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     let image = if options.regenerate {
         // Check if we have a color plate.
         if bitmap_tag.compressed_color_plate_data.is_empty() {
-            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_cannot_regenerate_missing_color_plate"), tag=file.tag_path.get_path_with_extension())))
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_cannot_regenerate_missing_color_plate"), tag=file.tag_path)))
         }
 
         // Regenerate
@@ -388,9 +438,28 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     }
     else {
         // Load the TIFF if we are not regenerating
-        let mut tiff = data_dir.join(file.tag_path.to_string());
-        tiff.set_extension("tif");
-        load_tiff(&tiff)?
+        let mut data = data_dir.join(file.tag_path.to_string());
+
+        data.set_extension("tif");
+        if data.exists() {
+            load_tiff(&data)?
+        }
+        else {
+            data.set_extension("tiff");
+            if data.exists() {
+                load_tiff(&data)?
+            }
+            else {
+                data.set_extension("png");
+                if data.exists() {
+                    load_png(&data)?
+                }
+                else {
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_cannot_find_bitmap_data"), tag=file.tag_path)))
+                }
+            }
+        }
+
     };
 
     options.apply_to_bitmap_tag(&mut bitmap_tag);

@@ -12,6 +12,7 @@ macros = { path = "../macros" }
 strings = { path = "../strings" }
 encoding = "0.2"
 tiff = "0.7"
+png = "0.17"
 flate2 = "1.0"
 
 [[bin]]
