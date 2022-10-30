@@ -29,6 +29,7 @@
     "command_usage.error_argument_unknown": "Unknown argument {prefix}{arg}",
     "command_usage.error_arguments_missing": "Arguments are missing. Needs:",
     "command_usage.error_available_verbs": "Available verbs:",
+    "command_usage.error_bad_thread_count": "Invalid thread count \"{string}\": {error}",
     "command_usage.error_get_help": "Use {path} <verb> --help to view help information for a verb.",
     "command_usage.error_no_verbs_available": "<no verbs are available for this tool>",
     "command_usage.error_no_verbs_matched": "No verbs matched \"{lookup}\"!",
@@ -193,6 +194,13 @@
     "engine.h1.verbs.script.error_no_hud_globals_referenced": "No HUD globals tag referenced by the globals tag.",
     "engine.h1.verbs.script.error_no_interface_bitmaps": "No interface bitmaps in the globals tag.",
     "engine.h1.verbs.script.error_no_tags_compiled": "No scripts could be compiled due to {error} error(s)",
+
+    "engine.h1.verbs.sound.arguments.channel-count.description": "Force the channel count and remix audio not equal to this. Can be: mono or stereo. Default (new tag): channel count of the input audio",
+    "engine.h1.verbs.sound.arguments.class.description": "Set the class. This option is required if the tag does not exist. Can be: ambient-computers, ambient-machinery, ambient-nature, device-computers, device-door, device-force-field, device-machinery, device-nature, first-person-damage, game-event, music, object-impacts, particle-impacts, projectile-impact, projectile-detonation, scripted-dialog-force-unspatialized, scripted-dialog-other, scripted-dialog-player, scripted-effect, slow-particle-impacts, unit-dialog, unit-footsteps, vehicle-collision, vehicle-engine, weapon-charge, weapon-empty, weapon-fire, weapon-idle, weapon-overheat, weapon-ready, weapon-reload.",
+    "engine.h1.verbs.sound.arguments.compression-level.description": "Set the compression level for Ogg Vorbis streams. Can be: -0.2 to 1.0 or be a bitrate in kbps if suffixed with k (e.g. 100k). Default: 1.0",
+    "engine.h1.verbs.sound.arguments.format.description": "Set the output format of the samples. Can be: 16-bit-pcm, ogg-vorbis, xbox-adpcm. Default (new tag): 16-bit-pcm",
+    "engine.h1.verbs.sound.arguments.sample-rate.description": "Force the sample rate and resample audio not equal to this. Can be: 22050 or 44100. Default (new tag): 44100 Hz if input audio is greater than 22050 Hz, or 22050 Hz",
+    "engine.h1.verbs.sound.arguments.split.description": "Set if the permutations should be split to reduce memory usage. This cannot be used for dialogue. Default (new tag): off",
 
     "engine.h1.verbs.strip.error_could_not_strip_tag": "Could not strip {tag}: {error}",
     "engine.h1.verbs.strip.error_no_tags_stripped": "No tags were stripped due to {error} error(s).",

@@ -58,3 +58,27 @@ pub fn make_directories(path: &Path) -> ErrorMessageResult<()> {
 pub fn make_parent_directories(path: &Path) -> ErrorMessageResult<()> {
     make_directories(&path.parent().unwrap())
 }
+
+/// Format the size to a human-readable size
+pub fn format_size(length: usize) -> String {
+    // Convert to 64-bit float
+    let length = length as f64;
+
+    let suffix = (|| {
+        let suffixes = &[
+            (1.0, "B"),
+            (1024.0, "KiB"),
+            (1024.0 * 1024.0, "MiB"),
+            (1024.0 * 1024.0 * 1024.0, "GiB"),
+            (1024.0 * 1024.0 * 1024.0 * 1024.0, "TiB")
+        ];
+        for i in 0..suffixes.len() - 1 {
+            if length < suffixes[i + 1].0 {
+                return suffixes[i];
+            }
+        }
+        return *suffixes.last().unwrap();
+    })();
+
+    format!("{length:0.3} {suffix}", length=length / suffix.0, suffix=suffix.1)
+}

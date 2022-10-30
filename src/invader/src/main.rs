@@ -8,6 +8,10 @@ extern crate macros;
 extern crate flate2;
 extern crate tiff;
 extern crate png;
+extern crate symphonia;
+extern crate rubato;
+extern crate vorbis_rs;
+extern crate xbadpcm;
 
 use ringhopper_proc::*;
 
@@ -100,6 +104,7 @@ fn get_verb_function(verb: Verb) -> Option<VerbFn> {
         Verb::Convert => Some(convert::convert_verb),
         Verb::ListEngines => Some(list_engines::list_engines_verb),
         Verb::Recover => Some(recover::recover_verb),
+        Verb::Sound => Some(sound::sound_verb),
         Verb::Script => Some(script::script_verb),
         Verb::Strip => Some(strip::strip_verb),
         Verb::Strings => Some(unicode_strings::unicode_strings_verb),

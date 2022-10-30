@@ -109,74 +109,30 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
     ], &[get_compiled_string!("arguments.specifier.tag_batch_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags().uses_threads())?;
     let tag_path = &parsed_args.extra[0];
 
-    let parse_f32 = |what: &str| {
-        match parsed_args.named.get(what) {
-            Some(n) => {
-                let parsed_float = n[0].parse::<f32>();
-                match parsed_float {
-                    Ok(f) => Ok(Some(f)),
-                    Err(e) => Err(ErrorMessage::AllocatedString(e.to_string()))
-                }
-            },
-            None => Ok(None)
-        }
-    };
-
-    let parse_u16 = |what: &str| {
-        match parsed_args.named.get(what) {
-            Some(n) => {
-                let parsed_float = n[0].parse::<u16>();
-                match parsed_float {
-                    Ok(f) => Ok(Some(f)),
-                    Err(e) => Err(ErrorMessage::AllocatedString(e.to_string()))
-                }
-            },
-            None => Ok(None)
-        }
-    };
-
-    let parse_bool = |what: &str| {
-        match parsed_args.named.get(what) {
-            Some(n) if n[0] == "off" => Ok(Some(false)),
-            Some(n) if n[0] == "on" => Ok(Some(true)),
-            Some(n) => Err(ErrorMessage::AllocatedString(format!(r#"{arg} != "off" | "on""#, arg=n[0]))),
-            None => Ok(None)
-        }
-    };
-
-    macro_rules! parse_enum_cli {
-        ($what:expr) => {
-            match parsed_args.named.get($what) {
-                Some(n) => Ok(Some(crate::from_str(&n[0])?)),
-                None => Ok(None)
-            }
-        }
-    }
-
     let options = BitmapOptions {
-        detail_fade_factor: parse_f32("detail-fade-factor")?,
-        sharpen_amount: parse_f32("sharpen-amount")?,
-        bump_height: parse_f32("bump-height")?,
-        blur_filter_size: parse_f32("blur-filter-size")?,
-        alpha_bias: parse_f32("alpha-bias")?,
+        detail_fade_factor: parsed_args.parse_f32("detail-fade-factor")?,
+        sharpen_amount: parsed_args.parse_f32("sharpen-amount")?,
+        bump_height: parsed_args.parse_f32("bump-height")?,
+        blur_filter_size: parsed_args.parse_f32("blur-filter-size")?,
+        alpha_bias: parsed_args.parse_f32("alpha-bias")?,
 
-        sprite_budget_count: parse_u16("sprite-budget-count")?,
-        map_count: parse_u16("map-count")?,
-        sprite_spacing: parse_u16("sprite-spacing")?,
+        sprite_budget_count: parsed_args.parse_u16("sprite-budget-count")?,
+        map_count: parsed_args.parse_u16("map-count")?,
+        sprite_spacing: parsed_args.parse_u16("sprite-spacing")?,
 
-        enable_diffusion_dithering: parse_bool("dithering")?,
-        disable_height_map_compression: parse_bool("disable-palettization")?,
-        uniform_sprite_sequences: parse_bool("uniform-sprite-sequences")?,
-        reg_point_from_texture: parse_bool("reg-point-from-texture")?,
+        enable_diffusion_dithering: parsed_args.parse_bool_on_off("dithering")?,
+        disable_height_map_compression: parsed_args.parse_bool_on_off("disable-palettization")?,
+        uniform_sprite_sequences: parsed_args.parse_bool_on_off("uniform-sprite-sequences")?,
+        reg_point_from_texture: parsed_args.parse_bool_on_off("reg-point-from-texture")?,
 
-        encoding_format: parse_enum_cli!("format")?,
-        sprite_budget_size: match parse_u16("sprite-budget-size")? {
+        encoding_format: parsed_args.parse_enum("format")?,
+        sprite_budget_size: match parsed_args.parse_u16("sprite-budget-size")? {
             Some(n) => Some(BitmapSpriteBudgetSize::from_length(n)?),
             None => None
         },
-        sprite_usage: parse_enum_cli!("sprite-usage")?,
-        usage: parse_enum_cli!("usage")?,
-        bitmap_type: parse_enum_cli!("type")?,
+        sprite_usage: parsed_args.parse_enum("sprite-usage")?,
+        usage: parsed_args.parse_enum("usage")?,
+        bitmap_type: parsed_args.parse_enum("type")?,
 
         square_sheets: parsed_args.named.contains_key("square-sheets"),
         regenerate: parsed_args.named.contains_key("regenerate"),
@@ -192,16 +148,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         }
     };
 
-    let max_threads: usize = match parse_u16("threads")? {
-        Some(t) => {
-            ((t / 2) as usize).max(1)
-        },
-        None => match std::thread::available_parallelism() {
-            Ok(n) => (n.get() / 2).max(1),
-            Err(_) => 1
-        }
-    };
-
+    let max_threads = (parsed_args.threads / 2).max(1);
     let data_dir = Path::new(&parsed_args.named["data"][0]).to_owned();
     let log_mutex = std::sync::Arc::new(std::sync::Mutex::new(true));
     if TagFile::uses_batching(tag_path) {
@@ -922,27 +869,4 @@ fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
         nearest_neighbor_alpha_mipmap: bitmap_tag.usage == BitmapUsage::VectorMap,
         truncate_zero_alpha: bitmap_tag.usage == BitmapUsage::AlphaBlend,
     }
-}
-
-fn format_size(length: usize) -> String {
-    // Convert to 64-bit float
-    let length = length as f64;
-
-    let suffix = (|| {
-        let suffixes = &[
-            (1.0, "B"),
-            (1024.0, "KiB"),
-            (1024.0 * 1024.0, "MiB"),
-            (1024.0 * 1024.0 * 1024.0, "GiB"),
-            (1024.0 * 1024.0 * 1024.0 * 1024.0, "TiB")
-        ];
-        for i in 0..suffixes.len() - 1 {
-            if length < suffixes[i + 1].0 {
-                return suffixes[i];
-            }
-        }
-        return *suffixes.last().unwrap();
-    })();
-
-    format!("{length:0.3} {suffix}", length=length / suffix.0, suffix=suffix.1)
 }

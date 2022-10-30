@@ -8,6 +8,8 @@ use ringhopper_proc::get_compiled_string;
 use ringhopper::engines::h1::EngineTarget;
 use ringhopper::error::*;
 
+use FromStr;
+
 #[cfg(test)]
 mod tests;
 
@@ -103,8 +105,75 @@ pub struct ParsedArguments {
     pub extra: Vec<String>,
 
     /// Engine target, if one was specified
-    pub engine_target: Option<&'static EngineTarget>
+    pub engine_target: Option<&'static EngineTarget>,
+
+    /// Number of threads to use
+    pub threads: usize
 }
+
+impl ParsedArguments {
+    /// Get the first argument, parsed as a 32-bit float if set.
+    pub fn parse_f32(&self, argument: &str) -> ErrorMessageResult<Option<f32>> {
+        match self.named.get(argument) {
+            Some(n) => {
+                let parsed_float = n[0].parse::<f32>();
+                match parsed_float {
+                    Ok(f) => Ok(Some(f)),
+                    Err(e) => Err(ErrorMessage::AllocatedString(e.to_string()))
+                }
+            },
+            None => Ok(None)
+        }
+    }
+
+    /// Get the first argument, parsed as a 16-bit unsigned integer if set.
+    pub fn parse_u16(&self, argument: &str) -> ErrorMessageResult<Option<u16>> {
+        match self.named.get(argument) {
+            Some(n) => {
+                let parsed_u16 = n[0].parse::<u16>();
+                match parsed_u16 {
+                    Ok(i) => Ok(Some(i)),
+                    Err(e) => Err(ErrorMessage::AllocatedString(e.to_string()))
+                }
+            },
+            None => Ok(None)
+        }
+    }
+
+    /// Get the first argument, parsed as an enum value if set.
+    pub fn parse_enum<T: FromStr<Err = ErrorMessage>>(&self, argument: &str) -> ErrorMessageResult<Option<T>> {
+        match self.named.get(argument) {
+            Some(n) => Ok(Some(crate::from_str(&n[0])?)),
+            None => Ok(None)
+        }
+    }
+
+    /// Get the first argument, parsed as some value if set.
+    pub fn parse_set<T>(&self, argument: &str, allowed_values: &[(&str, T)]) -> ErrorMessageResult<Option<T>> where T: Sized + Copy {
+        let arg = match self.named.get(argument) {
+            Some(n) => &n[0],
+            None => return Ok(None)
+        };
+
+        for i in allowed_values {
+            if arg == i.0 {
+                return Ok(Some(i.1));
+            }
+        }
+
+        let mut error_message = format!("{arg} != \"{first_val}\"", first_val=allowed_values[0].0);
+        for i in &allowed_values[1..] {
+            error_message += &format!(" | \"{value}\"", value=i.0);
+        }
+        Err(ErrorMessage::AllocatedString(error_message))
+    }
+
+    // Parse a boolean on/off value.
+    pub fn parse_bool_on_off(&self, argument: &str) -> ErrorMessageResult<Option<bool>> {
+        self.parse_set(argument, &[("on", true), ("off", false)])
+    }
+}
+
 
 /// Argument to search for in [ParsedArguments::parse_arguments].
 #[derive(Copy, Clone)]
@@ -257,6 +326,16 @@ impl ParsedArguments {
                     parsed.extra.push(input_param.to_owned());
                 }
             }
+
+            parsed.threads = if let Some(t) = parsed.named.get("threads") {
+                let string = t[0].as_str();
+                string.parse().map_err(|e| ErrorMessage::AllocatedString(format!(get_compiled_string!("command_usage.error_bad_thread_count"), string=string, error=e)))?
+            } else {
+                match std::thread::available_parallelism() {
+                    Ok(n) => n.get(),
+                    Err(_) => 1
+                }
+            };
 
             // Did we put --help? If so... yay.
             if let Some(_) = parsed.named.get("help") {

@@ -124,6 +124,12 @@ impl String32 {
     }
 }
 
+impl fmt::Display for String32 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        f.write_str(self.to_str())
+    }
+}
+
 /// Point with two X/Y shorts.
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
 pub struct Point2DInt {

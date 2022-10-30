@@ -96,16 +96,10 @@ fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit:
         return Err(ErrorMessage::StaticString(get_compiled_string!("file.error_reading_virtual_tags_directory")))
     }
 
-    let iterator = match std::fs::read_dir(directory) {
-        Ok(n) => n,
-        Err(e) => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_iterating_directory"), path=directory.to_string_lossy(), error=e)))
-    };
+    let iterator = std::fs::read_dir(directory).map_err(|e| ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_iterating_directory"), path=directory.to_string_lossy(), error=e)))?;
 
     for i in iterator {
-        let file = match i {
-            Ok(n) => n,
-            Err(e) => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_iterating_directory"), path=directory.to_string_lossy(), error=e)))
-        };
+        let file = i.map_err(|e| ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_iterating_directory"), path=directory.to_string_lossy(), error=e)))?;
 
         let file_path = file.path();
         if file_path.is_dir() {

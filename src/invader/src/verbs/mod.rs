@@ -4,5 +4,6 @@ pub mod convert;
 pub mod list_engines;
 pub mod recover;
 pub mod script;
+pub mod sound;
 pub mod strip;
 pub mod unicode_strings;
