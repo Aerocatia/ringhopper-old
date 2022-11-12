@@ -1,9 +1,9 @@
 use ringhopper::{error::ErrorMessageResult, types::Bounds, engines::h1::definitions::SoundFormat};
-use rubato::{Resampler, SincFixedIn, InterpolationType, InterpolationParameters, WindowFunction};
+use libsamplerate_sys::*;
 
 use vorbis_rs::*;
 
-use std::{path::*, num::*};
+use std::{path::*, num::*, ffi::{CStr, c_long}};
 use ringhopper::error::*;
 use crate::file::*;
 use ringhopper_proc::*;
@@ -109,7 +109,8 @@ impl Sound {
         let stream = MediaSourceStream::new(Box::new(cursor), MediaSourceStreamOptions::default());
 
         let mut hint = Hint::new();
-        hint.with_extension(path.extension().unwrap().to_str().unwrap());
+        let extension = path.extension().unwrap().to_str().unwrap().to_ascii_lowercase();
+        hint.with_extension(&extension);
 
         let mut r = probe.format(&hint, stream, &FormatOptions::default(), &MetadataOptions::default())
                          .map_err(|e| ErrorMessage::AllocatedString(format!("Can't decode \"{file}\": {e}", file=path.to_string_lossy(), e=e.to_string())))?;
@@ -178,7 +179,7 @@ impl Sound {
     /// Encode the sound to the given format.
     pub fn encode(&mut self, format: SoundFormat, split: bool, compression_level: VorbisBitrateManagementStrategy) -> ErrorMessageResult<()> {
         let permutation_len = if split {
-            116480
+            232960 / 2 // number of bytes allowed max divided by 2 bytes per sample
         }
         else {
             self.samples.len()
@@ -366,7 +367,7 @@ pub struct PitchRange {
     pub natural_pitch: f32,
 
     /// Default pitch bounds to set in the tag.
-    pub pitch_bounds: Bounds<f32>
+    pub pitch_bounds: Bounds<f32>,
 }
 
 impl PitchRange {
@@ -378,9 +379,8 @@ impl PitchRange {
             }
             else if let Some(n) = f.extension() {
                 match n.to_str() {
-                    Some("wav") => true,
-                    Some("flac") => true,
-                    _ => false
+                    None => false,
+                    Some(n) => n.eq_ignore_ascii_case("wav") || n.eq_ignore_ascii_case("flac")
                 }
             }
             else {
@@ -401,51 +401,88 @@ impl PitchRange {
 }
 
 /// Resample the given samples to the new sample rate.
-pub fn resample(samples: &[i16], channel_count: usize, old_sample_rate: u32, new_sample_rate: u32) -> Vec<i16> {
-    let real_sample_count = samples.len() / channel_count;
+pub fn resample(samples: &[i16], channel_count: usize, old_sample_rate: u32, new_sample_rate: u32) -> ErrorMessageResult<Vec<i16>> {
+    // Calculate the ratio
+    let ratio = new_sample_rate as f64 / old_sample_rate as f64;
+    let old_frame_count = samples.len() / channel_count;
+    let new_frame_count = (old_frame_count as f64 * (ratio + 0.95)).round() as usize; // allocate a few extra samples to make sure it works
 
-    let params = InterpolationParameters {
-        sinc_len: 256,
-        f_cutoff: 0.95,
-        interpolation: InterpolationType::Linear,
-        oversampling_factor: 256,
-        window: WindowFunction::BlackmanHarris2,
-    };
-    let mut resampler = SincFixedIn::<f32>::new(
-        new_sample_rate as f64 / old_sample_rate as f64,
-        2.0,
-        params,
-        real_sample_count,
-        channel_count
-    ).unwrap();
-
-    let mut new_samples = Vec::new();
-    match channel_count {
-        1 => {
-            let mut input = Vec::with_capacity(real_sample_count);
-            for i in samples {
-                input.push(convert_pcm_16_to_f32(*i));
-            }
-            let result = resampler.process(&[input], None).unwrap();
-            new_samples.reserve(result.len());
-            for i in &result[0] {
-                new_samples.push(convert_pcm_f32_to_16(*i));
-            }
-        },
-        2 => {
-            let l: Vec<f32> = samples.iter().step_by(2).map(|i| convert_pcm_16_to_f32(*i)).collect();
-            let r: Vec<f32> = samples.iter().skip(1).step_by(2).map(|i| convert_pcm_16_to_f32(*i)).collect();
-            let result = resampler.process(&[l,r], None).unwrap();
-            let iterator = result[0].iter().zip(result[1].iter());
-            new_samples.reserve(iterator.clone().count());
-            for i in iterator {
-                new_samples.extend_from_slice(&[convert_pcm_f32_to_16(*i.0), convert_pcm_f32_to_16(*i.1)]);
-            }
-        },
-        _ => unreachable!()
+    // Convert float to 16-bit PCM
+    let mut input_samples = Vec::with_capacity(samples.len());
+    for i in samples {
+        input_samples.push(convert_pcm_16_to_f32(*i));
     }
 
-    new_samples
+    // Do a checked_mul so if we overflow, we panic here rather then do UB
+    let mut output_samples = Vec::with_capacity(new_frame_count.checked_mul(channel_count).unwrap());
+
+    // Instantiate our resampler
+    let mut res = 0i32;
+    let state = unsafe { src_new(SRC_SINC_BEST_QUALITY as std::ffi::c_int, channel_count as std::ffi::c_int, &mut res) };
+    if res != 0 {
+        panic!("Failed to resample! src_strerror: {}", unsafe { CStr::from_ptr(src_strerror(res) as *const i8).to_str().unwrap() });
+    }
+
+    // Initialize our input struct
+    let mut data = SRC_DATA::default();
+    data.src_ratio = ratio;
+    data.data_in = input_samples.as_ptr();
+    data.data_out = output_samples.as_mut_ptr();
+
+    // Loop on all samples
+    let samples_per_go = old_frame_count.min(10000);
+    let mut frames_processed = 0usize;
+    let mut frames_output = 0usize;
+    loop {
+        let samples_to_process = (old_frame_count - frames_processed).min(samples_per_go);
+        let ending = data.end_of_input == 1;
+
+        data.input_frames_used = 0;
+        data.data_in = input_samples[frames_processed * channel_count..].as_ptr();
+        data.data_out = unsafe { output_samples.as_mut_ptr().add(frames_output * channel_count) };
+        data.input_frames = samples_to_process as c_long;
+        data.output_frames = (c_long::MAX as usize).min(new_frame_count - frames_output) as c_long;
+
+        // Process
+        res = unsafe { src_process(state, &mut data) };
+        if res != 0 {
+            unsafe { src_delete(state) };
+            panic!("Failed to resample! src_strerror: {}", unsafe { CStr::from_ptr(src_strerror(res) as *const i8).to_str().unwrap() });
+        }
+
+        // Increment
+        let output_frames = data.output_frames_gen as usize;
+        frames_output += output_frames;
+        frames_processed += data.input_frames_used as usize;
+
+        // If we are done, break
+        if ending {
+            break;
+        }
+
+        // If we did not process any samples, signal that we are finishing
+        if data.input_frames_used == 0 {
+            data.end_of_input = 1;
+        }
+    }
+
+    // We're done. Close secret rabbit code now.
+    unsafe { src_delete(state); }
+
+    // Check if we blew it.
+    debug_assert_eq!(old_frame_count, frames_processed, "Did not process all frames! ({} expected, got {})", old_frame_count, frames_processed);
+
+    // Resize the buffer to whatever our new size is
+    unsafe { output_samples.set_len(frames_output * channel_count) };
+
+    // Create a new buffer containing our new samples
+    let mut new_samples = Vec::with_capacity(output_samples.len());
+    for s in output_samples {
+        new_samples.push(convert_pcm_f32_to_16(s));
+    }
+
+    // Return
+    Ok(new_samples)
 }
 
 /// Change the channel count of the given samples.

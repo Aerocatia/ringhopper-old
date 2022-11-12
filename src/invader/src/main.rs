@@ -9,9 +9,9 @@ extern crate flate2;
 extern crate tiff;
 extern crate png;
 extern crate symphonia;
-extern crate rubato;
 extern crate vorbis_rs;
 extern crate xbadpcm;
+extern crate libsamplerate_sys;
 
 use ringhopper_proc::*;
 

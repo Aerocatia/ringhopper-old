@@ -19,8 +19,9 @@ png = "0.17"
 flate2 = "1.0"
 rubato = "0.12"
 vorbis_rs = "0.1"
-symphonia = { version = "0.5.1", features = ["wav", "vorbis", "flac"] }
+symphonia = { version = "0.5.1", features = ["wav", "flac", "pcm"], default-features = false }
 xbadpcm = "0.1"
+libsamplerate-sys = "0.1.12"
 
 [[bin]]
 name = "invader"

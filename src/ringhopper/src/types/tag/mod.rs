@@ -2,7 +2,7 @@
 
 use std::any::Any;
 use std::any::TypeId;
-use std::fmt::{self, Write};
+use std::fmt;
 use crate::types::*;
 
 #[cfg(test)]
@@ -591,6 +591,7 @@ impl<T: TagGroupFn> fmt::Display for TagReference<T> {
     // If we aren't on Windows, go through each character one-by-one, converting backslashes to OS path separators.
     #[cfg(not(target_os = "windows"))]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        use std::fmt::Write;
         for c in self.path.chars() {
             let character = match c {
                 HALO_DIRECTORY_SEPARATOR => std::path::MAIN_SEPARATOR,

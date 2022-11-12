@@ -88,7 +88,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
     }
     else {
         if options.class.is_none() {
-            return Err(ErrorMessage::AllocatedString(format!("Sound tag \"{tag}\" does not exist and no class was provided.", tag=tag.tag_path)))
+            return Err(ErrorMessage::AllocatedString(format!("A sound class is required because sound tag \"{tag}\" does not yet exist.", tag=tag.tag_path)))
         }
         default_channel_count = options.channel_count;
         default_sample_rate = options.sample_rate;
@@ -123,7 +123,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
 
             // Resample
             if pe.sample_rate != best_sample_rate {
-                pe.samples = util::resample(&pe.samples, pe.channels, pe.sample_rate, best_sample_rate);
+                pe.samples = util::resample(&pe.samples, pe.channels, pe.sample_rate, best_sample_rate)?;
                 pe.sample_rate = best_sample_rate;
             }
         }
@@ -325,6 +325,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
                  kbps=(total_size as f64 / (1000.0 / 8.0)) / total_time)
     }
 
+    make_parent_directories(&tag.file_path)?;
     write_file(&tag.file_path, &sound_tag.into_tag_file()?)?;
 
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=tag.tag_path);
