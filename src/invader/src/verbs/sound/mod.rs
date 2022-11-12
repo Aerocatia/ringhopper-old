@@ -19,6 +19,7 @@ struct SoundOptions {
     sample_rate: Option<u32>,
     channel_count: Option<usize>,
     split: Option<bool>,
+    adpcm_block_size: Option<bool>,
     compression_level: VorbisBitrateManagementStrategy,
     class: Option<SoundClass>,
     format: Option<SoundFormat>
@@ -32,6 +33,7 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
         Argument { long: "format", short: 'f', description: get_compiled_string!("engine.h1.verbs.sound.arguments.format.description"), parameter: Some("format"), multiple: false },
         Argument { long: "sample-rate", short: 'R', description: get_compiled_string!("engine.h1.verbs.sound.arguments.sample-rate.description"), parameter: Some("Hz"), multiple: false },
         Argument { long: "split", short: 'S', description: get_compiled_string!("engine.h1.verbs.sound.arguments.split.description"), parameter: Some("on/off"), multiple: false },
+        Argument { long: "fit-to-adpcm-block-size", short: 'A', description: get_compiled_string!("engine.h1.verbs.sound.arguments.fit-to-adpcm-block-size.description"), parameter: Some("on/off"), multiple: false },
     ], &[get_compiled_string!("arguments.specifier.tag_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_tags().needs_data().uses_threads())?;
 
     let options = SoundOptions {
@@ -65,7 +67,8 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
         class: parsed_args.parse_enum("class")?,
         format: parsed_args.parse_enum("format")?,
         channel_count: parsed_args.parse_set("channel-count", &[("stereo", 2), ("mono", 1)])?,
-        sample_rate: parsed_args.parse_set("sample-rate", &[("22050", 22050), ("44100", 44100)])?
+        sample_rate: parsed_args.parse_set("sample-rate", &[("22050", 22050), ("44100", 44100)])?,
+        adpcm_block_size: parsed_args.parse_bool_on_off("fit-to-adpcm-block-size")?
     };
 
     let tag_path = &parsed_args.extra[0];
@@ -80,6 +83,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
     let default_channel_count;
     let default_sample_rate;
 
+    // Load our sounds
     let mut sound_tag = if tag.file_path.is_file() {
         let sound_tag = *Sound::from_tag_file(&read_file(&tag.file_path)?)?.data;
         default_channel_count = Some(options.channel_count.unwrap_or(match sound_tag.channel_count { SoundChannelCount::Mono => 1, SoundChannelCount::Stereo => 2 }));
@@ -96,6 +100,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
     };
 
     sound_tag.flags.split_long_sound_into_permutations = options.split.unwrap_or(sound_tag.flags.split_long_sound_into_permutations);
+    sound_tag.flags.fit_to_adpcm_blocksize = options.adpcm_block_size.unwrap_or(sound_tag.flags.fit_to_adpcm_blocksize);
     sound_tag.format = options.format.unwrap_or(sound_tag.format);
     sound_tag.sound_class = options.class.unwrap_or(sound_tag.sound_class);
 
@@ -123,8 +128,28 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
 
             // Resample
             if pe.sample_rate != best_sample_rate {
-                pe.samples = util::resample(&pe.samples, pe.channels, pe.sample_rate, best_sample_rate)?;
+                pe.samples = util::resample(&pe.samples, pe.channels, pe.sample_rate as f64 / best_sample_rate as f64)?;
                 pe.sample_rate = best_sample_rate;
+            }
+
+            // Fit to Xbox ADPCM block size
+            if sound_tag.format == SoundFormat::XboxAdpcm && sound_tag.flags.fit_to_adpcm_blocksize {
+                let alignment = 64 * best_channel_count;
+                let disparity = pe.samples.len() % alignment;
+                if disparity != 0 {
+                    // Round up
+                    let samples_to_add = alignment - disparity;
+
+                    let end = pe.samples.len().min(1024);
+
+                    let new_end = end + samples_to_add;
+
+                    let mut new_end_resampled = util::resample(&pe.samples[end..], pe.channels, new_end as f64 / end as f64)?;
+                    new_end_resampled.resize(new_end, *new_end_resampled.last().unwrap());
+
+                    pe.samples.resize(pe.samples.len() - end, 0);
+                    pe.samples.append(&mut new_end_resampled);
+                }
             }
         }
 

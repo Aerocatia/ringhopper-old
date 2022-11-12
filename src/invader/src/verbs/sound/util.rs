@@ -401,9 +401,8 @@ impl PitchRange {
 }
 
 /// Resample the given samples to the new sample rate.
-pub fn resample(samples: &[i16], channel_count: usize, old_sample_rate: u32, new_sample_rate: u32) -> ErrorMessageResult<Vec<i16>> {
+pub fn resample(samples: &[i16], channel_count: usize, ratio: f64) -> ErrorMessageResult<Vec<i16>> {
     // Calculate the ratio
-    let ratio = new_sample_rate as f64 / old_sample_rate as f64;
     let old_frame_count = samples.len() / channel_count;
     let new_frame_count = (old_frame_count as f64 * (ratio + 0.95)).round() as usize; // allocate a few extra samples to make sure it works
 
