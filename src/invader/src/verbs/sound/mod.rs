@@ -64,7 +64,7 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
                     }
                 }
             },
-            None => VorbisBitrateManagementStrategy::QualityVbr { target_quality: 1.0 }
+            None => VorbisBitrateManagementStrategy::QualityVbr { target_quality: 0.8 }
         },
         class: parsed_args.parse_enum("class")?,
         format: parsed_args.parse_enum("format")?,
@@ -275,7 +275,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
 
                     // Resample
                     if pe.sample_rate != best_sample_rate {
-                        pe.samples = util::resample(&pe.samples, pe.channels, pe.sample_rate as f64 / best_sample_rate as f64)?;
+                        pe.samples = util::resample(&pe.samples, pe.channels, best_sample_rate as f64 / pe.sample_rate as f64)?;
                         pe.sample_rate = best_sample_rate;
                     }
 
@@ -284,13 +284,14 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
                         let alignment = 64 * best_channel_count;
                         let disparity = pe.samples.len() % alignment;
                         if disparity != 0 {
-                            // Round up
+                            // Round up to the next chunk size
                             let samples_to_add = alignment - disparity;
-                            let end = pe.samples.len().min(1024);
-                            let new_end = end + samples_to_add;
-                            let mut new_end_resampled = util::resample(&pe.samples[end..], pe.channels, new_end as f64 / end as f64)?;
-                            new_end_resampled.resize(new_end, *new_end_resampled.last().unwrap());
-                            pe.samples.resize(pe.samples.len() - end, 0);
+                            let end_length = pe.samples.len().min(8192 * (pe.sample_rate as usize / 22050usize) * pe.channels);
+                            let new_end_length = end_length + samples_to_add;
+                            let end_offset = pe.samples.len() - end_length;
+                            let mut new_end_resampled = util::resample(&pe.samples[end_offset..], pe.channels, new_end_length as f64 / end_length as f64)?;
+                            new_end_resampled.resize(new_end_length, *new_end_resampled.last().unwrap());
+                            pe.samples.resize(end_offset, 0);
                             pe.samples.append(&mut new_end_resampled);
                         }
                     }
