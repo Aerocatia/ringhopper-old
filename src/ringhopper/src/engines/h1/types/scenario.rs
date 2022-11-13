@@ -117,10 +117,9 @@ fn handle_node<'a, F>(scenario: &Scenario,
                 }
 
                 macro_rules! find_tag {
-                    ($group:expr) => {{
-                        let tag_str = n.get_string_data().unwrap();
+                    ($tag_str:expr, $group:expr) => {{
                         let mut found = false;
-                        let reference = TagReference::from_path_and_group(tag_str, $group)?;
+                        let reference = TagReference::from_path_and_group($tag_str, $group)?;
                         for i in references.into_iter() {
                             if reference.eq(i) {
                                 found = true;
@@ -223,18 +222,40 @@ fn handle_node<'a, F>(scenario: &Scenario,
                                                                      (encounter_index as u32) }
                     }
 
-                    ValueType::Sound => find_tag!(TagGroup::Sound),
-                    ValueType::Effect => find_tag!(TagGroup::Effect),
-                    ValueType::Damage => find_tag!(TagGroup::DamageEffect),
-                    ValueType::LoopingSound => find_tag!(TagGroup::SoundLooping),
-                    ValueType::AnimationGraph => find_tag!(TagGroup::ModelAnimations),
-                    ValueType::ActorVariant => find_tag!(TagGroup::ActorVariant),
-                    ValueType::DamageEffect => find_tag!(TagGroup::DamageEffect),
-                    ValueType::ObjectDefinition => {
+                    ValueType::Sound
+                     | ValueType::Effect
+                     | ValueType::Damage
+                     | ValueType::LoopingSound
+                     | ValueType::AnimationGraph
+                     | ValueType::ActorVariant
+                     | ValueType::DamageEffect
+                     | ValueType::ObjectDefinition => {
                         let tag_reference = n.get_string_data().unwrap();
-                        let group = resolve_object_fn(n.get_string_data().unwrap())?
-                                    .ok_or_else(|| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.scenario.error_compile_could_not_find_object"), tag_reference=tag_reference)))?;
-                        find_tag!(group)
+                        if tag_reference == "none" {
+                            ScenarioScriptNodeValue { unsigned_long_int: !0u32 }
+                        }
+                        else {
+                            match n.get_value_type() {
+                                ValueType::Effect => find_tag!(&tag_reference, TagGroup::Effect),
+                                ValueType::Damage => find_tag!(&tag_reference, TagGroup::DamageEffect),
+                                ValueType::LoopingSound => find_tag!(&tag_reference, TagGroup::SoundLooping),
+                                ValueType::AnimationGraph => find_tag!(&tag_reference, TagGroup::ModelAnimations),
+                                ValueType::ActorVariant => find_tag!(&tag_reference, TagGroup::ActorVariant),
+                                ValueType::DamageEffect => find_tag!(&tag_reference, TagGroup::DamageEffect),
+                                ValueType::ObjectDefinition => {
+                                    let tag_reference = n.get_string_data().unwrap();
+                                    if tag_reference == "none" {
+                                        ScenarioScriptNodeValue { unsigned_long_int: !0u32 }
+                                    }
+                                    else {
+                                        let group = resolve_object_fn(tag_reference)?
+                                                    .ok_or_else(|| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.scenario.error_compile_could_not_find_object"), tag_reference=tag_reference)))?;
+                                        find_tag!(&tag_reference, group)
+                                    }
+                                }
+                                _ => unreachable!()
+                            }
+                        }
                     },
 
                     _ => ScenarioScriptNodeValue::default()
