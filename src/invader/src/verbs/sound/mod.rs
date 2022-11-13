@@ -18,8 +18,8 @@ mod util;
 
 #[derive(Copy, Clone)]
 struct SoundOptions {
-    sample_rate: Option<u32>,
-    channel_count: Option<usize>,
+    sample_rate: Option<Option<u32>>,
+    channel_count: Option<Option<usize>>,
     split: Option<bool>,
     adpcm_block_size: Option<bool>,
     compression_level: VorbisBitrateManagementStrategy,
@@ -68,8 +68,8 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
         },
         class: parsed_args.parse_enum("class")?,
         format: parsed_args.parse_enum("format")?,
-        channel_count: parsed_args.parse_set("channel-count", &[("stereo", 2), ("mono", 1)])?,
-        sample_rate: parsed_args.parse_set("sample-rate", &[("22050", 22050), ("44100", 44100)])?,
+        channel_count: parsed_args.parse_set("channel-count", &[("stereo", Some(2)), ("mono", Some(1)), ("auto", None)])?,
+        sample_rate: parsed_args.parse_set("sample-rate", &[("22050", Some(22050)), ("44100", Some(44100)), ("auto", None)])?,
         adpcm_block_size: parsed_args.parse_bool_on_off("fit-to-adpcm-block-size")?
     };
 
@@ -158,22 +158,22 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
 }
 
 fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_extended_info: bool, max_threads: usize, log_mutex: &Arc<Mutex<bool>>) -> ErrorMessageResult<()> {
-    let default_channel_count;
-    let default_sample_rate;
+    let default_channel_count: Option<usize>;
+    let default_sample_rate: Option<u32>;
 
     // Load our sounds
     let mut sound_tag = if tag.file_path.is_file() {
         let sound_tag = *Sound::from_tag_file(&read_file(&tag.file_path)?)?.data;
-        default_channel_count = Some(options.channel_count.unwrap_or(match sound_tag.channel_count { SoundChannelCount::Mono => 1, SoundChannelCount::Stereo => 2 }));
-        default_sample_rate = Some(options.sample_rate.unwrap_or(match sound_tag.sample_rate { SoundSampleRate::_22050Hz => 22050, SoundSampleRate::_44100Hz => 44100 }));
+        default_channel_count = options.channel_count.unwrap_or(match sound_tag.channel_count { SoundChannelCount::Mono => Some(1), SoundChannelCount::Stereo => Some(2) });
+        default_sample_rate = options.sample_rate.unwrap_or(match sound_tag.sample_rate { SoundSampleRate::_22050Hz => Some(22050), SoundSampleRate::_44100Hz => Some(44100) });
         sound_tag
     }
     else {
         if options.class.is_none() {
             return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_no_sound_class_given"), tag=tag.tag_path)))
         }
-        default_channel_count = options.channel_count;
-        default_sample_rate = options.sample_rate;
+        default_channel_count = options.channel_count.unwrap_or(None);
+        default_sample_rate = options.sample_rate.unwrap_or(None);
         Sound::default()
     };
 
