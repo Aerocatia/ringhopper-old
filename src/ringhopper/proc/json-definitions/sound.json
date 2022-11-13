@@ -2,7 +2,7 @@
     {
         "name": "SoundFormat",
         "options": [
-            "16-bit pcm",
+            "pcm",
             "xbox adpcm",
             "ima adpcm",
             "ogg vorbis"

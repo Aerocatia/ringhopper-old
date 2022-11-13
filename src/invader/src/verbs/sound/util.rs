@@ -547,7 +547,7 @@ fn encode_block(samples_to_encode: &[i16], channels: NonZeroU8, sample_rate: Non
     let buffer_size = samples_to_encode.len() * 2;
 
     match format {
-        SoundFormat::_16bitPcm => {
+        SoundFormat::Pcm => {
             let mut v = Vec::with_capacity(buffer_size);
             for i in samples_to_encode {
                 v.extend_from_slice(&i.to_be_bytes());
