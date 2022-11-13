@@ -12,7 +12,7 @@ use crate::file::*;
 use std::convert::TryInto;
 use std::process::ExitCode;
 use std::path::*;
-use std::io::{Cursor, Write};
+use std::io::Cursor;
 
 #[derive(Copy, Clone)]
 struct BitmapOptions {
@@ -196,7 +196,6 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
                         Err(e) => {
                             let l = log_mutex.lock().unwrap();
                             eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.bitmap.error_could_not_generate_bitmaps"), tag=tag.tag_path, error=e);
-                            let _ = std::io::stderr().flush();
                             *errors.lock().unwrap() += 1;
                             drop(l)
                         }

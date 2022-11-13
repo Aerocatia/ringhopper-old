@@ -3,7 +3,7 @@ use libsamplerate_sys::*;
 
 use vorbis_rs::*;
 
-use std::{path::*, num::*, ffi::{CStr, c_long}};
+use std::{path::*, num::*, ffi::{CStr, c_long}, sync::{Arc, Mutex}};
 use ringhopper::error::*;
 use crate::file::*;
 use ringhopper_proc::*;
@@ -32,9 +32,11 @@ fn convert_pcm_f32_to_16(input: f32) -> i16 {
 
 use std::fmt::Display;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Default)]
 pub enum BitsPerSample {
     BPS(u32),
+
+    #[default]
     Unknown
 }
 impl Display for BitsPerSample {
@@ -46,7 +48,7 @@ impl Display for BitsPerSample {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Sound {
     /// Imported name
     pub name: String,
@@ -113,15 +115,15 @@ impl Sound {
         hint.with_extension(&extension);
 
         let mut r = probe.format(&hint, stream, &FormatOptions::default(), &MetadataOptions::default())
-                         .map_err(|e| ErrorMessage::AllocatedString(format!("Can't decode \"{file}\": {e}", file=path.to_string_lossy(), e=e.to_string())))?;
+                         .map_err(|e| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_decode"), file=path.to_string_lossy(), e=e.to_string())))?;
 
         let default_track = r.format.default_track().ok_or_else(|| ErrorMessage::AllocatedString(format!("File \"{file}\" has no default track", file=path.to_string_lossy())))?.to_owned();
         let mut decoder = codecs.make(&default_track.codec_params, &DecoderOptions::default())
-                                .map_err(|e| ErrorMessage::AllocatedString(format!("Can't decode \"{file}\": {e}", file=path.to_string_lossy(), e=e.to_string())))?;
+                                .map_err(|e| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_decode"), file=path.to_string_lossy(), e=e.to_string())))?;
 
         let channels = default_track.codec_params
                                     .channels
-                                    .ok_or_else(|| ErrorMessage::AllocatedString(format!("Can't get sample rate from \"{file}\"", file=path.to_string_lossy())))?
+                                    .ok_or_else(|| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_get_sample_rate"), file=path.to_string_lossy())))?
                                     .count();
 
         let bps = default_track.codec_params
@@ -130,13 +132,13 @@ impl Sound {
                                .unwrap_or(BitsPerSample::Unknown);
 
         if channels != 1 && channels != 2 {
-            return Err(ErrorMessage::AllocatedString(format!("Expected 1 or 2 channels. Found {channels} in \"{file}\"", file=path.to_string_lossy(), channels=channels)));
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_bad_channel_count"), file=path.to_string_lossy(), channels=channels)));
         }
 
         let sample_rate = default_track.codec_params.sample_rate
-                                       .ok_or_else(|| ErrorMessage::AllocatedString(format!("Can't get sample rate from \"{file}\"", file=path.to_string_lossy())))?;
+                                       .ok_or_else(|| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_get_sample_rate"), file=path.to_string_lossy())))?;
         if sample_rate == 0 {
-            return Err(ErrorMessage::AllocatedString(format!("Invalid sample rate {sample_rate} Hz from \"{file}\"", file=path.to_string_lossy(), sample_rate=sample_rate)));
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_get_sample_rate"), file=path.to_string_lossy())));
         }
 
         let original_codec = codecs.get_codec(default_track.codec_params.codec).unwrap().short_name;
@@ -177,7 +179,7 @@ impl Sound {
     }
 
     /// Encode the sound to the given format.
-    pub fn encode(&mut self, format: SoundFormat, split: bool, compression_level: VorbisBitrateManagementStrategy) -> ErrorMessageResult<()> {
+    pub fn encode(&mut self, format: SoundFormat, split: bool, compression_level: VorbisBitrateManagementStrategy, max_threads: usize) -> ErrorMessageResult<()> {
         let permutation_len = if split {
             232960 / 2 // number of bytes allowed max divided by 2 bytes per sample
         }
@@ -185,123 +187,63 @@ impl Sound {
             self.samples.len()
         };
 
+        // Nothing to encode? Ok.
+        if permutation_len == 0 {
+            self.encoded_samples.push((Vec::new(), 0));
+            return Ok(());
+        }
+
+        let sample_count = self.samples.len();
+        let total_chunk_count = self.samples.len() / permutation_len;
         let sample_rate = NonZeroU32::new(self.sample_rate).unwrap();
         let channels = NonZeroU8::new(self.channels as u8).unwrap();
 
-        const UNCOMPRESSED_LIMIT: usize = u32::MAX as usize;
-
-        for p in (0..self.samples.len()).step_by(permutation_len) {
-            let start = p;
-            let end = (p.saturating_add(permutation_len)).min(self.samples.len());
-            let samples_to_encode = &self.samples[start..end];
-            let buffer_size = samples_to_encode.len() * 2;
-
-            match format {
-                SoundFormat::_16bitPcm => {
-                    let mut v = Vec::with_capacity(buffer_size);
-                    for i in samples_to_encode {
-                        v.extend_from_slice(&i.to_be_bytes());
-                    }
-                    if buffer_size > UNCOMPRESSED_LIMIT {
-                        return Err(ErrorMessage::AllocatedString(format!("Permutation \"{permutation}\"'s uncompressed size exceeds the maximum size ({size} > {limit})",
-                                                                 permutation=self.name,
-                                                                 size=buffer_size,
-                                                                 limit=UNCOMPRESSED_LIMIT)))
-                    }
-
-                    self.encoded_samples.push((v, buffer_size));
-                }
-                SoundFormat::OggVorbis => {
-                    let mut v = Vec::with_capacity(buffer_size);
-
-                    // Work around a segfault with the encoder by only encoding this many samples at once.
-                    const MAX_SPLIT_SIZE: usize = 1024;
-
-                    let total_frame_count = samples_to_encode.len() / self.channels;
-
-                    // Encode
-                    (|| -> Result<(), VorbisError> {
-                        let mut encoder = VorbisEncoder::new(
-                            p as i32,
-                            [("ENCODER", env!("invader_version"))],
-                            sample_rate,
-                            channels,
-                            compression_level,
-                            None,
-                            &mut v
-                        )?;
-
-                        match channels.get() {
-                            1 => {
-                                let samples_mono: Vec<f32> = samples_to_encode.iter().map(|i| convert_pcm_16_to_f32(*i)).collect();
-                                debug_assert_eq!(total_frame_count, samples_mono.len());
-
-                                for i in (0..total_frame_count).step_by(MAX_SPLIT_SIZE) {
-                                    let start = i;
-                                    let end = i.saturating_add(MAX_SPLIT_SIZE).min(total_frame_count);
-                                    encoder.encode_audio_block(&[&samples_mono[start..end]])?;
-                                }
-                            },
-                            2 => {
-                                let l: Vec<f32> = samples_to_encode.iter().step_by(2).map(|i| convert_pcm_16_to_f32(*i)).collect();
-                                let r: Vec<f32> = samples_to_encode.iter().skip(1).step_by(2).map(|i| convert_pcm_16_to_f32(*i)).collect();
-
-                                debug_assert_eq!(total_frame_count, l.len());
-                                debug_assert_eq!(total_frame_count, r.len());
-
-                                for i in (0..total_frame_count).step_by(MAX_SPLIT_SIZE) {
-                                    let start = i;
-                                    let end = i.saturating_add(MAX_SPLIT_SIZE).min(total_frame_count);
-                                    encoder.encode_audio_block(&[&l[start..end], &r[start..end]])?;
-                                }
-                            },
-                            _ => panic!()
-                        }
-
-                        encoder.finish()
-                    })().map_err(|e| ErrorMessage::AllocatedString(e.to_string()))?;
-
-                    if buffer_size > UNCOMPRESSED_LIMIT {
-                        return Err(ErrorMessage::AllocatedString(format!("Permutation \"{permutation}\"'s uncompressed size exceeds the maximum size ({size} > {limit})",
-                                                                 permutation=self.name,
-                                                                 size=buffer_size,
-                                                                 limit=UNCOMPRESSED_LIMIT)))
-                    }
-
-                    self.encoded_samples.push((v, buffer_size));
-                }
-
-                SoundFormat::XboxAdpcm => {
-                    let mut v = Vec::new();
-
-                    // Encode
-                    (|| -> Result<(), ()> {
-                        let mut encoder = XboxADPCMEncoder::new(self.channels, 3, &mut v);
-                        match channels.get() {
-                            1 => {
-                                encoder.encode(&[&samples_to_encode])?;
-                            },
-                            2 => {
-                                let total_frame_count = samples_to_encode.len() / self.channels;
-
-                                let l: Vec<i16> = samples_to_encode.iter().step_by(2).map(|i| *i).collect();
-                                let r: Vec<i16> = samples_to_encode.iter().skip(1).step_by(2).map(|i| *i).collect();
-
-                                debug_assert_eq!(total_frame_count, l.len());
-                                debug_assert_eq!(total_frame_count, r.len());
-
-                                encoder.encode(&[&l, &r])?;
-                            },
-                            _ => panic!()
-                        }
-                        encoder.finish()
-                    })().unwrap();
-
-                    self.encoded_samples.push((v, 0));
-                }
-
-                SoundFormat::ImaAdpcm => return Err(ErrorMessage::StaticString("IMA ADPCM is not supported")),
+        if max_threads <= 1 {
+            self.encoded_samples.reserve_exact(total_chunk_count);
+            for p in (0..sample_count).step_by(permutation_len) {
+                let start = p;
+                let end = (p.saturating_add(permutation_len)).min(sample_count);
+                self.encoded_samples.push(encode_block(&self.samples[start..end], channels, sample_rate, format, compression_level, &self.name)?);
             }
+        }
+        else {
+            let mut threads = Vec::with_capacity(max_threads);
+            let encoded_samples = Arc::new(Mutex::new(Vec::with_capacity(total_chunk_count)));
+            for _ in 0..max_threads {
+                let samples = self.samples.clone();
+                let permutation_name = self.name.clone();
+                let channels = channels.clone();
+                let sample_rate = sample_rate.clone();
+                let format = format.clone();
+                let compression_level = compression_level.clone();
+                let permutation_len = permutation_len.clone();
+                let encoded_samples = encoded_samples.clone();
+                let sample_count = sample_count.clone();
+
+                threads.push(std::thread::spawn(move || -> ErrorMessageResult<()> {
+                    let mut index = 0;
+                    for (start, index) in (0..sample_count).step_by(permutation_len).map(|p| { index = index + 1; (p, index - 1) }) {
+                        let end = (start.saturating_add(permutation_len)).min(sample_count);
+
+                        // Reserve our spot!
+                        let mut es = encoded_samples.lock().unwrap();
+                        if es.len() != index {
+                            continue;
+                        }
+                        es.push((Vec::new(), 0)); // push a default value as a placeholder
+                        drop(es);
+
+                        // Put the real value in now
+                        let samples = encode_block(&samples[start..end], channels, sample_rate, format, compression_level, &permutation_name)?;
+                        encoded_samples.lock().unwrap()[index] = samples;
+                    }
+                    Ok(())
+                }))
+            }
+            for t in threads {
+                t.join().unwrap()?;
+            }
+            self.encoded_samples.append(&mut encoded_samples.lock().unwrap());
         }
 
         Ok(())
@@ -529,10 +471,10 @@ pub fn load_data_dir(data: &Path) -> ErrorMessageResult<Vec<PitchRange>> {
         }
     }
     if contains_dirs && contains_files {
-        return Err(ErrorMessage::AllocatedString(format!("Sound tag data \"{dir}\" directory contains mixed files and directories.", dir=data.to_string_lossy())));
+        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_bad_directory_mixed_files_dirs"), dir=data.to_string_lossy())));
     }
     if !contains_dirs && !contains_files {
-        return Err(ErrorMessage::AllocatedString(format!("Sound data \"{dir}\" directory is empty.", dir=data.to_string_lossy())));
+        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_bad_directory_empty"), dir=data.to_string_lossy())));
     }
 
     // Populate the pitch ranges.
@@ -567,7 +509,7 @@ pub fn get_best_sample_rate_and_channel_count(pitch_ranges: &[PitchRange]) -> Er
         for pj in 0..pi {
             let p_other = &pitch_ranges[pj];
             if p_other.name.eq_ignore_ascii_case(&p.name) {
-                return Err(ErrorMessage::AllocatedString(format!("Ambiguous pitch range \"{pitch_range}\" found (first directory is \"{pitch_range_1}\", second directory is \"{pitch_range_2}\")",
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_ambiguous_pitch_range"),
                                                                  pitch_range=p_other.name,
                                                                  pitch_range_1=p_other.path.to_string_lossy(),
                                                                  pitch_range_2=p.path.to_string_lossy())));
@@ -580,7 +522,7 @@ pub fn get_best_sample_rate_and_channel_count(pitch_ranges: &[PitchRange]) -> Er
                 let a = &p.permutations[j];
                 let b = &p.permutations[i];
                 if a.name.eq_ignore_ascii_case(&b.name) {
-                    return Err(ErrorMessage::AllocatedString(format!("Ambiguous permutation \"{permutation}\" in \"{pitch_range}\" found (first file is \"{permutation_1}\", second file is \"{permutation_2}\")",
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_ambiguous_permutation"),
                                                                      permutation=a.name,
                                                                      pitch_range=p.name,
                                                                      permutation_1=p.permutations[j].path.to_string_lossy(),
@@ -597,4 +539,117 @@ pub fn get_best_sample_rate_and_channel_count(pitch_ranges: &[PitchRange]) -> Er
     }
 
     Ok((highest_sample_rate, highest_channel_count))
+}
+
+
+fn encode_block(samples_to_encode: &[i16], channels: NonZeroU8, sample_rate: NonZeroU32, format: SoundFormat, compression_level: VorbisBitrateManagementStrategy, permutation: &str) -> ErrorMessageResult<(Vec<u8>, usize)> {
+    const UNCOMPRESSED_LIMIT: usize = u32::MAX as usize;
+    let buffer_size = samples_to_encode.len() * 2;
+
+    match format {
+        SoundFormat::_16bitPcm => {
+            let mut v = Vec::with_capacity(buffer_size);
+            for i in samples_to_encode {
+                v.extend_from_slice(&i.to_be_bytes());
+            }
+            if buffer_size > UNCOMPRESSED_LIMIT {
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_permutation_size_exceeded"),
+                                                         permutation=permutation,
+                                                         size=buffer_size,
+                                                         limit=UNCOMPRESSED_LIMIT)))
+            }
+
+            return Ok((v, buffer_size));
+        }
+        SoundFormat::OggVorbis => {
+            let mut v = Vec::with_capacity(buffer_size);
+
+            // Work around a segfault with the encoder by only encoding this many samples at once.
+            const MAX_SPLIT_SIZE: usize = 1024;
+
+            let total_frame_count = samples_to_encode.len() / (channels.get() as usize);
+
+            // Encode
+            (|| -> Result<(), VorbisError> {
+                let mut encoder = VorbisEncoder::new(
+                    0,
+                    [("ENCODER", env!("invader_version"))],
+                    sample_rate,
+                    channels,
+                    compression_level,
+                    None,
+                    &mut v
+                )?;
+
+                match channels.get() {
+                    1 => {
+                        let samples_mono: Vec<f32> = samples_to_encode.iter().map(|i| convert_pcm_16_to_f32(*i)).collect();
+                        debug_assert_eq!(total_frame_count, samples_mono.len());
+
+                        for i in (0..total_frame_count).step_by(MAX_SPLIT_SIZE) {
+                            let start = i;
+                            let end = i.saturating_add(MAX_SPLIT_SIZE).min(total_frame_count);
+                            encoder.encode_audio_block(&[&samples_mono[start..end]])?;
+                        }
+                    },
+                    2 => {
+                        let l: Vec<f32> = samples_to_encode.iter().step_by(2).map(|i| convert_pcm_16_to_f32(*i)).collect();
+                        let r: Vec<f32> = samples_to_encode.iter().skip(1).step_by(2).map(|i| convert_pcm_16_to_f32(*i)).collect();
+
+                        debug_assert_eq!(total_frame_count, l.len());
+                        debug_assert_eq!(total_frame_count, r.len());
+
+                        for i in (0..total_frame_count).step_by(MAX_SPLIT_SIZE) {
+                            let start = i;
+                            let end = i.saturating_add(MAX_SPLIT_SIZE).min(total_frame_count);
+                            encoder.encode_audio_block(&[&l[start..end], &r[start..end]])?;
+                        }
+                    },
+                    _ => panic!()
+                }
+
+                encoder.finish()
+            })().map_err(|e| ErrorMessage::AllocatedString(e.to_string()))?;
+
+            if buffer_size > UNCOMPRESSED_LIMIT {
+                return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_permutation_size_exceeded"),
+                                                         permutation=permutation,
+                                                         size=buffer_size,
+                                                         limit=UNCOMPRESSED_LIMIT)))
+            }
+
+            return Ok((v, buffer_size));
+        }
+
+        SoundFormat::XboxAdpcm => {
+            let mut v = Vec::new();
+
+            // Encode
+            (|| -> Result<(), ()> {
+                let mut encoder = XboxADPCMEncoder::new(channels.get() as usize, 3, &mut v);
+                match channels.get() {
+                    1 => {
+                        encoder.encode(&[&samples_to_encode])?;
+                    },
+                    2 => {
+                        let total_frame_count = samples_to_encode.len() / channels.get() as usize;
+
+                        let l: Vec<i16> = samples_to_encode.iter().step_by(2).map(|i| *i).collect();
+                        let r: Vec<i16> = samples_to_encode.iter().skip(1).step_by(2).map(|i| *i).collect();
+
+                        debug_assert_eq!(total_frame_count, l.len());
+                        debug_assert_eq!(total_frame_count, r.len());
+
+                        encoder.encode(&[&l, &r])?;
+                    },
+                    _ => panic!()
+                }
+                encoder.finish()
+            })().unwrap();
+
+            return Ok((v, 0));
+        }
+
+        SoundFormat::ImaAdpcm => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.sound.error_ima_adpcm_not_supported"))),
+    }
 }

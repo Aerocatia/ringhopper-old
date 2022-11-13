@@ -1,6 +1,7 @@
 use std::num::NonZeroU32;
 use std::process::ExitCode;
 use std::path::*;
+use std::sync::{Arc, Mutex};
 use macros::println_success;
 use ringhopper::engines::h1::definitions::{SoundClass, SoundFormat, Sound, SoundChannelCount, SoundSampleRate, SoundPitchRange, SoundPermutation};
 use ringhopper::error::{ErrorMessageResult, ErrorMessage};
@@ -15,6 +16,7 @@ use crate::*;
 
 mod util;
 
+#[derive(Copy, Clone)]
 struct SoundOptions {
     sample_rate: Option<u32>,
     channel_count: Option<usize>,
@@ -34,7 +36,7 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
         Argument { long: "sample-rate", short: 'R', description: get_compiled_string!("engine.h1.verbs.sound.arguments.sample-rate.description"), parameter: Some("Hz"), multiple: false },
         Argument { long: "split", short: 'S', description: get_compiled_string!("engine.h1.verbs.sound.arguments.split.description"), parameter: Some("on/off"), multiple: false },
         Argument { long: "fit-to-adpcm-block-size", short: 'A', description: get_compiled_string!("engine.h1.verbs.sound.arguments.fit-to-adpcm-block-size.description"), parameter: Some("on/off"), multiple: false },
-    ], &[get_compiled_string!("arguments.specifier.tag_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_tags().needs_data().uses_threads())?;
+    ], &[get_compiled_string!("arguments.specifier.tag_batch_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_tags().needs_data().uses_threads())?;
 
     let options = SoundOptions {
         split: parsed_args.parse_bool_on_off("split")?,
@@ -44,16 +46,16 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
                 if v.ends_with("k") {
                     VorbisBitrateManagementStrategy::Vbr {
                         target_bitrate: v[..v.len()-1].parse::<u32>()
-                                                      .map_err(|_| ErrorMessage::AllocatedString(format!("Invalid compression quality \"{value}\": could not parse", value=v)))
+                                                      .map_err(|_| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_bad_quality"), value=v)))
                                                       .map(|f| NonZeroU32::new(f.clamp(50,500) * 1000).unwrap())?
                     }
                 }
                 else {
                     VorbisBitrateManagementStrategy::QualityVbr {
                         target_quality: v.parse()
-                                         .map_err(|_| ErrorMessage::AllocatedString(format!("Invalid compression quality \"{value}\": could not parse", value=v)))
+                                         .map_err(|_| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_bad_quality"), value=v)))
                                          .map(|f| if f < -0.2 || f > 1.0 {
-                                                      Err(ErrorMessage::AllocatedString(format!("Invalid compression quality \"{value}\": not between -0.2 and 1.0", value=v)))
+                                                      Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_bad_quality_range"), value=v)))
                                                   }
                                                   else {
                                                       Ok(f)
@@ -71,15 +73,91 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
         adpcm_block_size: parsed_args.parse_bool_on_off("fit-to-adpcm-block-size")?
     };
 
+    let max_threads = parsed_args.threads;
+    let tags_dir = Path::new(&parsed_args.named["tags"][0]);
+    let data_dir = Path::new(&parsed_args.named["data"][0]);
     let tag_path = &parsed_args.extra[0];
-    let tag_path = TagReference::from_path_and_group(tag_path, TagGroup::Sound)?;
-    let file_path = Path::new(&parsed_args.named["tags"][0]).join(tag_path.to_string());
-    do_single_sound(&TagFile { tag_path, file_path }, Path::new(&parsed_args.named["data"][0]), &options, true)?;
+    let log_mutex = std::sync::Arc::new(std::sync::Mutex::new(true));
 
-    Ok(ExitCode::FAILURE)
+    if TagFile::uses_batching(tag_path) {
+        let success = std::sync::Arc::new(std::sync::Mutex::new(0usize));
+        let total = std::sync::Arc::new(std::sync::Mutex::new(0usize));
+        let errors = std::sync::Arc::new(std::sync::Mutex::new(0usize));
+        let log_mutex = log_mutex.clone();
+
+        let tags = TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &tag_path, Some(TagGroup::Sound))?;
+        let tag_count = tags.len();
+        let current_tag_index = std::sync::Arc::new(std::sync::Mutex::new(0usize));
+
+        let mut threads = Vec::new();
+        let tags = std::sync::Arc::new(std::sync::Mutex::new(tags));
+        for _ in 0..max_threads {
+            let success = success.clone();
+            let total = total.clone();
+            let errors = errors.clone();
+            let tags = tags.clone();
+            let current_tag_index = current_tag_index.clone();
+            let data_dir = data_dir.to_owned();
+            let log_mutex = log_mutex.clone();
+            let options = options.clone();
+
+            threads.push(std::thread::spawn(move || {
+                let index: usize = {
+                    let mut i = current_tag_index.lock().unwrap();
+                    if *i == tag_count {
+                        return;
+                    }
+                    *i += 1;
+                    *i - 1
+                };
+
+                let tag = tags.lock().unwrap()[index].clone();
+
+                let do_single_sound = do_single_sound(&tag, &data_dir, &options, false, max_threads, &log_mutex);
+                match do_single_sound {
+                    Ok(_) => {
+                        *success.lock().unwrap() += 1;
+                    }
+                    Err(e) => {
+                        let l = log_mutex.lock().unwrap();
+                        eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.sound.error_could_not_process_sounds"), tag=tag.tag_path, error=e);
+                        *errors.lock().unwrap() += 1;
+                        drop(l)
+                    }
+                }
+                *total.lock().unwrap() += 1;
+            }));
+        }
+
+        for i in threads {
+            i.join().unwrap();
+        }
+
+        let total = *total.lock().unwrap();
+        let errors = *errors.lock().unwrap();
+        let success = *success.lock().unwrap();
+
+        if total == 0 {
+            Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_no_tags_found"))))
+        }
+        else if errors > 0 {
+            println_warn!(get_compiled_string!("engine.h1.verbs.sound.processed_sounds_with_errors"), count=success, error=errors);
+            Ok(ExitCode::FAILURE)
+        }
+        else {
+            println_success!(get_compiled_string!("engine.h1.verbs.sound.processed_sounds"), count=success);
+            Ok(ExitCode::SUCCESS)
+        }
+    }
+    else {
+        let tag_path = TagReference::from_path_and_group(tag_path, TagGroup::Sound)?;
+        let file_path = Path::new(&tags_dir.join(tag_path.to_string())).to_owned();
+        do_single_sound(&TagFile { tag_path, file_path: file_path }, Path::new(&parsed_args.named["data"][0]), &options, true, max_threads, &log_mutex)?;
+        Ok(ExitCode::SUCCESS)
+    }
 }
 
-fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_extended_info: bool) -> ErrorMessageResult<()> {
+fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_extended_info: bool, max_threads: usize, log_mutex: &Arc<Mutex<bool>>) -> ErrorMessageResult<()> {
     let default_channel_count;
     let default_sample_rate;
 
@@ -92,7 +170,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
     }
     else {
         if options.class.is_none() {
-            return Err(ErrorMessage::AllocatedString(format!("A sound class is required because sound tag \"{tag}\" does not yet exist.", tag=tag.tag_path)))
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_no_sound_class_given"), tag=tag.tag_path)))
         }
         default_channel_count = options.channel_count;
         default_sample_rate = options.sample_rate;
@@ -106,7 +184,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
 
     let data = data_dir.join(tag.tag_path.get_path_without_extension());
     if !data.is_dir() {
-        return Err(ErrorMessage::AllocatedString(format!("Failed to find the sound tag's data directory. \"{dir}\" does not exist or is not a directory", dir=data.to_string_lossy())))
+        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_find_dir"), dir=data.to_string_lossy())))
     }
 
     let mut pitch_ranges = util::load_data_dir(&data)?;
@@ -117,43 +195,8 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
     let best_sample_rate = default_sample_rate.unwrap_or_else(|| match highest_sample_rate { n if n <= 22050 => 22050, _ => 44100 });
     let split = sound_tag.flags.split_long_sound_into_permutations;
 
-    // Resample / remix. Copy over tag data. Write mouth data if needed
+    // Copy over tag data
     for pr in &mut pitch_ranges {
-        for pe in &mut pr.permutations {
-            // Remix
-            if pe.channels != best_channel_count {
-                pe.samples = util::remix(&pe.samples, pe.channels, best_channel_count);
-                pe.channels = best_channel_count;
-            }
-
-            // Resample
-            if pe.sample_rate != best_sample_rate {
-                pe.samples = util::resample(&pe.samples, pe.channels, pe.sample_rate as f64 / best_sample_rate as f64)?;
-                pe.sample_rate = best_sample_rate;
-            }
-
-            // Fit to Xbox ADPCM block size
-            if sound_tag.format == SoundFormat::XboxAdpcm && sound_tag.flags.fit_to_adpcm_blocksize {
-                let alignment = 64 * best_channel_count;
-                let disparity = pe.samples.len() % alignment;
-                if disparity != 0 {
-                    // Round up
-                    let samples_to_add = alignment - disparity;
-
-                    let end = pe.samples.len().min(1024);
-
-                    let new_end = end + samples_to_add;
-
-                    let mut new_end_resampled = util::resample(&pe.samples[end..], pe.channels, new_end as f64 / end as f64)?;
-                    new_end_resampled.resize(new_end, *new_end_resampled.last().unwrap());
-
-                    pe.samples.resize(pe.samples.len() - end, 0);
-                    pe.samples.append(&mut new_end_resampled);
-                }
-            }
-        }
-
-        // Copy over tag data
         for pr_tag in &mut sound_tag.pitch_ranges {
             if pr.name == pr_tag.name.to_str() {
                 pr.pitch_bounds = pr_tag.bend_bounds;
@@ -170,31 +213,117 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
                 break;
             }
         }
-
-        // Generate mouth data
-        match sound_tag.sound_class {
-            SoundClass::UnitDialog | SoundClass::ScriptedDialogPlayer | SoundClass::ScriptedDialogOther | SoundClass::ScriptedDialogForceUnspatialized => {
-                for pe in &mut pr.permutations {
-                    pe.generate_mouth_data()
-                }
-            },
-            _ => ()
-        }
     }
 
-    // Encode
-    for pr in &mut pitch_ranges {
-        for pe in &mut pr.permutations {
-            pe.encode(sound_tag.format, split, options.compression_level)?;
-        }
+    let generates_mouth_data = match sound_tag.sound_class {
+        SoundClass::UnitDialog | SoundClass::ScriptedDialogPlayer | SoundClass::ScriptedDialogOther | SoundClass::ScriptedDialogForceUnspatialized => true,
+        _ => false
+    };
+
+    let pitch_range_count = pitch_ranges.len();
+
+    // Have an array of indices indicating the next permutation to process.
+    //
+    // If size == permutation count for the pitch range, move to the next one.
+    let permutation_count_per_pitch_range: Vec<usize> = pitch_ranges.iter().map(|v| v.permutations.len()).collect();
+    let total_permutation_count: usize = permutation_count_per_pitch_range.iter().sum();
+    let threads_per_permutation = (max_threads / total_permutation_count.max(1)).max(1);
+
+    let next_permutation_to_process = Arc::new(Mutex::new(vec![0usize; pitch_range_count]));
+    let pitch_ranges = Arc::new(Mutex::new(pitch_ranges));
+    let mut threads = Vec::with_capacity(max_threads);
+    for _ in 0..max_threads {
+        let nptp_array = next_permutation_to_process.clone();
+        let pr_array = pitch_ranges.clone();
+        let best_sample_rate = best_sample_rate.clone();
+        let best_channel_count = best_channel_count.clone();
+        let sound_tag_format = sound_tag.format.clone();
+        let split = split.clone();
+        let fit_to_adpcm_blocksize = sound_tag.flags.fit_to_adpcm_blocksize.clone();
+        let compression_level = options.compression_level.clone();
+        let count_array = permutation_count_per_pitch_range.clone();
+        let threads_per_permutation = threads_per_permutation;
+
+        threads.push(std::thread::spawn(move || -> ErrorMessageResult<()> {
+            for pri in 0..pitch_range_count {
+                let permutation_count = count_array[pri];
+                loop {
+                    // Get the next permutation we can process
+                    let mut nptp = nptp_array.lock().unwrap();
+                    let latest = &mut nptp[pri];
+                    if *latest == permutation_count {
+                        break;
+                    }
+
+                    // Increment it
+                    let permutation_index = latest.to_owned();
+                    *latest += 1;
+
+                    // Drop it
+                    drop(nptp);
+
+                    // Get our permutation
+                    let mut pra = pr_array.lock().unwrap();
+                    let mut pe = std::mem::take(&mut pra[pri].permutations[permutation_index]);
+                    drop(pra);
+
+                    // Remix
+                    if pe.channels != best_channel_count {
+                        pe.samples = util::remix(&pe.samples, pe.channels, best_channel_count);
+                        pe.channels = best_channel_count;
+                    }
+
+                    // Resample
+                    if pe.sample_rate != best_sample_rate {
+                        pe.samples = util::resample(&pe.samples, pe.channels, pe.sample_rate as f64 / best_sample_rate as f64)?;
+                        pe.sample_rate = best_sample_rate;
+                    }
+
+                    // Fit to Xbox ADPCM block size
+                    if sound_tag_format == SoundFormat::XboxAdpcm && fit_to_adpcm_blocksize {
+                        let alignment = 64 * best_channel_count;
+                        let disparity = pe.samples.len() % alignment;
+                        if disparity != 0 {
+                            // Round up
+                            let samples_to_add = alignment - disparity;
+                            let end = pe.samples.len().min(1024);
+                            let new_end = end + samples_to_add;
+                            let mut new_end_resampled = util::resample(&pe.samples[end..], pe.channels, new_end as f64 / end as f64)?;
+                            new_end_resampled.resize(new_end, *new_end_resampled.last().unwrap());
+                            pe.samples.resize(pe.samples.len() - end, 0);
+                            pe.samples.append(&mut new_end_resampled);
+                        }
+                    }
+
+                    // Generate mouth data
+                    if generates_mouth_data {
+                        pe.generate_mouth_data()
+                    }
+
+                    // Encode
+                    pe.encode(sound_tag_format, split, compression_level, threads_per_permutation)?;
+
+                    // Move it back
+                    let mut pra = pr_array.lock().unwrap();
+                    pra[pri].permutations[permutation_index] = pe;
+                    drop(pra);
+                }
+            }
+
+            Ok(())
+        }));
+    }
+    for t in threads {
+        t.join().unwrap()?;
     }
 
     // Now let's write our final result
+    let mut pitch_ranges = pitch_ranges.lock().unwrap();
     sound_tag.pitch_ranges.blocks = Vec::with_capacity(pitch_ranges.len());
     sound_tag.sample_rate = match best_sample_rate { 44100 => SoundSampleRate::_44100Hz, 22050 => SoundSampleRate::_22050Hz, _ => unreachable!() };
     sound_tag.channel_count = match best_channel_count { 1 => SoundChannelCount::Mono, 2 => SoundChannelCount::Stereo, _ => unreachable!() };
 
-    for pr in &mut pitch_ranges {
+    for pr in &mut *pitch_ranges {
         let mut pitch_range = SoundPitchRange::default();
         pitch_range.natural_pitch = pr.natural_pitch;
         pitch_range.bend_bounds = pr.pitch_bounds;
@@ -217,13 +346,13 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
         const PERMUTATION_LIMIT: usize = u16::MAX as usize;
         const SUBPERMUTATION_LIMIT: usize = PERMUTATION_LIMIT - 1;
         if pr.permutations.len() > PERMUTATION_LIMIT {
-            return Err(ErrorMessage::AllocatedString(format!("Pitch range \"{pitch_range}\" exceeds the maximum number of permutations allowed ({count} > {limit})",
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_permutation_limit_exceeded"),
                                                              pitch_range=pr.name,
                                                              count=pr.permutations.len(),
                                                              limit=PERMUTATION_LIMIT)));
         }
         if split && subpermutation_count > SUBPERMUTATION_LIMIT {
-            return Err(ErrorMessage::AllocatedString(format!("Pitch range \"{pitch_range}\" exceeds the maximum number of sub-permutations allowed ({count} > {limit})",
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_subpermutation_limit_exceeded"),
                                                              pitch_range=pr.name,
                                                              count=subpermutation_count,
                                                              limit=SUBPERMUTATION_LIMIT)));
@@ -252,7 +381,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
                 let subpermutation_count = pe.encoded_samples.len();
 
                 if !pe.mouth_data.is_empty() {
-                    return Err(ErrorMessage::StaticString("Cannot split permutations with generated mouth data."));
+                    return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.sound.error_cannot_split_mouth_data")));
                 }
 
                 let mut path = Vec::with_capacity(subpermutation_count);
@@ -305,7 +434,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
         for pi in 0..pitch_ranges.len() {
             let pitch_range = &pitch_ranges[pi];
             let pitch_range_tag = &sound_tag.pitch_ranges[pi];
-            println!("Pitch range #{pitch_range_index} ({pitch_range_name}): {permutation_count} permutation(s)",
+            println!(get_compiled_string!("engine.h1.verbs.sound.output_pitch_range_header"),
                      pitch_range_index=pi,
                      pitch_range_name=pitch_range.name,
                      permutation_count=pitch_range.permutations.len());
@@ -327,7 +456,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
                     }
                 }
 
-                println!("    Permutation #{permutation_index} ({permutation_name}): {min:02}:{sec:02}.{msec:03} (input: {original_sample_rate} Hz, {original_channel_count}, {original_bits_per_sample}, {original_codec})",
+                println!(get_compiled_string!("engine.h1.verbs.sound.output_pitch_range_permutation"),
                          permutation_index=pm,
                          permutation_name=permutation.name,
                          min=min,
@@ -342,18 +471,21 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
             println!();
         }
 
-        println!("Output: {sample_rate} Hz, {channel_count}, {format} @ {kbps:.01} kbps ({size})",
+        println!(get_compiled_string!("engine.h1.verbs.sound.output_end"),
                  sample_rate=best_sample_rate,
                  channel_count=channel_count_to_str(best_channel_count),
                  format=sound_tag.format.as_str_pretty(),
                  size=format_size(total_size),
-                 kbps=(total_size as f64 / (1000.0 / 8.0)) / total_time)
+                 kbps=(total_size as f64 / (1000.0 / 8.0)) / total_time,
+                 split=match split { false => "", true => " (split)" })
     }
 
     make_parent_directories(&tag.file_path)?;
     write_file(&tag.file_path, &sound_tag.into_tag_file()?)?;
 
+    let l = log_mutex.lock().unwrap();
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=tag.tag_path);
+    drop(l);
 
     Ok(())
 }
