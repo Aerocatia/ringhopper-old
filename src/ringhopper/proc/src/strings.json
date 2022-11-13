@@ -210,6 +210,8 @@
     "engine.h1.verbs.sound.error_bad_quality": "Invalid compression quality \"{value}\": could not parse",
     "engine.h1.verbs.sound.error_bad_quality_range": "Invalid compression quality \"{value}\": not between -0.2 and 1.0",
     "engine.h1.verbs.sound.error_cannot_decode": "Can't decode \"{file}\": {e}",
+    "engine.h1.verbs.sound.error_cannot_decode_no_default_track": "No default track found in \"{file}\"",
+    "engine.h1.verbs.sound.error_cannot_decode_no_samples": "Could not decode any samples from \"{file}\"",
     "engine.h1.verbs.sound.error_cannot_get_sample_rate": "Can't get sample rate of \"{file}\"",
     "engine.h1.verbs.sound.error_cannot_find_dir": "Failed to find the sound tag's data directory. \"{dir}\" does not exist or is not a directory",
     "engine.h1.verbs.sound.error_cannot_split_mouth_data": "Cannot split permutations with generated mouth data.",

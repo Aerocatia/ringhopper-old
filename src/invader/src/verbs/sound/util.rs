@@ -117,7 +117,7 @@ impl Sound {
         let mut r = probe.format(&hint, stream, &FormatOptions::default(), &MetadataOptions::default())
                          .map_err(|e| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_decode"), file=path.to_string_lossy(), e=e.to_string())))?;
 
-        let default_track = r.format.default_track().ok_or_else(|| ErrorMessage::AllocatedString(format!("File \"{file}\" has no default track", file=path.to_string_lossy())))?.to_owned();
+        let default_track = r.format.default_track().ok_or_else(|| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_decode_no_default_track"), file=path.to_string_lossy())))?.to_owned();
         let mut decoder = codecs.make(&default_track.codec_params, &DecoderOptions::default())
                                 .map_err(|e| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_decode"), file=path.to_string_lossy(), e=e.to_string())))?;
 
@@ -170,9 +170,13 @@ impl Sound {
                         buf.clear();
                     }
                 }
-                Err(symphonia::core::errors::Error::DecodeError(e)) => return Err(ErrorMessage::AllocatedString(format!("Can't decode \"{file}\": {e}", file=path.to_string_lossy(), e=e.to_string()))),
+                Err(symphonia::core::errors::Error::DecodeError(e)) => return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_decode"), file=path.to_string_lossy(), e=e.to_string()))),
                 Err(_) => break,
             }
+        }
+
+        if samples.is_empty() {
+            return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_decode_no_samples"), file=path.to_string_lossy())));
         }
 
         Ok(Sound { name, sample_rate, channels, samples, path, gain: 0.0, skip_fraction: 0.0, mouth_data: Vec::new(), original_channels: channels, original_sample_rate: sample_rate, original_bits_per_sample: bps, original_codec, encoded_samples: Vec::new() })
