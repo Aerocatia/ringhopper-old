@@ -236,6 +236,7 @@ fn handle_node<'a, F>(scenario: &Scenario,
                         }
                         else {
                             match n.get_value_type() {
+                                ValueType::Sound => find_tag!(&tag_reference, TagGroup::Sound),
                                 ValueType::Effect => find_tag!(&tag_reference, TagGroup::Effect),
                                 ValueType::Damage => find_tag!(&tag_reference, TagGroup::DamageEffect),
                                 ValueType::LoopingSound => find_tag!(&tag_reference, TagGroup::SoundLooping),
