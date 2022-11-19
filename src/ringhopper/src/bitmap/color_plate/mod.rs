@@ -497,11 +497,11 @@ impl ColorPlate {
 
                     let left_to_right = real_left..real_right;
                     real_left = side_check!(left_to_right.clone()).unwrap_or(real_right);
-                    real_right = side_check!(left_to_right.clone().rev()).unwrap_or(real_left);
+                    real_right = side_check!(left_to_right.clone().rev()).map(|x| x + 1).unwrap_or(real_left);
 
                     let top_to_bottom = real_top..real_bottom;
                     real_top = vert_check!(top_to_bottom.clone()).unwrap_or(real_bottom);
-                    real_bottom = vert_check!(top_to_bottom.clone().rev()).unwrap_or(real_top);
+                    real_bottom = vert_check!(top_to_bottom.clone().rev()).map(|y| y + 1).unwrap_or(real_top);
 
                     // Warn if we just deleted everything.
                     if real_top == real_bottom || real_left == real_right {
