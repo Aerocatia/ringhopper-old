@@ -135,7 +135,7 @@ pub fn load_definition_json_def(_: TokenStream) -> TokenStream {
 
                 stream.extend(format!("
                     #[repr(u16)]
-                    #[derive(Copy, Clone, PartialEq, Default)]
+                    #[derive(Copy, Clone, PartialEq, Debug, Default)]
                     pub enum {object_name} {{
                         #[default] {options}
                     }}

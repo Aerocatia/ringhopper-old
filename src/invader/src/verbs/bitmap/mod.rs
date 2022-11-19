@@ -14,9 +14,12 @@ use std::process::ExitCode;
 use std::path::*;
 use std::io::Cursor;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Copy, Clone)]
 struct BitmapOptions {
-    encoding_format: Option<BitmapFormat>,
+    encoding_format: Option<Option<BitmapFormat>>,
     usage: Option<BitmapUsage>,
     enable_diffusion_dithering: Option<bool>,
     disable_height_map_compression: Option<bool>,
@@ -45,26 +48,26 @@ struct BitmapOptions {
 impl BitmapOptions {
     fn apply_to_bitmap_tag(&self, bitmap_tag: &mut Bitmap) {
         macro_rules! set_if_set {
-            ($tag_field:tt, $option:tt) => {
-                if let Some(n) = self.$tag_field {
+            ($tag_field:expr, $option:tt) => {
+                if let Some(n) = $tag_field {
                     bitmap_tag.$option = n
                 }
             }
         }
 
-        set_if_set!(encoding_format, encoding_format);
-        set_if_set!(usage, usage);
-        set_if_set!(detail_fade_factor, detail_fade_factor);
-        set_if_set!(sharpen_amount, sharpen_amount);
-        set_if_set!(bump_height, bump_height);
-        set_if_set!(sprite_budget_size, sprite_budget_size);
-        set_if_set!(sprite_budget_count, sprite_budget_count);
-        set_if_set!(blur_filter_size, blur_filter_size);
-        set_if_set!(alpha_bias, alpha_bias);
-        set_if_set!(map_count, mipmap_count);
-        set_if_set!(sprite_usage, sprite_usage);
-        set_if_set!(sprite_spacing, sprite_spacing);
-        set_if_set!(bitmap_type, _type);
+        set_if_set!(self.encoding_format.unwrap_or(None), encoding_format);
+        set_if_set!(self.usage, usage);
+        set_if_set!(self.detail_fade_factor, detail_fade_factor);
+        set_if_set!(self.sharpen_amount, sharpen_amount);
+        set_if_set!(self.bump_height, bump_height);
+        set_if_set!(self.sprite_budget_size, sprite_budget_size);
+        set_if_set!(self.sprite_budget_count, sprite_budget_count);
+        set_if_set!(self.blur_filter_size, blur_filter_size);
+        set_if_set!(self.alpha_bias, alpha_bias);
+        set_if_set!(self.map_count, mipmap_count);
+        set_if_set!(self.sprite_usage, sprite_usage);
+        set_if_set!(self.sprite_spacing, sprite_spacing);
+        set_if_set!(self.bitmap_type, _type);
 
         macro_rules! set_flag_if_set {
             ($tag_field:tt, $option:tt) => {
@@ -125,7 +128,17 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         uniform_sprite_sequences: parsed_args.parse_bool_on_off("uniform-sprite-sequences")?,
         reg_point_from_texture: parsed_args.parse_bool_on_off("reg-point-from-texture")?,
 
-        encoding_format: parsed_args.parse_enum("format")?,
+        encoding_format: if let Some(n) = parsed_args.named.get("format") {
+            if n[0] == "auto" {
+                Some(None)
+            }
+            else {
+                Some(parsed_args.parse_enum("format")?)
+            }
+        }
+        else {
+            None
+        },
         sprite_budget_size: match parsed_args.parse_u16("sprite-budget-size")? {
             Some(n) => Some(BitmapSpriteBudgetSize::from_length(n)?),
             None => None
@@ -347,7 +360,9 @@ fn load_png(path: &Path) -> ErrorMessageResult<Image> {
 
 fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, show_extended_info: bool, warnings: &mut usize, log_mutex: &std::sync::Arc<std::sync::Mutex<bool>>) -> ErrorMessageResult<()> {
     // Load the bitmap tag
+    let is_new_bitmap_tag;
     let mut bitmap_tag = if file.file_path.exists() {
+        is_new_bitmap_tag = false;
         *Bitmap::from_tag_file(&read_file(&file.file_path)?)?.data
     }
     else if options.regenerate {
@@ -359,6 +374,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
         tag.flags.disable_height_map_compression = true;
         tag.usage = BitmapUsage::Default;
         tag.encoding_format = BitmapFormat::_32bit;
+        is_new_bitmap_tag = true;
         tag
     };
 
@@ -457,6 +473,11 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     bitmap_tag.bitmap_group_sequence.blocks.clear();
     bitmap_tag.bitmap_data.blocks.clear();
     bitmap_tag.processed_pixel_data.clear();
+
+    // Figure out what format to use if we need to
+    if options.encoding_format == Some(None) || (options.encoding_format == None && is_new_bitmap_tag) {
+        bitmap_tag.encoding_format = best_bitmap_format(&processed_result);
+    }
 
     const U16_MAX: usize = u16::MAX as usize;
     const MAX_BITMAPS: usize = U16_MAX - 1;
@@ -786,7 +807,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
             }
         }
 
-        println!("Total: {size}", size=format_size(bitmap_tag.processed_pixel_data.len()));
+        println!(get_compiled_string!("engine.h1.verbs.bitmap.total_size"), size=format_size(bitmap_tag.processed_pixel_data.len()));
     }
 
     // Warn if we did something that may not be what we wanted.
@@ -867,5 +888,56 @@ fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
         vectorize: bitmap_tag.usage == BitmapUsage::VectorMap,
         nearest_neighbor_alpha_mipmap: bitmap_tag.usage == BitmapUsage::VectorMap,
         truncate_zero_alpha: bitmap_tag.usage == BitmapUsage::AlphaBlend,
+    }
+}
+
+fn best_bitmap_format(processed_result: &ProcessedBitmaps) -> BitmapFormat {
+    let mut is_monochrome = true;
+    let mut is_16_bit_color = true;
+    for b in &processed_result.bitmaps {
+        let mut is_a4r4g4b4 = true;
+        let mut is_a1r5g5b5 = true;
+        let mut is_r5g6b5 = true;
+        let mut is_a8y8 = true;
+        let mut is_a8 = true;
+        let mut is_y8 = true;
+        let mut is_ay8 = true;
+
+        for p in &b.pixels {
+            macro_rules! test_pixel {
+                ($to:tt, $from:tt, $var:tt) => {
+                    $var = $var && ColorARGBInt::$from(p.$to()) == *p;
+                }
+            }
+
+            test_pixel!(to_r5g6b5, from_r5g6b5, is_r5g6b5);
+            test_pixel!(to_a1r5g5b5, from_a1r5g5b5, is_a1r5g5b5);
+            test_pixel!(to_a4r4g4b4, from_a4r4g4b4, is_a4r4g4b4);
+
+            test_pixel!(to_a8y8, from_a8y8, is_a8y8);
+            test_pixel!(to_a8, from_a8, is_a8);
+            test_pixel!(to_y8, from_y8, is_y8);
+            test_pixel!(to_ay8, from_ay8, is_ay8);
+        }
+
+        is_monochrome = is_monochrome && (is_a8 || is_ay8 || is_y8 || is_a8y8);
+        is_16_bit_color = is_16_bit_color && (is_a4r4g4b4 || is_a1r5g5b5 || is_r5g6b5);
+
+        if !is_monochrome && !is_16_bit_color {
+            break;
+        }
+    }
+
+    if processed_result.bitmaps.is_empty() {
+        BitmapFormat::_32bit
+    }
+    else if is_monochrome {
+        BitmapFormat::Monochrome
+    }
+    else if is_16_bit_color {
+        BitmapFormat::_16bit
+    }
+    else {
+        BitmapFormat::_32bit
     }
 }

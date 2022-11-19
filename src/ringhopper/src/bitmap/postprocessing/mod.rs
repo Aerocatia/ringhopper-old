@@ -3,7 +3,7 @@ use crate::types::{ColorARGBInt, log2_u16, ColorARGB, ColorRGB, Vector3D, Point2
 use super::*;
 
 /// Result of a processed bitmap.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ProcessedBitmap {
     /// All pixels of the bitmap.
     pub pixels: Vec<ColorARGBInt>,
@@ -110,7 +110,7 @@ pub struct ProcessedSequence {
 }
 
 /// Bitmap postprocessor which can generate mipmaps and do postprocessing.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ProcessedBitmaps {
     /// All final sequences.
     pub sequences: Vec<ProcessedSequence>,
