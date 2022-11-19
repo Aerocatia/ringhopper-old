@@ -13,6 +13,9 @@ extern crate vorbis_rs;
 extern crate xbadpcm;
 extern crate libsamplerate_sys;
 
+#[cfg(feature = "jxl")]
+extern crate jpegxl_rs;
+
 use ringhopper_proc::*;
 
 mod cmd;
