@@ -14,7 +14,7 @@ ringhopper = { path = "../ringhopper" }
 macros = { path = "macros", package = "ringhopper-macros" }
 ringhopper-proc = { path = "../ringhopper/proc", package = "ringhopper-proc" }
 encoding = "0.2"
-tiff = "0.7"
+tiff = "0.8"
 png = "0.17"
 flate2 = "1.0"
 rubato = "0.12"
