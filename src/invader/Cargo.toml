@@ -23,7 +23,6 @@ rubato = "0.12"
 vorbis_rs = "0.1"
 xbadpcm = "0.1"
 libsamplerate-sys = "0.1.12"
-jpegxl-src = "*"
 
 [features]
 default = []
