@@ -1,4 +1,5 @@
 use ringhopper_proc::*;
+use std::num::NonZeroUsize;
 use std::process::ExitCode;
 use crate::cmd::*;
 use ringhopper::engines::h1::TagGroup;
@@ -7,7 +8,7 @@ use ringhopper::file::TagFile;
 use crate::file::*;
 use macros::terminal::*;
 use ringhopper::error::ErrorMessageResult;
-use std::path::Path;
+use std::path::*;
 
 mod bitmap;
 mod hud_message_text;
@@ -34,17 +35,49 @@ const RECOVER_FUNCTION_GROUPS: &'static [(TagGroup, fn (tag_data: &[u8], tag_fil
     (TagGroup::UnicodeStringList, string_list::recover_unicode_string_list)
 ];
 
-/// Convert a tag, returning [`None`] if it is impossible to recover a tag with the group,
-/// `Some(Err(ErrorMessageResult))` if the tag failed to convert, `Some(Ok(true))` if the tag converted, and
-/// `Some(Ok(false))` if the tag did not convert because data is already present.
-fn recover_tag(tag_file: &TagFile, file_data: &[u8], data_dir: &Path, overwrite: bool) -> Option<ErrorMessageResult<RecoverResult>> {
+#[derive(Clone)]
+struct RecoverOptions {
+    batching: bool,
+    overwrite: bool,
+    data_dir: PathBuf
+}
+
+fn recover_tag(tag_file: &TagFile, log_mutex: super::LogMutex, _available_threads: NonZeroUsize, options: &RecoverOptions) -> ErrorMessageResult<bool> {
     let group = tag_file.tag_path.get_group();
+    let file_data = read_file(&tag_file.file_path)?;
+
     for fg in RECOVER_FUNCTION_GROUPS {
         if fg.0 == group {
-            return Some(fg.1(&file_data, tag_file, data_dir, overwrite));
+            let result = fg.1(&file_data, tag_file, &options.data_dir, options.overwrite)?;
+            let skipped;
+
+            let l = log_mutex.lock();
+            match result {
+                RecoverResult::Recovered => {
+                    println_success!(get_compiled_string!("engine.h1.verbs.recover.recovered_tag"), tag=tag_file.tag_path);
+                    skipped = false;
+                },
+                RecoverResult::DataAlreadyExists => {
+                    println!(get_compiled_string!("engine.h1.verbs.recover.skipped_tag_exists"), tag=tag_file.tag_path);
+                    skipped = true;
+                },
+                RecoverResult::NoSourceData => {
+                    println_warn!(get_compiled_string!("engine.h1.verbs.recover.skipped_tag_no_source_data"), tag=tag_file.tag_path);
+                    skipped = true;
+                },
+            }
+            drop(l);
+
+            return Ok(skipped);
         }
     }
-    None
+
+    // Can't recover this
+    if !options.batching {
+        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.recover.unable_to_recover_tag"), input_group=tag_file.tag_path.get_group())));
+    }
+
+    Ok(true)
 }
 
 pub fn recover_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode> {
@@ -58,54 +91,12 @@ pub fn recover_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessag
                                                                                  .can_overwrite()
                                                                                  .needs_data())?;
 
-    let overwrite = parsed_args.named.get("overwrite").is_some();
+    let tag_path = &parsed_args.extra[0];
+    let options = RecoverOptions {
+        batching: TagFile::uses_batching(tag_path),
+        overwrite: parsed_args.named.get("overwrite").is_some(),
+        data_dir: Path::new(&parsed_args.named["data"][0]).to_owned()
+    };
 
-    let tags = TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &parsed_args.extra[0], None)?;
-    let total = tags.len();
-    let mut count = 0usize;
-    let mut recovered = 0usize;
-    let mut error_count = 0usize;
-    let mut convertible = tags.len();
-    for i in tags {
-        let file_data = read_file(&i.file_path)?;
-        match recover_tag(&i, &file_data, str_slice_to_path_vec(&parsed_args.named["data"])[0], overwrite) {
-            Some(Ok(result)) => {
-                match result {
-                    RecoverResult::Recovered => {
-                        println_success!(get_compiled_string!("engine.h1.verbs.recover.recovered_tag"), tag=i.tag_path);
-                        recovered += 1;
-                    },
-                    RecoverResult::DataAlreadyExists => println!(get_compiled_string!("engine.h1.verbs.recover.skipped_tag_exists"), tag=i.tag_path),
-                    RecoverResult::NoSourceData => println!(get_compiled_string!("engine.h1.verbs.recover.skipped_tag_no_source_data"), tag=i.tag_path)
-                };
-                count += 1;
-            },
-            Some(Err(e)) => {
-                eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.recover.error_could_not_recover_tag"), tag=i.tag_path, error=e);
-                error_count += 1;
-            },
-            None => {
-                if total == 1 {
-                    eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.recover.unable_to_recover_tag"), input_group=i.tag_path.get_group());
-                    error_count += 1;
-                }
-                convertible -= 1;
-            }
-        }
-    }
-
-    if convertible == 0 {
-        Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover.error_no_tags_found")))
-    }
-    else if count == 0 {
-        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.recover.error_no_tags_recovered"), error=error_count)))
-    }
-    else if error_count > 0 {
-        println_warn!(get_compiled_string!("engine.h1.verbs.recover.recovered_some_tags_with_errors"), count=recovered, error=error_count);
-        Ok(ExitCode::FAILURE)
-    }
-    else {
-        println_success!(get_compiled_string!("engine.h1.verbs.recover.recovered_all_tags"), count=recovered);
-        Ok(ExitCode::SUCCESS)
-    }
+    Ok(super::do_with_batching_threaded(recover_tag, &tag_path, None, &str_slice_to_path_vec(&parsed_args.named["tags"]), parsed_args.threads, options)?.exit_code())
 }

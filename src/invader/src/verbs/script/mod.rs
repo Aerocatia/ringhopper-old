@@ -2,6 +2,7 @@ use ringhopper::engines::h1::{TagGroup, TagReference, TagFileSerializeFn, Engine
 use ringhopper::engines::h1::*;
 use ringhopper::engines::h1::definitions::*;
 use ringhopper_proc::*;
+use std::num::NonZeroUsize;
 use std::process::ExitCode;
 use crate::cmd::*;
 use ringhopper::error::{ErrorMessageResult, ErrorMessage};
@@ -11,30 +12,23 @@ use crate::file::*;
 use macros::terminal::*;
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex};
 
-struct ScriptOptions<'a> {
+#[derive(Clone)]
+struct ScriptOptions {
+    tags_dirs: Vec<PathBuf>,
+    all_tags: Arc<Mutex<Option<Vec<TagFile>>>>,
+    hud_globals: HUDGlobals,
+    data_dir: PathBuf,
+    engine_target: &'static EngineTarget,
     reload_scripts: bool,
     regenerate: bool,
     exclude_global_scripts: bool,
-    explicit: Option<&'a Vec<String>>,
+    explicit: Option<Vec<String>>,
     clear: bool
 }
 
-struct CompileResult {
-    warning_count: usize,
-    script_count: usize,
-    global_count: usize
-}
-
-fn compile_scripts_for_tag(path: &TagFile,
-                           data_dir: &Path,
-                           hud_globals: &HUDGlobals,
-                           tags_dirs: &[&Path],
-                           engine_target:
-                           &EngineTarget,
-                           all_tags:
-                           &mut Option<Vec<TagFile>>,
-                           options: &ScriptOptions) -> ErrorMessageResult<CompileResult> {
+fn compile_scripts_for_tag(path: &TagFile, log_mutex: super::LogMutex, _available_threads: NonZeroUsize, options: &ScriptOptions) -> ErrorMessageResult<bool> {
     // Load the scenario tag
     let mut scenario_tag = *Scenario::from_tag_file(&read_file(&path.file_path)?)?.data;
 
@@ -53,7 +47,7 @@ fn compile_scripts_for_tag(path: &TagFile,
     };
 
     // Get the tag data directory.
-    let scenario_tag_data_dir = data_dir.join(path.tag_path.to_string()).parent().unwrap().join("scripts");
+    let scenario_tag_data_dir = options.data_dir.join(path.tag_path.to_string()).parent().unwrap().join("scripts");
 
     // If we are clearing scripts, do not do anything
     if options.clear {
@@ -65,11 +59,11 @@ fn compile_scripts_for_tag(path: &TagFile,
         scenario_tag.source_files.blocks.clear();
 
         let global_scripts_name = "global_scripts".to_owned();
-        let global_scripts_path = data_dir.join("global_scripts.hsc");
+        let global_scripts_path = options.data_dir.join("global_scripts.hsc");
 
         // If explicit, add only specific scripts.
         let mut script_paths = BTreeMap::<String, PathBuf>::new();
-        if let Some(n) = options.explicit {
+        if let Some(n) = &options.explicit {
             for script in n {
                 script_paths.insert(script.to_owned(), scenario_tag_data_dir.join(format!("{script}.hsc")));
             }
@@ -153,13 +147,15 @@ fn compile_scripts_for_tag(path: &TagFile,
     }
     else {
         // If explicit, regenerate only specific scripts.
-        if let Some(n) = options.explicit {
+        if let Some(n) = &options.explicit {
             scenario_tag.source_files.blocks.retain(|b| n.contains(&b.name.to_str().to_owned()));
         }
     }
 
     // Next, load the HUD message text tags if present
     let hud_messages_tag = if !scenario_tag.hud_messages.is_empty() {
+        let tags_dirs: Vec<&Path> = options.tags_dirs.iter().map(|f| f.as_path()).collect();
+
         match TagFile::from_tag_ref(&tags_dirs, &scenario_tag.hud_messages) {
             Some(n) => Ok(HUDMessageText::from_tag_file(&read_file(&n.file_path)?)?.data),
             None => Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("general.error_tag_not_found"), tag=scenario_tag.hud_messages)))
@@ -170,20 +166,27 @@ fn compile_scripts_for_tag(path: &TagFile,
     };
 
     // Get the warnings:
-    let warnings = scenario_tag.compile_scripts(engine_target, hud_messages_tag.as_ref(), hud_globals, &mut |path| -> ErrorMessageResult<Option<TagGroup>> {
+    let warnings = scenario_tag.compile_scripts(options.engine_target, hud_messages_tag.as_ref(), &options.hud_globals, &mut |path| -> ErrorMessageResult<Option<TagGroup>> {
+        let mut all_tags = options.all_tags.lock().unwrap();
         if all_tags.is_none() {
-            *all_tags = Some(TagFile::from_virtual_tags_directory(tags_dirs)?);
+            let tags_dirs: Vec<&Path> = options.tags_dirs.iter().map(|f| f.as_path()).collect();
+            *all_tags = Some(TagFile::from_virtual_tags_directory(&tags_dirs)?);
         }
-
         for i in all_tags.as_ref().unwrap() {
             if i.tag_path.get_group().is_object() && i.tag_path.get_path_without_extension() == path {
                 return Ok(Some(i.tag_path.get_group()))
             }
         }
-
         Ok(None)
     })?;
     let warning_count = warnings.len();
+    let script_count = scenario_tag.scripts.len();
+    let global_count = scenario_tag.globals.len();
+
+    // Save it
+    write_file(&path.file_path, &scenario_tag.into_tag_file()?)?;
+
+    let l = log_mutex.lock();
 
     if warning_count > 0 {
         eprintln_warn!(get_compiled_string!("engine.h1.verbs.script.compiled_scripts_with_warnings"), warning_count=warning_count, tag_path=path.tag_path);
@@ -192,11 +195,16 @@ fn compile_scripts_for_tag(path: &TagFile,
             eprintln_warn!("    {file}:{line}:{column}: {warning}", file=w.get_file(), line=line, column=column, warning=w.get_message());
         }
     }
+    else if script_count != 0 || global_count != 0 {
+        println_success!(get_compiled_string!("engine.h1.verbs.script.compiled_scripts"), tag=path.tag_path, global_count=global_count, script_count=script_count);
+    }
+    else {
+        println_success!(get_compiled_string!("engine.h1.verbs.script.cleared_scripts"), tag=path.tag_path);
+    }
 
-    // Save it
-    write_file(&path.file_path, &scenario_tag.into_tag_file()?)?;
+    drop(l);
 
-    Ok(CompileResult { warning_count, script_count: scenario_tag.scripts.len(), global_count: scenario_tag.globals.len() })
+    Ok(true)
 }
 
 pub fn script_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode> {
@@ -210,7 +218,7 @@ pub fn script_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         &[get_compiled_string!("arguments.specifier.tag_batch_without_group")],
         executable,
         verb.get_description(),
-        ArgumentConstraints::new().needs_data().needs_tags().multiple_tags_directories().needs_engine()
+        ArgumentConstraints::new().needs_data().needs_tags().multiple_tags_directories().needs_engine().uses_threads()
     )?;
 
     // Here are our tags.
@@ -245,51 +253,27 @@ pub fn script_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         }
     };
 
-    let tags = TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &parsed_args.extra[0], Some(TagGroup::Scenario))?;
     let options = ScriptOptions {
+        hud_globals,
+        all_tags: Arc::new(Mutex::new(None)),
+        tags_dirs: parsed_args.named["tags"].iter().map(|p| Path::new(p).to_owned()).collect(),
+        data_dir: Path::new(&parsed_args.named.get("data").unwrap()[0]).to_owned(),
+        engine_target: parsed_args.engine_target.unwrap(),
         reload_scripts: parsed_args.named.contains_key("reload-scripts"),
         exclude_global_scripts: parsed_args.named.contains_key("exclude-global-scripts"),
         regenerate: parsed_args.named.contains_key("regenerate"),
-        explicit: parsed_args.named.get("explicit"),
+        explicit: parsed_args.named.get("explicit").map(|f| f.to_owned()),
         clear: parsed_args.named.contains_key("clear")
     };
-    let mut processed = 0usize;
-    let mut error_count = 0usize;
-    let mut warning_count = 0usize;
-    let mut all_tags = None;
-    let data_dir = &parsed_args.named.get("data").unwrap()[0];
-    let total = tags.len();
-    for i in tags {
-        match compile_scripts_for_tag(&i, Path::new(&data_dir), &hud_globals, &tags_dirs, parsed_args.engine_target.unwrap(), &mut all_tags, &options) {
-            Ok(info) => {
-                if info.script_count != 0 || info.global_count != 0 {
-                    println_success!(get_compiled_string!("engine.h1.verbs.script.compiled_scripts"), tag=i.tag_path, global_count=info.global_count, script_count=info.script_count);
-                }
-                else {
-                    println_success!(get_compiled_string!("engine.h1.verbs.script.cleared_scripts"), tag=i.tag_path);
-                }
-                warning_count += info.warning_count;
-                processed += 1;
-            },
-            Err(e) => {
-                eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.script.error_could_not_compile_scripts"), tag=i.tag_path, error=e);
-                error_count += 1;
-            }
-        }
-    }
 
-    if total == 0 {
-        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_no_tags_found"))))
-    }
-    else if processed == 0 {
-        Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.script.error_no_tags_compiled"), error=error_count)))
-    }
-    else if error_count > 0 {
-        println_warn!(get_compiled_string!("engine.h1.verbs.script.compiled_some_tags_with_errors"), count=processed, error=error_count, warning=warning_count);
-        Ok(ExitCode::FAILURE)
+    let tag_path = &parsed_args.extra[0];
+    if TagFile::uses_batching(tag_path) {
+        Ok(super::do_with_batching_threaded(compile_scripts_for_tag, tag_path, Some(TagGroup::Scenario), &str_slice_to_path_vec(&parsed_args.named["tags"]), parsed_args.threads, options)?.exit_code())
     }
     else {
-        println_success!(get_compiled_string!("engine.h1.verbs.script.compiled_all_tags"), count=processed, warning=warning_count);
+        let tag_path = TagReference::from_path_and_group(tag_path, TagGroup::Scenario)?;
+        let file_path = Path::new(&parsed_args.named["tags"][0]).join(tag_path.to_string());
+        compile_scripts_for_tag(&TagFile { tag_path, file_path }, super::LogMutex::default(), parsed_args.threads, &options)?;
         Ok(ExitCode::SUCCESS)
     }
 }

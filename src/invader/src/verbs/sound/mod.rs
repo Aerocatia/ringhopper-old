@@ -1,4 +1,4 @@
-use std::num::NonZeroU32;
+use std::num::{NonZeroU32, NonZeroUsize};
 use std::process::ExitCode;
 use std::path::*;
 use std::sync::{Arc, Mutex};
@@ -8,7 +8,6 @@ use ringhopper::error::{ErrorMessageResult, ErrorMessage};
 use ringhopper::file::*;
 use ringhopper::types::*;
 use ringhopper::engines::h1::*;
-use ringhopper::engines::h1::TagReference;
 use ringhopper_proc::*;
 use vorbis_rs::VorbisBitrateManagementStrategy;
 use crate::file::*;
@@ -16,8 +15,10 @@ use crate::*;
 
 mod util;
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 struct SoundOptions {
+    batched: bool,
+    data_dir: PathBuf,
     sample_rate: Option<Option<u32>>,
     channel_count: Option<Option<usize>>,
     split: Option<bool>,
@@ -38,7 +39,10 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
         Argument { long: "fit-to-adpcm-block-size", short: 'A', description: get_compiled_string!("engine.h1.verbs.sound.arguments.fit-to-adpcm-block-size.description"), parameter: Some("on/off"), multiple: false },
     ], &[get_compiled_string!("arguments.specifier.tag_batch_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_tags().needs_data().uses_threads())?;
 
+    let tag_path = &parsed_args.extra[0];
     let options = SoundOptions {
+        batched: TagFile::uses_batching(tag_path),
+        data_dir: Path::new(&parsed_args.named["data"][0]).to_owned(),
         split: parsed_args.parse_bool_on_off("split")?,
         compression_level: match parsed_args.named.get("compression-level") {
             Some(n) => {
@@ -73,93 +77,14 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
         adpcm_block_size: parsed_args.parse_bool_on_off("fit-to-adpcm-block-size")?
     };
 
-    let max_threads = parsed_args.threads;
-    let tags_dir = Path::new(&parsed_args.named["tags"][0]);
-    let data_dir = Path::new(&parsed_args.named["data"][0]);
-    let tag_path = &parsed_args.extra[0];
-    let log_mutex = std::sync::Arc::new(std::sync::Mutex::new(true));
-
-    if TagFile::uses_batching(tag_path) {
-        let success = std::sync::Arc::new(std::sync::Mutex::new(0usize));
-        let total = std::sync::Arc::new(std::sync::Mutex::new(0usize));
-        let errors = std::sync::Arc::new(std::sync::Mutex::new(0usize));
-        let log_mutex = log_mutex.clone();
-
-        let tags = TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &tag_path, Some(TagGroup::Sound))?;
-        let tag_count = tags.len();
-        let current_tag_index = std::sync::Arc::new(std::sync::Mutex::new(0usize));
-
-        let mut threads = Vec::new();
-        let tags = std::sync::Arc::new(std::sync::Mutex::new(tags));
-        for _ in 0..max_threads {
-            let success = success.clone();
-            let total = total.clone();
-            let errors = errors.clone();
-            let tags = tags.clone();
-            let current_tag_index = current_tag_index.clone();
-            let data_dir = data_dir.to_owned();
-            let log_mutex = log_mutex.clone();
-            let options = options.clone();
-
-            threads.push(std::thread::spawn(move || {
-                let index: usize = {
-                    let mut i = current_tag_index.lock().unwrap();
-                    if *i == tag_count {
-                        return;
-                    }
-                    *i += 1;
-                    *i - 1
-                };
-
-                let tag = tags.lock().unwrap()[index].clone();
-
-                let do_single_sound = do_single_sound(&tag, &data_dir, &options, false, max_threads, &log_mutex);
-                match do_single_sound {
-                    Ok(_) => {
-                        *success.lock().unwrap() += 1;
-                    }
-                    Err(e) => {
-                        let l = log_mutex.lock().unwrap();
-                        eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.sound.error_could_not_process_sounds"), tag=tag.tag_path, error=e);
-                        *errors.lock().unwrap() += 1;
-                        drop(l)
-                    }
-                }
-                *total.lock().unwrap() += 1;
-            }));
-        }
-
-        for i in threads {
-            i.join().unwrap();
-        }
-
-        let total = *total.lock().unwrap();
-        let errors = *errors.lock().unwrap();
-        let success = *success.lock().unwrap();
-
-        if total == 0 {
-            Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_no_tags_found"))))
-        }
-        else if errors > 0 {
-            println_warn!(get_compiled_string!("engine.h1.verbs.sound.processed_sounds_with_errors"), count=success, error=errors);
-            Ok(ExitCode::FAILURE)
-        }
-        else {
-            println_success!(get_compiled_string!("engine.h1.verbs.sound.processed_sounds"), count=success);
-            Ok(ExitCode::SUCCESS)
-        }
-    }
-    else {
-        let tag_path = TagReference::from_path_and_group(tag_path, TagGroup::Sound)?;
-        let file_path = Path::new(&tags_dir.join(tag_path.to_string())).to_owned();
-        do_single_sound(&TagFile { tag_path, file_path: file_path }, Path::new(&parsed_args.named["data"][0]), &options, true, max_threads, &log_mutex)?;
-        Ok(ExitCode::SUCCESS)
-    }
+    let result = super::do_with_batching_threaded(do_single_sound, &tag_path, Some(TagGroup::Bitmap), &str_slice_to_path_vec(&parsed_args.named["tags"]), parsed_args.threads, options)?;
+    Ok(result.exit_code())
 }
 
-fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_extended_info: bool, max_threads: usize, log_mutex: &Arc<Mutex<bool>>) -> ErrorMessageResult<()> {
+fn do_single_sound(tag: &TagFile, log_mutex: super::LogMutex, available_threads: NonZeroUsize, options: &SoundOptions) -> ErrorMessageResult<bool> {
     let default_channel_count: Option<usize>;
     let default_sample_rate: Option<u32>;
+    let available_threads = available_threads.get();
 
     // Load our sounds
     let mut sound_tag = if tag.file_path.is_file() {
@@ -182,7 +107,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
     sound_tag.format = options.format.unwrap_or(sound_tag.format);
     sound_tag.sound_class = options.class.unwrap_or(sound_tag.sound_class);
 
-    let data = data_dir.join(tag.tag_path.get_path_without_extension());
+    let data = options.data_dir.join(tag.tag_path.get_path_without_extension());
     if !data.is_dir() {
         return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.sound.error_cannot_find_dir"), dir=data.to_string_lossy())))
     }
@@ -226,13 +151,11 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
     //
     // If size == permutation count for the pitch range, move to the next one.
     let permutation_count_per_pitch_range: Vec<usize> = pitch_ranges.iter().map(|v| v.permutations.len()).collect();
-    let total_permutation_count: usize = permutation_count_per_pitch_range.iter().sum();
-    let threads_per_permutation = (max_threads / total_permutation_count.max(1)).max(1);
-
     let next_permutation_to_process = Arc::new(Mutex::new(vec![0usize; pitch_range_count]));
+
     let pitch_ranges = Arc::new(Mutex::new(pitch_ranges));
-    let mut threads = Vec::with_capacity(max_threads);
-    for _ in 0..max_threads {
+    let mut threads = Vec::with_capacity(available_threads);
+    for _ in 0..available_threads {
         let nptp_array = next_permutation_to_process.clone();
         let pr_array = pitch_ranges.clone();
         let best_sample_rate = best_sample_rate.clone();
@@ -242,7 +165,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
         let fit_to_adpcm_blocksize = sound_tag.flags.fit_to_adpcm_blocksize.clone();
         let compression_level = options.compression_level.clone();
         let count_array = permutation_count_per_pitch_range.clone();
-        let threads_per_permutation = threads_per_permutation;
+        let available_threads = available_threads;
 
         threads.push(std::thread::spawn(move || -> ErrorMessageResult<()> {
             for pri in 0..pitch_range_count {
@@ -302,7 +225,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
                     }
 
                     // Encode
-                    pe.encode(sound_tag_format, split, compression_level, threads_per_permutation)?;
+                    pe.encode(sound_tag_format, split, compression_level, available_threads)?;
 
                     // Move it back
                     let mut pra = pr_array.lock().unwrap();
@@ -422,7 +345,7 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
     }
 
     // Show our output info
-    if show_extended_info {
+    if options.batched {
         let channel_count_to_str = |c| match c {
             1 => "mono",
             2 => "stereo",
@@ -488,6 +411,6 @@ fn do_single_sound(tag: &TagFile, data_dir: &Path, options: &SoundOptions, show_
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=tag.tag_path);
     drop(l);
 
-    Ok(())
+    Ok(true)
 }
 

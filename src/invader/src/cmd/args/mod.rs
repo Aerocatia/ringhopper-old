@@ -2,6 +2,7 @@
 
 use macros::terminal::*;
 use std::collections::HashMap;
+use std::num::NonZeroUsize;
 use std::path::Path;
 
 use ringhopper_proc::get_compiled_string;
@@ -94,9 +95,7 @@ impl ArgumentConstraints {
     }
 }
 
-
 /// Argument to search for in [ParsedArguments::parse_arguments].
-#[derive(Default)]
 pub struct ParsedArguments {
     /// Named arguments
     pub named: HashMap<&'static str, Vec<String>>,
@@ -108,8 +107,15 @@ pub struct ParsedArguments {
     pub engine_target: Option<&'static EngineTarget>,
 
     /// Number of threads to use
-    pub threads: usize
+    pub threads: NonZeroUsize
 }
+
+impl Default for ParsedArguments {
+    fn default() -> ParsedArguments {
+        ParsedArguments { named: HashMap::new(), extra: Vec::new(), engine_target: None, threads: NonZeroUsize::new(1).unwrap() }
+    }
+}
+
 
 impl ParsedArguments {
     /// Get the first argument, parsed as a 32-bit float if set.
@@ -329,11 +335,11 @@ impl ParsedArguments {
 
             parsed.threads = if let Some(t) = parsed.named.get("threads") {
                 let string = t[0].as_str();
-                string.parse().map_err(|e| ErrorMessage::AllocatedString(format!(get_compiled_string!("command_usage.error_bad_thread_count"), string=string, error=e)))?
+                NonZeroUsize::new(string.parse().map_err(|e| ErrorMessage::AllocatedString(format!(get_compiled_string!("command_usage.error_bad_thread_count"), string=string, error=e)))?).unwrap_or(NonZeroUsize::new(1).unwrap())
             } else {
                 match std::thread::available_parallelism() {
-                    Ok(n) => n.get(),
-                    Err(_) => 1
+                    Ok(n) => n,
+                    Err(_) => NonZeroUsize::new(1).unwrap()
                 }
             };
 

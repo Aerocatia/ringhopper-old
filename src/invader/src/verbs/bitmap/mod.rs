@@ -7,11 +7,15 @@ use ringhopper::error::*;
 use ringhopper::file::*;
 use ringhopper::bitmap::*;
 use ringhopper::engines::h1::definitions::*;
-use ringhopper::engines::h1::{*, TagReference};
+use ringhopper::engines::h1::*;
 use crate::file::*;
 use std::convert::TryInto;
+use std::num::NonZeroUsize;
 use std::process::ExitCode;
 use std::path::*;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 mod loader;
 use self::loader::*;
@@ -19,8 +23,12 @@ use self::loader::*;
 #[cfg(test)]
 mod tests;
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 struct BitmapOptions {
+    data_dir: PathBuf,
+    batched: bool,
+    warnings: Arc<AtomicUsize>,
+
     encoding_format: Option<Option<BitmapFormat>>,
     usage: Option<BitmapUsage>,
     enable_diffusion_dithering: Option<bool>,
@@ -115,6 +123,10 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
     let tag_path = &parsed_args.extra[0];
 
     let options = BitmapOptions {
+        data_dir: Path::new(&parsed_args.named["data"][0]).to_owned(),
+        batched: TagFile::uses_batching(tag_path),
+        warnings: Arc::new(AtomicUsize::new(0)),
+
         detail_fade_factor: parsed_args.parse_f32("detail-fade-factor")?,
         sharpen_amount: parsed_args.parse_f32("sharpen-amount")?,
         bump_height: parsed_args.parse_f32("bump-height")?,
@@ -163,98 +175,16 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         }
     };
 
-    let max_threads = (parsed_args.threads / 2).max(1);
-    let data_dir = Path::new(&parsed_args.named["data"][0]).to_owned();
-    let log_mutex = std::sync::Arc::new(std::sync::Mutex::new(true));
-    if TagFile::uses_batching(tag_path) {
-        let success = std::sync::Arc::new(std::sync::Mutex::new(0usize));
-        let total = std::sync::Arc::new(std::sync::Mutex::new(0usize));
-        let errors = std::sync::Arc::new(std::sync::Mutex::new(0usize));
-        let warnings = std::sync::Arc::new(std::sync::Mutex::new(0usize));
-        let log_mutex = log_mutex.clone();
-
-        let tags = TagFile::from_tag_path_batched(&str_slice_to_path_vec(&parsed_args.named["tags"]), &tag_path, Some(TagGroup::Bitmap))?;
-        let tag_count = tags.len();
-        let current_tag_index = std::sync::Arc::new(std::sync::Mutex::new(0usize));
-
-        let mut threads = Vec::new();
-        let tags = std::sync::Arc::new(std::sync::Mutex::new(tags));
-        for _ in 0..max_threads {
-            let success = success.clone();
-            let total = total.clone();
-            let errors = errors.clone();
-            let warnings = warnings.clone();
-            let tags = tags.clone();
-            let current_tag_index = current_tag_index.clone();
-            let data_dir = data_dir.clone();
-            let log_mutex = log_mutex.clone();
-
-            threads.push(std::thread::spawn(move || {
-                loop {
-                    let index: usize = {
-                        let mut i = current_tag_index.lock().unwrap();
-                        if *i == tag_count {
-                            return;
-                        }
-                        *i += 1;
-                        *i - 1
-                    };
-
-                    let mut warnings_tmp = 0;
-                    let tag = tags.lock().unwrap()[index].clone();
-
-                    let do_single_bitmap = do_single_bitmap(&tag, &data_dir, &options, false, &mut warnings_tmp, &log_mutex);
-                    match do_single_bitmap {
-                        Ok(_) => {
-                            *success.lock().unwrap() += 1;
-                        }
-                        Err(e) => {
-                            let l = log_mutex.lock().unwrap();
-                            eprintln_error_pre!(get_compiled_string!("engine.h1.verbs.bitmap.error_could_not_generate_bitmaps"), tag=tag.tag_path, error=e);
-                            *errors.lock().unwrap() += 1;
-                            drop(l)
-                        }
-                    }
-                    *total.lock().unwrap() += 1;
-                    *warnings.lock().unwrap() += warnings_tmp;
-                }
-            }))
-        }
-
-        for i in threads {
-            i.join().unwrap();
-        }
-
-        let total = *total.lock().unwrap();
-        let errors = *errors.lock().unwrap();
-        let warnings = *warnings.lock().unwrap();
-        let success = *success.lock().unwrap();
-
-        if total == 0 {
-            Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("file.error_no_tags_found"))))
-        }
-        else if errors > 0 {
-            println_warn!(get_compiled_string!("engine.h1.verbs.bitmap.generated_bitmaps_with_warnings_and_errors"), count=success, error=errors, warning=warnings);
-            Ok(ExitCode::FAILURE)
-        }
-        else if warnings > 0 {
-            println_warn!(get_compiled_string!("engine.h1.verbs.bitmap.generated_bitmaps_with_warnings"), count=success, warning=warnings);
-            Ok(ExitCode::SUCCESS)
-        }
-        else {
-            println_success!(get_compiled_string!("engine.h1.verbs.bitmap.generated_bitmaps"), count=success);
-            Ok(ExitCode::SUCCESS)
-        }
+    let warnings = options.warnings.clone();
+    let result = super::do_with_batching_threaded(do_single_bitmap, &tag_path, Some(TagGroup::Bitmap), &str_slice_to_path_vec(&parsed_args.named["tags"]), parsed_args.threads, options)?;
+    let warnings = warnings.fetch_add(0, Ordering::Relaxed);
+    if warnings > 0 {
+        eprintln_warn!("Warnings: {warnings}", warnings = warnings);
     }
-    else {
-        let tag_path = TagReference::from_path_and_group(tag_path, TagGroup::Bitmap)?;
-        let file_path = Path::new(&parsed_args.named["tags"][0]).join(tag_path.to_string());
-        do_single_bitmap(&TagFile { tag_path, file_path }, Path::new(&parsed_args.named["data"][0]), &options, true, &mut 0, &log_mutex)?;
-        Ok(ExitCode::SUCCESS)
-    }
+    Ok(result.exit_code())
 }
 
-fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, show_extended_info: bool, warnings: &mut usize, log_mutex: &std::sync::Arc<std::sync::Mutex<bool>>) -> ErrorMessageResult<()> {
+fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threads: NonZeroUsize, options: &BitmapOptions) -> ErrorMessageResult<bool> {
     // Load the bitmap tag
     let is_new_bitmap_tag;
     let mut bitmap_tag = if file.file_path.exists() {
@@ -296,7 +226,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     }
     else {
         // Load the image if we are not regenerating
-        let mut data = data_dir.join(file.tag_path.to_string());
+        let mut data = options.data_dir.join(file.tag_path.to_string());
         let mut image = None;
 
         for img in IMAGE_LOADING_FUNCTIONS {
@@ -628,7 +558,7 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     let l = log_mutex.lock().unwrap();
 
     // Print all extended info.
-    if show_extended_info {
+    if !options.batched {
         let describe_bitmap = |b: usize| {
             let bitmap = &bitmap_tag.bitmap_data[b];
             let format_info = match bitmap.format {
@@ -702,30 +632,30 @@ fn do_single_bitmap(file: &TagFile, data_dir: &Path, options: &BitmapOptions, sh
     // Warn if we did something that may not be what we wanted.
     if warn_monochrome {
         eprintln_warn_pre!(get_compiled_string!("engine.h1.verbs.bitmap.warning_monochrome_non_monochrome"));
-        *warnings += 1;
+        options.warnings.fetch_add(1, Ordering::Relaxed);
     }
     if bitmap_tag.encoding_format == BitmapFormat::DXT1 {
         if contains_varying_alpha {
             eprintln_warn_pre!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_alpha_loss"));
-            *warnings += 1;
+        options.warnings.fetch_add(1, Ordering::Relaxed);
         }
         if contains_zero_alpha_color {
             eprintln_warn_pre!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_color_loss"));
             if contains_fully_transparent_bitmaps {
                 eprintln_warn!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_color_loss_entire_bitmap"));
             }
-            *warnings += 1;
+            options.warnings.fetch_add(1, Ordering::Relaxed);
         }
     }
     for w in color_plate_warnings {
         eprintln_warn_pre!("{}", w);
-        *warnings += 1;
+        options.warnings.fetch_add(1, Ordering::Relaxed);
     }
 
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=file.tag_path);
     drop(l);
 
-    Ok(())
+    Ok(true)
 }
 
 fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
