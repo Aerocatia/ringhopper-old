@@ -267,13 +267,5 @@ pub fn script_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
     };
 
     let tag_path = &parsed_args.extra[0];
-    if TagFile::uses_batching(tag_path) {
-        Ok(super::do_with_batching_threaded(compile_scripts_for_tag, tag_path, Some(TagGroup::Scenario), &str_slice_to_path_vec(&parsed_args.named["tags"]), parsed_args.threads, options)?.exit_code())
-    }
-    else {
-        let tag_path = TagReference::from_path_and_group(tag_path, TagGroup::Scenario)?;
-        let file_path = Path::new(&parsed_args.named["tags"][0]).join(tag_path.to_string());
-        compile_scripts_for_tag(&TagFile { tag_path, file_path }, super::LogMutex::default(), parsed_args.threads, &options)?;
-        Ok(ExitCode::SUCCESS)
-    }
+    Ok(super::do_with_batching_threaded(compile_scripts_for_tag, tag_path, Some(TagGroup::Scenario), &str_slice_to_path_vec(&parsed_args.named["tags"]), parsed_args.threads, options)?.exit_code())
 }
