@@ -170,6 +170,9 @@
     "engine.h1.verbs.recover.recovered_tag": "Recovered {tag}",
     "engine.h1.verbs.recover.unable_to_recover_tag": "Can't recover {input_group} tags.",
 
+    "engine.h1.verbs.recover-processed.arguments.force.description": "Recover processed data even when input data can be recovered.",
+    "engine.h1.verbs.recover-processed.skipped_tag_source_data": "Skipped {tag} (input data can be recovered; did you mean to use the recover verb instead? use --force to bypass this)",
+
     "engine.h1.verbs.script.arguments.clear.description": "Clear all script data from the tag.",
     "engine.h1.verbs.script.arguments.exclude_global_scripts.description": "Do not automatically include global_scripts.hsc from the root of the data folder.",
     "engine.h1.verbs.script.arguments.explicit.description": "Explicitly compile the given source in the script directory. This argument can be used multiple times.",
@@ -273,7 +276,8 @@
     "verb.model.description": "Generate model tags.",
     "verb.physics.description": "Generate physics tags.",
     "verb.plate.description": "Generate color plates.",
-    "verb.recover.description": "Recover source data from tags.",
+    "verb.recover.description": "Recover input data from tags.",
+    "verb.recover-processed.description": "Recover processed data from tags.",
     "verb.refactor.description": "Move tags while preserving references.",
     "verb.repair.description": "Repair cache files.",
     "verb.resource.description": "Generate resource maps.",

@@ -17,6 +17,7 @@ pub mod collection;
 pub mod convert;
 pub mod list_engines;
 pub mod recover;
+pub mod recover_processed;
 pub mod script;
 pub mod sound;
 pub mod strip;
