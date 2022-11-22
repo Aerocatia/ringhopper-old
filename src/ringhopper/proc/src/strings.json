@@ -171,6 +171,20 @@
     "engine.h1.verbs.recover.unable_to_recover_tag": "Can't recover {input_group} tags.",
 
     "engine.h1.verbs.recover-processed.arguments.force.description": "Recover processed data even when input data can be recovered.",
+    "engine.h1.verbs.recover-processed.error_bitmap_bad_multitex": "Cannot recover cubemaps or 3D textures with multiple bitmaps on a sequence.",
+    "engine.h1.verbs.recover-processed.error_bitmap_bad_sprite_empty": "No sprites found in sprite bitmap tag.",
+
+    "engine.h1.verbs.recover-processed.error_bitmap_bad_cubemaps": "Bitmap type is not set to cubemaps but the tag contains cubemaps.",
+    "engine.h1.verbs.recover-processed.error_bitmap_bad_2d": "Bitmap type is not set to 2D textures, sprites, or interface bitmaps but the tag contains 2D textures",
+    "engine.h1.verbs.recover-processed.error_bitmap_bad_3d": "Bitmap type is not set to 3D textures but the tag contains 3D textures.",
+    "engine.h1.verbs.recover-processed.error_bitmap_bad_depth": "Bitmap type is not set to 3D textures but the tag has bitmap(s) with depth not equal to 1.",
+    "engine.h1.verbs.recover-processed.error_bitmap_bad_sprite_type": "Can't recover sprites from non-2D texture.",
+    "engine.h1.verbs.recover-processed.error_bitmap_bad_white_type": "White textures are unsupported.",
+    "engine.h1.verbs.recover-processed.error_bitmap_corrupted_invalid_sprite_dimensions": "Bitmap tag is corrupted. Sequence #{sequence} contains invalid sprite dimensions.",
+    "engine.h1.verbs.recover-processed.error_bitmap_no_unique_background": "Cannot find a unique color for the background.",
+    "engine.h1.verbs.recover-processed.error_bitmap_no_unique_divider": "Cannot find a unique color for the divider.",
+    "engine.h1.verbs.recover-processed.error_bitmap_out_of_bounds": "Bitmap tag is corrupted. Bitmap #{bitmap} contains out-of-bounds pixel data.",
+    "engine.h1.verbs.recover-processed.error_bitmap_sequence_invalid_bitmap_index": "Bitmap tag is corrupted. Sequence #{sequence} contains an invalid bitmap index ({index} >= {count}).",
     "engine.h1.verbs.recover-processed.skipped_tag_source_data": "Skipped {tag} (input data can be recovered; did you mean to use the recover verb instead? use --force to bypass this)",
 
     "engine.h1.verbs.script.arguments.clear.description": "Clear all script data from the tag.",

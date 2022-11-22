@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::path::Path;
 use crate::file::*;
+use ringhopper_proc::*;
 use super::RecoverProcessedResult;
 use ringhopper::bitmap::BitmapEncoding;
 
@@ -37,11 +38,11 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
             }
         }
         if !has_sprites {
-            return Err(ErrorMessage::StaticString("No sprites found in sprite bitmap tag."));
+            return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_bad_sprite_empty")));
         }
         for b in &tag.bitmap_data {
             if b._type != BitmapDataType::_2dTexture {
-                return Err(ErrorMessage::StaticString("Can't recover sprites from non-2D texture."));
+                return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_bad_sprite_type")));
             }
         }
     }
@@ -50,36 +51,36 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
     let mut is_multitexture = false;
     for b in &tag.bitmap_data {
         if b._type != BitmapDataType::_3dTexture && b.depth != 1 {
-            return Err(ErrorMessage::StaticString("Bitmap type is not set to 3D textures but the tag has bitmap(s) with depth not equal to 1."));
+            return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_bad_depth")));
         }
         match b._type {
             BitmapDataType::CubeMap => if tag._type != BitmapType::CubeMaps {
-                return Err(ErrorMessage::StaticString("Bitmap type is not set to cubemaps but the tag contains cubemaps."));
+                return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_bad_cubemaps")));
             }
             else {
                 is_multitexture = true;
             },
             BitmapDataType::_3dTexture => if tag._type != BitmapType::_3dTextures {
-                return Err(ErrorMessage::StaticString("Bitmap type is not set to 3D textures but the tag contains 3D textures."));
+                return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_bad_3d")));
             }
             else {
                 is_multitexture = true;
             },
             BitmapDataType::_2dTexture => if tag._type != BitmapType::_2dTextures && tag._type != BitmapType::Sprites && tag._type != BitmapType::InterfaceBitmaps {
-                return Err(ErrorMessage::StaticString("Bitmap type is not set to 2D textures, sprites, or interface bitmaps but the tag contains 2D textures"));
+                return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_bad_2d")));
             }
             else {
                 is_multitexture = false;
             },
             BitmapDataType::White => {
-                return Err(ErrorMessage::StaticString("White textures are unsupported."));
+                return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_bad_white_type")));
             }
         }
     }
     if is_multitexture {
         for s in &tag.bitmap_group_sequence {
             if s.first_bitmap_index.is_some() && s.bitmap_count > 1 {
-                return Err(ErrorMessage::StaticString("Cannot recover cubemaps or 3D textures with multiple bitmaps on a sequence."));
+                return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_bad_multitex")));
             }
         }
     }
@@ -102,7 +103,7 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
         let start = bitmap.pixel_data_offset as usize;
         let end = start.saturating_add(encoding.calculate_size_of_texture(width, height, depth, faces, mipmaps));
 
-        let input = tag.processed_pixel_data.get(start..end).ok_or_else(|| ErrorMessage::AllocatedString(format!("Bitmap tag is corrupted. Bitmap #{bitmap} contains out-of-bounds pixel data.", bitmap=index)))?;
+        let input = tag.processed_pixel_data.get(start..end).ok_or_else(|| ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_out_of_bounds"), bitmap=index)))?;
         let base_texture_size = encoding.calculate_size_of_texture(width, height, depth, faces, 0);
 
         all_bitmaps.insert(
@@ -129,7 +130,7 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
             for spr in &seq.sprites {
                 let q = spr.bitmap_index.unwrap_or(0xFFFF) as usize;
                 if q >= bitmap_count {
-                    return Err(ErrorMessage::AllocatedString(format!("Bitmap tag is corrupted. Sequence #{sequence} contains an invalid bitmap index ({index} >= {count}).", sequence=s, index=q, count=bitmap_count)));
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_sequence_invalid_bitmap_index"), sequence=s, index=q, count=bitmap_count)));
                 }
                 decode_bitmap(&tag, &mut all_bitmaps, q)?;
             }
@@ -143,7 +144,7 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
                 let end = first + seq.bitmap_count as usize;
                 for q in first..end {
                     if q >= bitmap_count {
-                        return Err(ErrorMessage::AllocatedString(format!("Bitmap tag is corrupted. Sequence #{sequence} contains an invalid bitmap index ({index} >= {count}).", sequence=s, index=q, count=bitmap_count)));
+                        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_sequence_invalid_bitmap_index"), sequence=s, index=q, count=bitmap_count)));
                     }
                     decode_bitmap(&tag, &mut all_bitmaps, q)?;
                 }
@@ -179,7 +180,7 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
                 let original_pixel_data = &all_bitmaps[&q];
 
                 if spr.left > spr.right || spr.top > spr.bottom || spr.left < 0.0 || spr.right > 1.0 || spr.top < 0.0 || spr.bottom > 1.0 {
-                    return Err(ErrorMessage::AllocatedString(format!("Bitmap tag is corrupted. Sequence #{sequence} contains invalid sprite dimensions.", sequence=s)));
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_corrupted_invalid_sprite_dimensions"), sequence=s)));
                 }
 
                 let mut sprites_on_this_bitmap = 0;
@@ -202,7 +203,7 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
                 let y2 = ((spr.bottom as f64 * b.height as f64).round() as usize).saturating_sub(spacing);
 
                 if x1 >= x2 || y1 >= y2 || x2 > b.width as usize || y2 > b.width as usize {
-                    return Err(ErrorMessage::AllocatedString(format!("Bitmap tag is corrupted. Sequence #{sequence} contains invalid sprite dimensions.", sequence=s)));
+                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_corrupted_invalid_sprite_dimensions"), sequence=s)));
                 }
 
                 let width = x2 - x1;
@@ -281,7 +282,7 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
                     break;
                 }
             }
-            color_to_find.ok_or(ErrorMessage::StaticString("Cannot find a unique color for the background."))?
+            color_to_find.ok_or(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_no_unique_background")))?
         }
     };
 
@@ -299,7 +300,7 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
                     break;
                 }
             }
-            color_to_find.ok_or(ErrorMessage::StaticString("Cannot find a unique color for the sequence dividers."))?
+            color_to_find.ok_or(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_no_unique_divider")))?
         }
     };
 

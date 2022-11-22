@@ -63,7 +63,7 @@ fn recover_processed_tag(tag_file: &TagFile, log_mutex: super::LogMutex, _availa
             }
             drop(l);
 
-            return Ok(skipped);
+            return Ok(!skipped);
         }
     }
 
