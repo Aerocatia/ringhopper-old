@@ -201,6 +201,37 @@ impl BitmapSpriteBudgetSize {
     }
 }
 
+impl TryFrom<BitmapDataFormat> for BitmapEncoding {
+    type Error = ErrorMessage;
+
+    fn try_from(value: BitmapDataFormat) -> ErrorMessageResult<BitmapEncoding> {
+        let m = match value {
+            BitmapDataFormat::A8R8G8B8 => BitmapEncoding::A8R8G8B8,
+            BitmapDataFormat::X8R8G8B8 => BitmapEncoding::X8R8G8B8,
+            BitmapDataFormat::R5G6B5 => BitmapEncoding::R5G6B5,
+            BitmapDataFormat::A1R5G5B5 => BitmapEncoding::A1R5G5B5,
+            BitmapDataFormat::A4R4G4B4 => BitmapEncoding::A4R4G4B4,
+            BitmapDataFormat::A8 => BitmapEncoding::A8,
+            BitmapDataFormat::Y8 => BitmapEncoding::Y8,
+            BitmapDataFormat::AY8 => BitmapEncoding::AY8,
+            BitmapDataFormat::A8Y8 => BitmapEncoding::A8Y8,
+            BitmapDataFormat::P8 => BitmapEncoding::P8HCE,
+            BitmapDataFormat::DXT1 => BitmapEncoding::BC1,
+            BitmapDataFormat::DXT3 => BitmapEncoding::BC2,
+            BitmapDataFormat::DXT5 => BitmapEncoding::BC3,
+
+            BitmapDataFormat::Unused1 => return Err(ErrorMessage::StaticString("unsupported")),
+            BitmapDataFormat::Unused2 => return Err(ErrorMessage::StaticString("unsupported")),
+            BitmapDataFormat::Unused3 => return Err(ErrorMessage::StaticString("unsupported")),
+            BitmapDataFormat::Unused4 => return Err(ErrorMessage::StaticString("unsupported")),
+            BitmapDataFormat::Unused5 => return Err(ErrorMessage::StaticString("unsupported"))
+        };
+
+        Ok(m)
+    }
+}
+
+
 impl TryFrom<BitmapEncoding> for BitmapDataFormat {
     type Error = ErrorMessage;
 

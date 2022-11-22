@@ -10,17 +10,17 @@ use macros::terminal::*;
 use ringhopper::error::ErrorMessageResult;
 use std::path::*;
 
+mod bitmap;
 mod model;
 
 pub enum RecoverProcessedResult {
     Recovered,
     DataAlreadyExists,
-
-    #[allow(dead_code)]
     SourceDataExists
 }
 
-const RECOVER_PROCESSED_FUNCTION_GROUPS: &'static [(TagGroup, fn (tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, overwrite: bool) -> ErrorMessageResult<RecoverProcessedResult>)] = &[
+const RECOVER_PROCESSED_FUNCTION_GROUPS: &'static [(TagGroup, fn (tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, overwrite: bool, force: bool) -> ErrorMessageResult<RecoverProcessedResult>)] = &[
+    (TagGroup::Bitmap, bitmap::recover_processed_bitmaps),
     (TagGroup::GBXModel, model::recover_processed_gbxmodels),
     (TagGroup::Model, model::recover_processed_models),
 ];
@@ -28,6 +28,7 @@ const RECOVER_PROCESSED_FUNCTION_GROUPS: &'static [(TagGroup, fn (tag_data: &[u8
 #[derive(Clone)]
 struct RecoverProcessedOptions {
     batching: bool,
+    force: bool,
     overwrite: bool,
     data_dir: PathBuf
 }
@@ -38,7 +39,7 @@ fn recover_processed_tag(tag_file: &TagFile, log_mutex: super::LogMutex, _availa
 
     for fg in RECOVER_PROCESSED_FUNCTION_GROUPS {
         if fg.0 == group {
-            let result = fg.1(&file_data, tag_file, &options.data_dir, options.overwrite)?;
+            let result = fg.1(&file_data, tag_file, &options.data_dir, options.overwrite, options.force)?;
             let skipped;
 
             let l = log_mutex.lock();
@@ -76,7 +77,7 @@ fn recover_processed_tag(tag_file: &TagFile, log_mutex: super::LogMutex, _availa
 
 pub fn recover_processed_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageResult<ExitCode> {
     let parsed_args = ParsedArguments::parse_arguments(args,
-                                                       &[],
+                                                       &[Argument { long: "force", short: 'f', description: get_compiled_string!("engine.h1.verbs.recover-processed.arguments.force.description"), parameter: None, multiple: false }],
                                                        &[get_compiled_string!("arguments.specifier.tag_batch_with_group")],
                                                        executable,
                                                        verb.get_description(),
@@ -87,6 +88,7 @@ pub fn recover_processed_verb(verb: &Verb, args: &[&str], executable: &str) -> E
 
     let tag_path = &parsed_args.extra[0];
     let options = RecoverProcessedOptions {
+        force: parsed_args.named.contains_key("force"),
         batching: TagFile::uses_batching(tag_path),
         overwrite: parsed_args.named.get("overwrite").is_some(),
         data_dir: Path::new(&parsed_args.named["data"][0]).to_owned()

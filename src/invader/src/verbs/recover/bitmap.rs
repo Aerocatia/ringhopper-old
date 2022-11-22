@@ -5,9 +5,6 @@ use ringhopper::engines::h1::*;
 use std::path::Path;
 use crate::file::*;
 use super::RecoverResult;
-use std::io::Cursor;
-
-use tiff::encoder::*;
 
 pub fn recover_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, overwrite: bool) -> ErrorMessageResult<RecoverResult> {
     // Output as a tiff?
@@ -42,22 +39,7 @@ pub fn recover_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, ove
     }
 
     // Encode into a TIFF
-    let mut data = Vec::new();
-    let mut encoder = TiffEncoder::new(Cursor::new(&mut data)).unwrap();
-    let mut image = encoder.new_image::<colortype::RGBA8>(width as u32, height as u32).unwrap();
-    image.encoder().write_tag(tiff::tags::Tag::ExtraSamples, &[2u16][..]).unwrap();
-    image.rows_per_strip(2).unwrap();
-
-    // Write each strip
-    let mut idx = 0;
-    while image.next_strip_sample_count() > 0 {
-        let sample_count = image.next_strip_sample_count() as usize;
-        image.write_strip(&decompressed_output[idx..idx+sample_count]).unwrap();
-        idx += sample_count;
-    }
-
-    // Done
-    image.finish().unwrap();
+    let data = crate::make_tiff(&decompressed_output, width, height);
 
     // Write
     make_parent_directories(&output_file)?;

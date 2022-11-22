@@ -157,3 +157,28 @@ fn load_bitmap_color_plate(tag: &ringhopper::engines::h1::definitions::Bitmap) -
 
     Ok(decompressed_output)
 }
+
+fn make_tiff(pixels_r8g8b8a8: &[u8], width: usize, height: usize) -> Vec<u8> {
+    use tiff::encoder::*;
+    use std::io::Cursor;
+
+    // Encode into a TIFF
+    let mut data = Vec::new();
+    let mut encoder = TiffEncoder::new(Cursor::new(&mut data)).unwrap();
+    let mut image = encoder.new_image::<colortype::RGBA8>(width as u32, height as u32).unwrap();
+    image.encoder().write_tag(tiff::tags::Tag::ExtraSamples, &[2u16][..]).unwrap();
+    image.rows_per_strip(2).unwrap();
+
+    // Write each strip
+    let mut idx = 0;
+    while image.next_strip_sample_count() > 0 {
+        let sample_count = image.next_strip_sample_count() as usize;
+        image.write_strip(&pixels_r8g8b8a8[idx..idx+sample_count]).unwrap();
+        idx += sample_count;
+    }
+
+    // Done
+    image.finish().unwrap();
+
+    data
+}

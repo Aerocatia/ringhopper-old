@@ -8,6 +8,8 @@ use texpresso::{Params, Format, Algorithm};
 
 use super::iterate_encoded_base_map_and_mipmaps;
 
+const UNCOMPRESSED_BPP: usize = BitmapEncoding::A8B8G8R8.bits_per_pixel() / 8;
+
 /// Bitmap formats supported.
 #[derive(PartialEq, Copy, Clone, Default, Debug)]
 pub enum BitmapEncoding {
@@ -271,7 +273,6 @@ impl BitmapEncoding {
                     params.algorithm = Algorithm::IterativeClusterFit;
                     params.weights = [1.0, 1.0, 1.0]; // weigh each channel equally (may look slightly worse on some textures but better for multipurposes)
                     let mut rgba = BitmapEncoding::A8B8G8R8.encode(pixels, width, height, depth, faces, mipmaps, false);
-                    const UNCOMPRESSED_BPP: usize = BitmapEncoding::A8B8G8R8.bits_per_pixel() / 8;
 
                     // Set alpha to 255 unless it is 0
                     if self == BitmapEncoding::BC1 {
@@ -425,7 +426,34 @@ impl BitmapEncoding {
             }
         }
         else {
-            todo!("block decoding not implemented")
+            match self {
+                BitmapEncoding::BC1 | BitmapEncoding::BC2 | BitmapEncoding::BC3 => {
+                    let format = match self {
+                        BitmapEncoding::BC1 => Format::Bc1,
+                        BitmapEncoding::BC2 => Format::Bc2,
+                        BitmapEncoding::BC3 => Format::Bc3,
+                        _ => unreachable!()
+                    };
+
+                    let mut byte_output: Vec<u8> = vec![0u8; BitmapEncoding::A8R8G8B8.calculate_size_of_texture(width, height, depth, faces, mipmaps)];
+                    iterate_encoded_base_map_and_mipmaps(self, width, height, depth, faces, mipmaps, |f| {
+                        let pixel_output = &mut byte_output[f.pixel_offset * UNCOMPRESSED_BPP..(f.pixel_offset + f.size) * UNCOMPRESSED_BPP];
+                        let face_count = faces * depth;
+                        let pixels_per_face = f.size / face_count;
+                        let bytes_per_face = pixels_per_face * UNCOMPRESSED_BPP;
+                        let bytes_per_compressed_face = format.compressed_size(f.width, f.height);
+                        let mut input_offset = f.byte_offset;
+                        for output_offset in (0..f.size * UNCOMPRESSED_BPP).step_by(bytes_per_face) {
+                            let input_bytes = &pixels[input_offset..input_offset + bytes_per_compressed_face];
+                            input_offset += bytes_per_compressed_face;
+                            format.decompress(input_bytes, f.width, f.height, &mut pixel_output[output_offset..output_offset + bytes_per_face]);
+                        }
+                    });
+
+                    return Self::A8B8G8R8.decode(&byte_output, width, height, depth, faces, mipmaps);
+                },
+                _ => panic!("tried to block compress {encoding_type:?}", encoding_type=self)
+            }
         }
 
         debug_assert_eq!(pixel_count, output.len(), "output length does not match expected length (this is a bug!!)");
