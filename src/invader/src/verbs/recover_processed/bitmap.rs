@@ -240,13 +240,20 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
 
             let mut sequence_bitmaps = Vec::with_capacity(texture_count);
 
+            let textures_to_read = if tag._type == BitmapType::CubeMaps || tag._type == BitmapType::_3dTextures {
+                texture_count
+            }
+            else {
+                1
+            };
+
             for i in first_bitmap..first_bitmap + bitmap_count {
                 let bitmap = &tag.bitmap_data[i];
                 let width = bitmap.width as usize;
                 let height = bitmap.height as usize;
                 let pixel_count = width * height;
                 let bitmap_data = &all_bitmaps[&i];
-                for o in (0..pixel_count * texture_count).step_by(pixel_count) {
+                for o in (0..pixel_count * textures_to_read).step_by(pixel_count) {
                     sequence_bitmaps.push(ExtractedImage { width, height, pixel_data: bitmap_data[o..o+pixel_count].to_owned() })
                 }
             }
