@@ -320,12 +320,12 @@ pub fn recover_jms(model: Model, tag_file: &TagFile, data_dir: &Path, overwrite:
     Ok(result)
 }
 
-pub fn recover_processed_models(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, overwrite: bool, _force: bool) -> ErrorMessageResult<RecoverProcessedResult> {
+pub fn recover_processed_models(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, options: &super::RecoverProcessedOptions) -> ErrorMessageResult<RecoverProcessedResult> {
     let model = *Model::from_tag_file(tag_data)?.data;
-    recover_jms(model, tag_file, data_dir, overwrite)
+    recover_jms(model, tag_file, data_dir, options.overwrite)
 }
 
-pub fn recover_processed_gbxmodels(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, overwrite: bool, _force: bool) -> ErrorMessageResult<RecoverProcessedResult> {
+pub fn recover_processed_gbxmodels(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, options: &super::RecoverProcessedOptions) -> ErrorMessageResult<RecoverProcessedResult> {
     let model = Model::try_from(*GBXModel::from_tag_file(tag_data)?.data)?;
-    recover_jms(model, tag_file, data_dir, overwrite)
+    recover_jms(model, tag_file, data_dir, options.overwrite)
 }

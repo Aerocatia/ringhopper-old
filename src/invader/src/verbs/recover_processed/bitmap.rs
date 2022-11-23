@@ -11,12 +11,12 @@ use ringhopper_proc::*;
 use super::RecoverProcessedResult;
 use ringhopper::bitmap::BitmapEncoding;
 
-pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, overwrite: bool, force: bool) -> ErrorMessageResult<RecoverProcessedResult> {
+pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: &Path, options: &super::RecoverProcessedOptions) -> ErrorMessageResult<RecoverProcessedResult> {
     // Output as a tiff?
     let mut output_file = data_dir.join(&tag_file.tag_path.to_string());
     output_file.set_extension("tif");
 
-    if !overwrite && output_file.is_file() {
+    if !options.overwrite && output_file.is_file() {
         return Ok(RecoverProcessedResult::DataAlreadyExists);
     }
 
@@ -24,7 +24,7 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
     let tag = Bitmap::from_tag_file(tag_data)?.data;
 
     // Check if source data
-    if tag.compressed_color_plate_data.len() >= 4 && !force {
+    if tag.compressed_color_plate_data.len() >= 4 && !options.force {
         return Ok(RecoverProcessedResult::SourceDataExists)
     }
 
@@ -233,7 +233,7 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
             let first_bitmap = seq.first_bitmap_index.unwrap() as usize;
             let texture_count = match tag._type {
                 BitmapType::CubeMaps => faces,
-                BitmapType::_2dTextures => bitmap_count,
+                BitmapType::_2dTextures | BitmapType::InterfaceBitmaps => bitmap_count,
                 BitmapType::_3dTextures => tag.bitmap_data[first_bitmap].depth as usize,
                 _ => unreachable!()
             };
@@ -271,91 +271,146 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
     let blue = ColorARGBInt { a: 255, r: 0, g: 0, b: 255 };
     let magenta = ColorARGBInt { a: 255, r: 255, g: 0, b: 255 };
 
-    let background = match contains_color(blue) {
-        false => blue,
-        true => {
-            let mut color_to_find = None;
-            for i in 0xFF000000u32..=0xFFFFFFFFu32 {
-                let color = ColorARGBInt::from_a8r8g8b8(i);
-                if !contains_color(color) {
-                    color_to_find = Some(color);
-                    break;
-                }
-            }
-            color_to_find.ok_or(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_no_unique_background")))?
-        }
-    };
-
-    let divider = match contains_color(magenta) {
-        false => magenta,
-        true => {
-            let mut color_to_find = None;
-            for i in 0xFF000000u32..=0xFFFFFFFFu32 {
-                let color = ColorARGBInt::from_a8r8g8b8(i);
-                if color == background {
-                    continue;
-                }
-                if !contains_color(color) {
-                    color_to_find = Some(color);
-                    break;
-                }
-            }
-            color_to_find.ok_or(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_no_unique_divider")))?
-        }
-    };
-
     let mut height;
     let mut width;
     let input_data: Vec<u8>;
 
     let single_bitmap = sequence_count == 1 && bitmap_count == 1;
 
-    // Make single 2D texture
-    if single_bitmap && tag._type == BitmapType::_2dTextures {
-        let b = &bitmaps_to_put_in_color_plate[0][0];
-        height = b.height;
-        width = b.width;
-        input_data = BitmapEncoding::A8B8G8R8.encode(&b.pixel_data, width, height, 1, 1, 0, false);
+    let can_be_unrolled = !options.force_plate && if !single_bitmap {
+        false
     }
-
-    // Make unrolled cubemap
-    else if single_bitmap && tag._type == BitmapType::CubeMaps && (bitmaps_to_put_in_color_plate[0][0].width == bitmaps_to_put_in_color_plate[0][0].height) {
-        let b = &bitmaps_to_put_in_color_plate[0][0];
-        let length = b.width;
-
-        height = length * 3;
-        width = length * 4;
-
-        let rotate_0 = |offset_x, offset_y, _| (offset_x, offset_y);
-        let rotate_90 = |offset_x, offset_y, length| (length - (offset_y + 1), offset_x);
-        let rotate_180 = |offset_x, offset_y, length| (length - (offset_x + 1), length - (offset_y + 1));
-        let rotate_270 = |offset_x, offset_y, length| (offset_y, length - (offset_x + 1));
-
-        let read_face_and_rotate = |index: usize, output: &mut [ColorARGBInt], to_x: usize, to_y: usize, get_pixel: fn (offset_x: usize, offset_y: usize, length: usize) -> (usize, usize)| {
-            let pixel_data = &bitmaps_to_put_in_color_plate[0][index].pixel_data;
-
-            for y in 0..length {
-                for x in 0..length {
-                    let (rx, ry) = get_pixel(x, y, length);
-                    output[x + to_x + (y + to_y) * width] = pixel_data[rx + ry * length];
+    else {
+        match tag._type {
+            BitmapType::_2dTextures | BitmapType::InterfaceBitmaps => {
+                let b = &bitmaps_to_put_in_color_plate[0][0];
+                if b.width < 2 || b.height < 2 {
+                    true
                 }
-            }
-        };
+                else {
+                    // Check if the bitmap can be considered a valid color plate
+                    let mut valid_color_plate = true;
+                    let first_color = b.pixel_data[0];
+                    for c in &b.pixel_data[b.width.min(3)..b.width] {
+                        if !c.same_color(first_color) {
+                            valid_color_plate = false;
+                            break;
+                        }
+                    }
 
-        let mut pixel_data = vec![ColorARGBInt { a: 255, r: 0, g: 0, b: 0}; width * height];
+                    if valid_color_plate {
+                        valid_color_plate = !first_color.same_color(b.pixel_data[1]) || first_color.same_color(blue);
+                    }
 
-        read_face_and_rotate(0, &mut pixel_data, length * 0, length * 1, rotate_270);
-        read_face_and_rotate(1, &mut pixel_data, length * 1, length * 1, rotate_180);
-        read_face_and_rotate(2, &mut pixel_data, length * 2, length * 1, rotate_90);
-        read_face_and_rotate(3, &mut pixel_data, length * 3, length * 1, rotate_0);
-        read_face_and_rotate(4, &mut pixel_data, length * 0, length * 0, rotate_270);
-        read_face_and_rotate(5, &mut pixel_data, length * 0, length * 2, rotate_270);
+                    !valid_color_plate
+                }
+            },
+            BitmapType::_3dTextures => false,
+            BitmapType::CubeMaps => bitmaps_to_put_in_color_plate[0][0].width == bitmaps_to_put_in_color_plate[0][0].height,
+            BitmapType::Sprites => false
+        }
+    };
 
-        input_data = BitmapEncoding::A8B8G8R8.encode(&pixel_data, width, height, 1, 1, 0, false);
+    if can_be_unrolled {
+        match tag._type {
+            BitmapType::_2dTextures | BitmapType::InterfaceBitmaps => {
+                let b = &bitmaps_to_put_in_color_plate[0][0];
+                height = b.height;
+                width = b.width;
+                input_data = BitmapEncoding::A8B8G8R8.encode(&b.pixel_data, width, height, 1, 1, 0, false);
+            },
+            BitmapType::CubeMaps => {
+                let bitmaps = &bitmaps_to_put_in_color_plate[0];
+
+                let b = &bitmaps[0];
+                let length = b.width;
+
+                let top_left_corner = &bitmaps[4];
+                let mut background_color = None;
+
+                'color_loop: for c in 0xFF000000u32..=0xFFFFFFFFu32 {
+                    let color_potential = ColorARGBInt::from_a8r8g8b8(c);
+                    for y in 0..length {
+                        if top_left_corner.pixel_data[y * length + length - 1].same_color(color_potential) {
+                            continue 'color_loop;
+                        }
+                    }
+                    background_color = Some(color_potential);
+                }
+
+                if background_color.is_none() {
+                    return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_no_unique_background")))
+                }
+
+                height = length * 3;
+                width = length * 4;
+
+                let rotate_0 = |offset_x, offset_y, _| (offset_x, offset_y);
+                let rotate_90 = |offset_x, offset_y, length| (length - (offset_y + 1), offset_x);
+                let rotate_180 = |offset_x, offset_y, length| (length - (offset_x + 1), length - (offset_y + 1));
+                let rotate_270 = |offset_x, offset_y, length| (offset_y, length - (offset_x + 1));
+
+                let read_face_and_rotate = |index: usize, output: &mut [ColorARGBInt], to_x: usize, to_y: usize, get_pixel: fn (offset_x: usize, offset_y: usize, length: usize) -> (usize, usize)| {
+                    let pixel_data = &bitmaps_to_put_in_color_plate[0][index].pixel_data;
+
+                    for y in 0..length {
+                        for x in 0..length {
+                            let (rx, ry) = get_pixel(x, y, length);
+                            output[x + to_x + (y + to_y) * width] = pixel_data[rx + ry * length];
+                        }
+                    }
+                };
+
+                let mut pixel_data = vec![background_color.unwrap(); width * height];
+
+                read_face_and_rotate(0, &mut pixel_data, length * 0, length * 1, rotate_270);
+                read_face_and_rotate(1, &mut pixel_data, length * 1, length * 1, rotate_180);
+                read_face_and_rotate(2, &mut pixel_data, length * 2, length * 1, rotate_90);
+                read_face_and_rotate(3, &mut pixel_data, length * 3, length * 1, rotate_0);
+                read_face_and_rotate(4, &mut pixel_data, length * 0, length * 0, rotate_270);
+                read_face_and_rotate(5, &mut pixel_data, length * 0, length * 2, rotate_270);
+
+                input_data = BitmapEncoding::A8B8G8R8.encode(&pixel_data, width, height, 1, 1, 0, false);
+            },
+            _ => unreachable!()
+        }
     }
 
     // Make a color plate
     else {
+        let background = match contains_color(blue) {
+            false => blue,
+            true => {
+                let mut color_to_find = None;
+                for i in (0xFF000000u32..=0xFFFFFFFFu32).rev() {
+                    let color = ColorARGBInt::from_a8r8g8b8(i);
+                    if !contains_color(color) {
+                        color_to_find = Some(color);
+                        break;
+                    }
+                }
+                color_to_find.ok_or(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_no_unique_background")))?
+            }
+        };
+
+        let divider = match contains_color(magenta) {
+            false => magenta,
+            true => {
+                let mut color_to_find = None;
+                for i in 0xFF000000u32..=0xFFFFFFFFu32 {
+                    let color = ColorARGBInt::from_a8r8g8b8(i);
+                    if color == background {
+                        continue;
+                    }
+                    if !contains_color(color) {
+                        color_to_find = Some(color);
+                        break;
+                    }
+                }
+                color_to_find.ok_or(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_no_unique_divider")))?
+            }
+        };
+
         height = 1usize; // start with 1 for the key
         width = 3usize; // start with 3 for the sequence divider
 

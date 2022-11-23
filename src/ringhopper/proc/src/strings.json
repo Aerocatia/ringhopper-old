@@ -171,6 +171,7 @@
     "engine.h1.verbs.recover.unable_to_recover_tag": "Can't recover {input_group} tags.",
 
     "engine.h1.verbs.recover-processed.arguments.force.description": "Recover processed data even when input data can be recovered.",
+    "engine.h1.verbs.recover-processed.arguments.force-plate.description": "Always wrap bitmaps in a color plate.",
     "engine.h1.verbs.recover-processed.error_bitmap_bad_multitex": "Cannot recover cubemaps or 3D textures with multiple bitmaps on a sequence.",
     "engine.h1.verbs.recover-processed.error_bitmap_bad_sprite_empty": "No sprites found in sprite bitmap tag.",
 
