@@ -77,7 +77,7 @@ pub fn sound_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessageR
         adpcm_block_size: parsed_args.parse_bool_on_off("fit-to-adpcm-block-size")?
     };
 
-    let result = super::do_with_batching_threaded(do_single_sound, &tag_path, Some(TagGroup::Bitmap), &str_slice_to_path_vec(&parsed_args.named["tags"]), parsed_args.threads, options)?;
+    let result = super::do_with_batching_threaded(do_single_sound, &tag_path, Some(TagGroup::Sound), &str_slice_to_path_vec(&parsed_args.named["tags"]), parsed_args.threads, options)?;
     Ok(result.exit_code())
 }
 
