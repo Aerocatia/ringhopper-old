@@ -345,7 +345,7 @@ fn do_single_sound(tag: &TagFile, log_mutex: super::LogMutex, available_threads:
     }
 
     // Show our output info
-    if options.batched {
+    if !options.batched {
         let channel_count_to_str = |c| match c {
             1 => "mono",
             2 => "stereo",
