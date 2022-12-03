@@ -115,6 +115,7 @@ fn get_verb_function(verb: Verb) -> Option<VerbFn> {
         Verb::TagCollection => Some(collection::collection_verb),
         Verb::UICollection => Some(collection::collection_verb),
         Verb::UnicodeStrings => Some(unicode_strings::unicode_strings_verb),
+        Verb::UpscaleHUD => Some(upscale_hud::upscale_hud_verb),
 
         _ => None
     }

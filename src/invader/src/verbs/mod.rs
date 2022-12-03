@@ -22,6 +22,7 @@ pub mod script;
 pub mod sound;
 pub mod strip;
 pub mod unicode_strings;
+pub mod upscale_hud;
 
 #[derive(Clone, Copy)]
 pub struct BatchResult {

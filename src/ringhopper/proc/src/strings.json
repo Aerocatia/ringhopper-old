@@ -85,7 +85,7 @@
 
     "engine.h1.types.scenario.contains_non_ascii": "Source \"{file}\" contains non-ASCII bytes. This will become an error in a future version!",
     "engine.h1.types.scenario.error_compile_failed_to_compile_scripts": "Failed to compile script: {file}:{line}:{column}: {message}",
-    "engine.h1.types.scenario.error_compile_could_not_find_object": "Could not resolve \"{tag_reference}\" into an object tag.",
+    "engine.h1.types.scenario.error_compile_could_not_find_object": "Could not resolve {tag_reference} into an object tag.",
     "engine.h1.types.scenario.error_compile_could_not_find_squad_or_platoon": "Cannot find a squad or platoon named \"{sub_index}\" in encounter \"{encounter}\"",
     "engine.h1.types.scenario.error_compile_found_squad_or_platoon_index_overflow": "Found \"{sub_index}\" in encounter \"{encounter}\"'s {array_type}, but its index exceeds the maximum index for scripts ({index} > {max_index})",
     "engine.h1.types.scenario.error_compile_found_in_array_index_overflow": "Found \"{string_data}\" in \"{arr_name}\", but its index exceeds the maximum index for scripts ({index} > {max_index})",
@@ -227,7 +227,7 @@
     "engine.h1.verbs.sound.error_cannot_find_dir": "Failed to find the sound tag's data directory. \"{dir}\" does not exist or is not a directory",
     "engine.h1.verbs.sound.error_cannot_split_mouth_data": "Cannot split permutations with generated mouth data.",
     "engine.h1.verbs.sound.error_ima_adpcm_not_supported": "IMA ADPCM is not supported",
-    "engine.h1.verbs.sound.error_no_sound_class_given": "A sound class is required because sound tag \"{tag}\" does not yet exist.",
+    "engine.h1.verbs.sound.error_no_sound_class_given": "A sound class is required because sound tag {tag} does not yet exist.",
     "engine.h1.verbs.sound.error_permutation_limit_exceeded": "Pitch range \"{pitch_range}\" exceeds the maximum number of permutations allowed ({count} > {limit})",
     "engine.h1.verbs.sound.error_permutation_size_exceeded": "Permutation \"{permutation}\"'s uncompressed size exceeds the maximum size ({size} > {limit})",
     "engine.h1.verbs.sound.error_subpermutation_limit_exceeded": "Pitch range \"{pitch_range}\" exceeds the maximum number of permutations allowed ({count} > {limit})",
@@ -242,6 +242,9 @@
     "engine.h1.verbs.unicode-strings.error_missing_end_string": "A string is missing an ###END-STRING### line.",
     "engine.h1.verbs.unicode-strings.error_parsing_file": "Error parsing file {file}: {error}",
     "engine.h1.verbs.unicode-strings.saved_file": "Saved {file}",
+
+    "engine.h1.verbs.upscale-hud.error_unable_to_upscale_tag": "Cannot upscale {tag} because {group} tags cannot be upscaled with this verb.",
+    "engine.h1.verbs.upscale-hud.upscaled_tag": "Upscaled {tag}",
 
     "engine.types.error_null_index_unwrap": "Tried to use a null index where one isn't allowed.",
     "engine.types.error_null_index": "Tried to access a null index of an array where a null index isn't allowed ({size} of {item_type})",
@@ -303,5 +306,6 @@
     "verb.strings.description": "Generate string_list tags.",
     "verb.tag-collection.description": "Generate tag_collection tags.",
     "verb.ui-collection.description": "Generate ui_widget_collection tags.",
-    "verb.unicode-strings.description": "Generate unicode_string_list tags."
+    "verb.unicode-strings.description": "Generate unicode_string_list tags.",
+    "verb.upscale-hud.description": "Scale legacy HUD tags for MCC."
 }
