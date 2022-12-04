@@ -52,13 +52,20 @@ fn modify_scaling(width_scale: &mut f32, height_scale: &mut f32, offset: &mut Po
     if flags.use_high_res_scale {
         flags.use_high_res_scale = false;
     }
-    else if *width_scale == 0.0 && *height_scale == 0.0 {
-        *width_scale = 2.0;
-        *height_scale = 2.0;
-    }
     else {
-        *width_scale *= 2.0;
-        *height_scale *= 2.0;
+        if *width_scale <= 0.0 {
+            *width_scale = 2.0;
+        }
+        else {
+            *width_scale *= 2.0;
+        }
+
+        if *height_scale <= 0.0 {
+            *height_scale = 2.0;
+        }
+        else {
+            *height_scale *= 2.0;
+        }
     }
 
     safe_double(&mut offset.x);
@@ -78,6 +85,7 @@ fn upscale_weapon_hud_interface(path: &TagFile) -> ErrorMessageResult<Vec<u8>> {
     }
     for e in &mut tag.crosshairs {
         for o in &mut e.crosshair_overlays {
+            o.scaling_flags.use_high_res_scale = false; // this flag is always unused, so honoring this flag may break some HUDs
             modify_scaling(&mut o.width_scale, &mut o.height_scale, &mut o.anchor_offset, &mut o.scaling_flags);
         }
     }

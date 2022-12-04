@@ -29,7 +29,6 @@ pub enum Verb {
     Refactor,
     Repair,
     Resource,
-    UpscaleHUD,
     Scan,
     Script,
     Sound,
@@ -37,7 +36,8 @@ pub enum Verb {
     Strip,
     TagCollection,
     UICollection,
-    UnicodeStrings
+    UnicodeStrings,
+    UpscaleHUD
 }
 
 /// Info for a verb, including the name, aliases, and description.
@@ -82,7 +82,6 @@ pub(crate) static ALL_VERBS: &'static [VerbInfo] = &[
     VerbInfo::new(Verb::Refactor, "refactor", get_compiled_string!("verb.refactor.description")),
     VerbInfo::new(Verb::Repair, "repair", get_compiled_string!("verb.repair.description")),
     VerbInfo::new(Verb::Resource, "resource", get_compiled_string!("verb.resource.description")),
-    VerbInfo::new(Verb::UpscaleHUD, "scale-hud", get_compiled_string!("verb.upscale-hud.description")),
     VerbInfo::new(Verb::Scan, "scan", get_compiled_string!("verb.scan.description")),
     VerbInfo::new(Verb::Script, "script", get_compiled_string!("verb.script.description")),
     VerbInfo::new(Verb::Sound, "sound", get_compiled_string!("verb.sound.description")),
@@ -90,7 +89,8 @@ pub(crate) static ALL_VERBS: &'static [VerbInfo] = &[
     VerbInfo::new(Verb::Strip, "strip",  get_compiled_string!("verb.strip.description")),
     VerbInfo::new(Verb::TagCollection, "tag-collection", get_compiled_string!("verb.tag-collection.description")),
     VerbInfo::new(Verb::UICollection, "ui-collection", get_compiled_string!("verb.ui-collection.description")),
-    VerbInfo::new(Verb::UnicodeStrings, "unicode-strings", get_compiled_string!("verb.unicode-strings.description"))
+    VerbInfo::new(Verb::UnicodeStrings, "unicode-strings", get_compiled_string!("verb.unicode-strings.description")),
+    VerbInfo::new(Verb::UpscaleHUD, "upscale-hud", get_compiled_string!("verb.upscale-hud.description"))
 ];
 
 impl Verb {
