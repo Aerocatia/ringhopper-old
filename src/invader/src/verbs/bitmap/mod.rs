@@ -46,12 +46,13 @@ struct BitmapOptions {
     sprite_usage: Option<BitmapSpriteUsage>,
     sprite_spacing: Option<u16>,
     bitmap_type: Option<BitmapType>,
+    average_detail_fade_color: Option<bool>,
+    invert_detail_fade: Option<bool>,
 
     // These are not saved
     square_sheets: bool,
     regenerate: bool,
     bump_algorithm: BumpmapAlgorithm,
-    detail_fade_color: DetailFadeColor,
     gamma_corrected_mipmaps: bool
 }
 
@@ -90,6 +91,8 @@ impl BitmapOptions {
         set_flag_if_set!(uniform_sprite_sequences, uniform_sprite_sequences);
         set_flag_if_set!(reg_point_from_texture, filthy_sprite_bug_fix);
         set_flag_if_set!(disable_height_map_compression, disable_height_map_compression);
+        set_flag_if_set!(average_detail_fade_color, use_average_color_for_detail_fade);
+        set_flag_if_set!(invert_detail_fade, invert_detail_fade);
     }
 }
 
@@ -118,7 +121,8 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         Argument { long: "sobel-bumpmaps", short: 'S', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sobel-bumpmaps.description"), parameter: None, multiple: false },
         Argument { long: "square-sheets", short: 'Q', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.square-sheets.description"), parameter: None, multiple: false },
         Argument { long: "gamma-corrected-mipmaps", short: 'G', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.gamma-corrected-mipmaps.description"), parameter: None, multiple: false },
-        Argument { long: "fade-to-average", short: 'V', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.fade-to-average.description"), parameter: None, multiple: false },
+        Argument { long: "fade-to-average", short: 'V', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.fade-to-average.description"), parameter: Some("on/off"), multiple: false },
+        Argument { long: "invert-detail-fade", short: 'I', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.invert-detail-fade.description"), parameter: Some("on/off"), multiple: false },
     ], &[get_compiled_string!("arguments.specifier.tag_batch_without_group")], executable, verb.get_description(), ArgumentConstraints::new().needs_data().needs_tags().uses_threads())?;
     let tag_path = &parsed_args.extra[0];
 
@@ -169,10 +173,8 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
             false => BumpmapAlgorithm::Fast
         },
         gamma_corrected_mipmaps: parsed_args.named.contains_key("gamma-corrected-mipmaps"),
-        detail_fade_color: match parsed_args.named.contains_key("fade-to-average") {
-            true => DetailFadeColor::Average,
-            false => DetailFadeColor::Gray,
-        }
+        average_detail_fade_color: parsed_args.parse_bool_on_off("fade-to-average")?,
+        invert_detail_fade: parsed_args.parse_bool_on_off("invert-detail-fade")?,
     };
 
     let warnings = options.warnings.clone();
@@ -260,7 +262,6 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
     let mut processing_options = make_bitmap_processing_options(&bitmap_tag);
     processing_options.bumpmap_algorithm = options.bump_algorithm;
     processing_options.gamma_corrected_mipmaps = options.gamma_corrected_mipmaps;
-    processing_options.detail_fade_color = options.detail_fade_color;
 
     // Read the color plate!
     let color_plate_options = ColorPlateOptions {
@@ -672,7 +673,13 @@ fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
             BitmapUsage::DetailMap => Some(bitmap_tag.detail_fade_factor as f64),
             _ => None
         },
-        detail_fade_color: DetailFadeColor::Gray,
+
+        detail_fade_color: match bitmap_tag.flags.use_average_color_for_detail_fade {
+            true => DetailFadeColor::Average,
+            false => DetailFadeColor::Gray
+        },
+
+        invert_detail_fade: bitmap_tag.flags.invert_detail_fade,
 
         sharpen_factor: match bitmap_tag.sharpen_amount {
             n if n > 0.0 => Some(n as f64),

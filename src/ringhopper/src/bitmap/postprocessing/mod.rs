@@ -93,7 +93,10 @@ pub struct ProcessingOptions {
     pub nearest_neighbor_alpha_mipmap: bool,
 
     /// Fade color to use.
-    pub detail_fade_color: DetailFadeColor
+    pub detail_fade_color: DetailFadeColor,
+
+    /// If `true`, invert the fade direction (i.e. starts on fade color, ends on original color).
+    pub invert_detail_fade: bool
 }
 
 /// Final processed bitmap sequence.
@@ -561,39 +564,47 @@ impl ProcessedBitmaps {
             _ => return,
         };
 
-        for bitmap in &mut self.bitmaps {
-            let (base_map_pixels, mipmap_pixels) = bitmap.pixels_float.split_at_mut(bitmap.width * bitmap.height);
+        let invert_fade = self.options.invert_detail_fade;
 
+        for bitmap in &mut self.bitmaps {
             if bitmap.mipmaps > 0 {
+                let bitmap_pixels = &mut bitmap.pixels_float[..];
+
                 let fade = fade.clamp(0.0, 1.0) as f32;
                 let mipmap_count_float = bitmap.mipmaps as f32;
                 let overall_fade_factor = mipmap_count_float - fade * (mipmap_count_float - 1.0 + (1.0 - fade));
+                let mipmap_count = bitmap.mipmaps;
 
                 // Get the fade color
                 let (r,g,b) = match self.options.detail_fade_color {
                     DetailFadeColor::Gray => (127.0 / 255.0, 127.0 / 255.0, 127.0 / 255.0),
                     DetailFadeColor::Average => {
                         let mut average = ColorRGB::default();
-                        for p in &base_map_pixels[..] {
+                        for p in &bitmap_pixels[..bitmap.width * bitmap.height] {
                             average.r += p.r;
                             average.g += p.g;
                             average.b += p.b;
                         }
-                        let sum = base_map_pixels.len() as f32;
+                        let sum = bitmap_pixels.len() as f32;
                         (average.r / sum, average.g / sum, average.b / sum)
                     }
                 };
 
                 // Do it!
-                iterate_mipmaps!(bitmap, |m| {
+                iterate_base_map_and_mipmaps(bitmap.width, bitmap.height, bitmap.depth, bitmap.faces, mipmap_count, |m| {
                     // The amount we fade depends on the mipmap. We can use alpha blending to calculate this.
-                    let fade_to_gray = ColorARGB {
-                        a: (((m.index + 1) as f32) / overall_fade_factor).min(1.0),
+                    let mut fade_to_gray = ColorARGB {
+                        a: (m.index as f32 / overall_fade_factor).clamp(0.0, 1.0),
                         r,
                         g,
                         b
                     };
-                    for px in &mut mipmap_pixels[m.pixel_offset..m.pixel_offset + m.size] {
+
+                    if invert_fade {
+                        fade_to_gray.a = 1.0 - fade_to_gray.a;
+                    }
+
+                    for px in &mut bitmap_pixels[m.pixel_offset..m.pixel_offset + m.size] {
                         *px = ColorARGB::from_rgb(px.a, ColorARGB::from_rgb(1.0, px.rgb()).alpha_blend(fade_to_gray).rgb());
                     }
                 });
