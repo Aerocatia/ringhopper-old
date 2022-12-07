@@ -585,7 +585,7 @@ impl ProcessedBitmaps {
                             average.g += p.g;
                             average.b += p.b;
                         }
-                        let sum = bitmap_pixels.len() as f32;
+                        let sum = (bitmap.width * bitmap.height) as f32;
                         (average.r / sum, average.g / sum, average.b / sum)
                     }
                 };
