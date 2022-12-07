@@ -127,7 +127,9 @@
             { "name": "disable height map compression", "description": "Disable palettization when usage is set to height or vector map." },
             { "name": "uniform sprite sequences", "description": "hey - don't even try it!", "note": "What this flag was intended to do is unknown. Current tools error if you have this set.", "read_only": true },
             { "name": "filthy sprite bug fix", "description": "Ignore sequence borders when calculating registration point." },
-            { "name": "half hud scale", "description": "Draw the HUD at half the width and height.", "engines": ["mcc-cea"] }
+            { "name": "half hud scale", "description": "Draw the HUD at half the width and height.", "engines": ["mcc-cea"] },
+            { "name": "invert detail fade", "engines": ["mcc-cea"] },
+            { "name": "use average color for detail fade", "description": "Instead of fading to gray, use the average color of the bitmap.", "engines": ["mcc-cea"] }
         ],
         "width": 16
     },
