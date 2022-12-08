@@ -695,11 +695,11 @@ fn make_bitmap_processing_options(bitmap_tag: &Bitmap) -> ProcessingOptions {
             if bitmap_tag._type == BitmapType::Sprites && (bitmap_tag.mipmap_count == 0 || bitmap_tag.mipmap_count > 2) {
                 Some(2)
             }
-            else if bitmap_tag.mipmap_count == 0 {
-                None
-            }
             else if bitmap_tag._type == BitmapType::InterfaceBitmaps || bitmap_tag.usage == BitmapUsage::LightMap {
                 Some(0)
+            }
+            else if bitmap_tag.mipmap_count == 0 {
+                None
             }
             else {
                 Some(bitmap_tag.mipmap_count as usize - 1)
