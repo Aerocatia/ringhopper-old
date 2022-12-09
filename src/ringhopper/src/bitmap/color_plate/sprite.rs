@@ -462,6 +462,7 @@ impl UnbakedSpriteSheet {
             self.spacing = 0;
             let added = self.add_sprite_to_sheet(bitmap, color_plate, false);
             if added {
+                self.locked = true; // lock the sprite sheet, preventing further sprites from being added
                 return added;
             }
             self.spacing = old_spacing;
