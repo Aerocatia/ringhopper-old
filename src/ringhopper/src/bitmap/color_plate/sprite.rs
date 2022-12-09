@@ -1,9 +1,6 @@
-#![allow(dead_code)]
-
 use super::*;
 
 pub(crate) struct SpriteProcessor {
-    sprites: Vec<UnbakedSprite>,
     warnings: Vec<ErrorMessage>
 }
 
@@ -50,7 +47,7 @@ impl SpriteProcessor {
             }
         }
 
-        let mut processor = SpriteProcessor { sprites, warnings: Vec::new() };
+        let mut processor = SpriteProcessor { warnings: Vec::new() };
         let mut sheets = processor.generate_sheets(max_sheet_length, spacing, color_plate)?;
 
         let mut total_pixel_usage = 0;
