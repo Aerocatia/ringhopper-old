@@ -183,6 +183,8 @@
     "engine.h1.verbs.recover-processed.error_bitmap_bad_sprite_type": "Can't recover sprites from non-2D texture.",
     "engine.h1.verbs.recover-processed.error_bitmap_bad_white_type": "White textures are unsupported.",
     "engine.h1.verbs.recover-processed.error_bitmap_corrupted_invalid_sprite_dimensions": "Bitmap tag is corrupted. Sequence #{sequence} contains invalid sprite dimensions.",
+    "engine.h1.verbs.recover-processed.error_bitmap_no_bitmaps_recovered": "No bitmaps could be found in the tag. The tag may be corrupt.",
+    "engine.h1.verbs.recover-processed.error_bitmap_no_sequences": "No sequences could be found in the tag. The tag may be corrupt.",
     "engine.h1.verbs.recover-processed.error_bitmap_no_unique_background": "Cannot find a unique color for the background.",
     "engine.h1.verbs.recover-processed.error_bitmap_no_unique_divider": "Cannot find a unique color for the divider.",
     "engine.h1.verbs.recover-processed.error_bitmap_out_of_bounds": "Bitmap tag is corrupted. Bitmap #{bitmap} contains out-of-bounds pixel data.",

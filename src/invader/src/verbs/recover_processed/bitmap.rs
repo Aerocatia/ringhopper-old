@@ -28,6 +28,11 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
         return Ok(RecoverProcessedResult::SourceDataExists)
     }
 
+    // No sequences
+    if tag.bitmap_group_sequence.blocks.is_empty() {
+        return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_no_sequences")));
+    }
+
     // Make sure sprites can be done
     if tag._type == BitmapType::Sprites {
         let mut has_sprites = false;
@@ -150,6 +155,10 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
                 }
             }
         }
+    }
+
+    if all_bitmaps.is_empty() {
+        return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_no_bitmaps_recovered")));
     }
 
     // Crop sprites
