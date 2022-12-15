@@ -840,7 +840,10 @@
                 "name": "units",
                 "type": "Reflexive",
                 "struct": "ModelAnimationsAnimationGraphUnitSeat",
-                "maximum": 32
+                "maximum": {
+                    "default": 32,
+                    "extended": 512
+                }
             },
             {
                 "name": "weapons",

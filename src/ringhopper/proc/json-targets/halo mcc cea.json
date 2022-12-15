@@ -1,6 +1,6 @@
 {
     "name": "Halo: Combat Evolved Anniversary (MCC)",
-    "version": "halo1 pc 01.03.43.0000 Aug 21 2022 17:13:00",
+    "version": "halo1 pc 01.03.43.0000 Nov 16 2022 20:49:44",
     "fallback": true,
     "derives": "halo pc retail.json",
     "shorthand": "mcc-cea",

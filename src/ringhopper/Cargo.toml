@@ -9,7 +9,7 @@ exclude = ["proc"]
 
 [dependencies]
 encoding = "0.2"
-rat-in-a-tube = "0.2.1"
+rat-in-a-tube = "0.2.2"
 texpresso = "2.0"
 ringhopper-proc = { path = "proc", package = "ringhopper-proc", version = "0.1.3" }
 
