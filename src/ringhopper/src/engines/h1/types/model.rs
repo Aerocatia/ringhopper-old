@@ -133,7 +133,7 @@ fn decompress_vector3(v: u32) -> (f32, f32, f32) {
 /// Functions for compressing models into a smaller format.
 ///
 /// These functions are lossy.
-trait ModelCompression {
+pub trait ModelCompression {
     type Compressed;
 
     /// Lossily compress the data.

@@ -15,6 +15,7 @@ use ringhopper::file::TagFile;
 pub mod bitmap;
 pub mod collection;
 pub mod convert;
+pub mod lightmap;
 pub mod list_engines;
 pub mod recover;
 pub mod recover_processed;

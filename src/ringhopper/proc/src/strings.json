@@ -155,6 +155,16 @@
     "engine.h1.verbs.convert.converted_tag": "Converted {tag}",
     "engine.h1.verbs.convert.unable_to_convert_tag": "Can't convert {tag} to {output_group}",
 
+    "engine.h1.verbs.lightmap.arguments.bsp": "Choose a BSP by name to bake. This argument can be used multiple times.",
+    "engine.h1.verbs.lightmap.arguments.fullbright": "Render a lightmap as fullbright/white.",
+    "engine.h1.verbs.lightmap.error_cannot_find_bsp_tag": "Cannot find BSP tag {tag}",
+    "engine.h1.verbs.lightmap.error_compressed_vertices_corrupt": "Material #{material} of lightmap #{lightmap} has corrupt compressed vertices.",
+    "engine.h1.verbs.lightmap.error_compressed_vertices_missing": "Material #{material} of lightmap #{lightmap} is missing compressed vertices.",
+    "engine.h1.verbs.lightmap.error_uncompressed_vertices_corrupt": "Material #{material} of lightmap #{lightmap} has corrupt uncompressed vertices.",
+    "engine.h1.verbs.lightmap.error_uncompressed_vertices_missing": "Material #{material} of lightmap #{lightmap} is missing uncompressed vertices.",
+    "engine.h1.verbs.lightmap.baked": "Baked lightmaps for {bsp} BSP(s) for {tag}",
+    "engine.h1.verbs.lightmap.baked_skipped": "No BSPs found for {tag} that match BSP(s) [{bsp}]",
+
     "engine.h1.verbs.list-engines.available_engines": "Available engines targets:",
 
     "engine.h1.verbs.recover.error_bitmap_color_plate_data_invalid": "Compressed color plate data is invalid.",
@@ -289,6 +299,7 @@
     "verb.edit.description": "Edit tags.",
     "verb.extract.description": "Extract tags from cache files.",
     "verb.font.description": "Generate font tags.",
+    "verb.lightmap.description": "Fullbright scenario_structure_bsp tags.",
     "verb.gbxmodel.description": "Generate gbxmodel tags.",
     "verb.hud-messages.description": "Generate hud_message_text tags.",
     "verb.info.description": "Get information for cache files.",
