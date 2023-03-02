@@ -529,8 +529,10 @@ impl ColorPlate {
                 }
 
                 // If it's non-power-of-two
-                if self.options.input_type != ColorPlateInputType::NonPowerOfTwoTextures && !bitmap_width.is_power_of_two() && !bitmap_height.is_power_of_two() {
-                    return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_non_power_of_two_texture"), width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)))
+                if self.options.input_type != ColorPlateInputType::NonPowerOfTwoTextures {
+                    if !bitmap_width.is_power_of_two() || !bitmap_height.is_power_of_two() {
+                        return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.types.bitmap.error_non_power_of_two_texture"), width=bitmap_width, height=bitmap_height, x=virtual_left, y=virtual_top)))
+                    }
                 }
 
                 // Increment
