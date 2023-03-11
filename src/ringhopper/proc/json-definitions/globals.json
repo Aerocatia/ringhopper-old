@@ -785,7 +785,6 @@
             {
                 "name": "test 0",
                 "type": "TagReference",
-                "non_null": true,
                 "groups": [
                     "bitmap"
                 ]
@@ -793,7 +792,6 @@
             {
                 "name": "test 1",
                 "type": "TagReference",
-                "non_null": true,
                 "groups": [
                     "bitmap"
                 ]
