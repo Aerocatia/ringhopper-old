@@ -734,7 +734,8 @@ pub fn build_color_plate(bitmap_type: BitmapType, sequences: &Vec<Vec<ColorPlate
     let mut width;
     let input_data: Vec<u8>;
 
-    let single_bitmap = sequences.len() == 1 && sequences[0].len() == 1;
+    let faces = if bitmap_type == BitmapType::CubeMaps { 6 } else { 1 };
+    let single_bitmap = sequence_count == 1 && sequences[0].len() == faces;
 
     let can_be_unrolled = !force_plate && if !single_bitmap {
         false

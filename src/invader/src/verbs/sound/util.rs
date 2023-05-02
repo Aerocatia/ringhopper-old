@@ -612,7 +612,7 @@ fn encode_block(samples_to_encode: &[i16], channels: NonZeroU8, sample_rate: Non
                     _ => panic!()
                 }
 
-                encoder.finish()
+                encoder.finish().map(|_| ())
             })().map_err(|e| ErrorMessage::AllocatedString(e.to_string()))?;
 
             if buffer_size > UNCOMPRESSED_LIMIT {

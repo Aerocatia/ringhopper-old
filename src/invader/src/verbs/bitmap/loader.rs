@@ -40,7 +40,8 @@ pub fn load_tiff(path: &Path) -> ErrorMessageResult<Image> {
         ColorType::Palette(n) => n,
         ColorType::GrayA(n) => n,
         ColorType::RGBA(n) => n,
-        ColorType::CMYK(n) => n
+        ColorType::CMYK(n) => n,
+        ColorType::YCbCr(n) => n,
     };
     if bit_depth != 8 {
         return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_8_bit_color")))

@@ -25,7 +25,6 @@ fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit:
     // This version uses the Win32 API directly. This is drastically faster than Rust's [`std::fs`] functions on Windows, although note that some unsafe code is needed to do this.
 
     use windows::Win32::Storage::FileSystem::*;
-    use windows::Win32::Foundation::CHAR;
     use windows::core::PCSTR;
 
     if recursion_limit == 0 {
@@ -43,7 +42,7 @@ fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit:
         // Do it!
         let result = (|| {
             loop {
-                let file_name_str_slice = unsafe { &*std::ptr::slice_from_raw_parts(&find_data.cFileName as *const CHAR as *const u8, find_data.cFileName.len()) };
+                let file_name_str_slice = unsafe { &*std::ptr::slice_from_raw_parts(&find_data.cFileName as *const u8, find_data.cFileName.len()) };
                 let mut file_name_str_len = 0usize;
                 for &c in file_name_str_slice {
                     if c == 0 {
