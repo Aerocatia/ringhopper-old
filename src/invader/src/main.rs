@@ -107,6 +107,7 @@ fn get_verb_function(verb: Verb) -> Option<VerbFn> {
         Verb::Convert => Some(convert::convert_verb),
         Verb::Lightmap => Some(lightmap::lightmap_verb),
         Verb::ListEngines => Some(list_engines::list_engines_verb),
+        Verb::NormalizeLightmaps => Some(normalize_lightmaps::normalize_lightmaps_verb),
         Verb::Recover => Some(recover::recover_verb),
         Verb::RecoverProcessed => Some(recover_processed::recover_processed_verb),
         Verb::Sound => Some(sound::sound_verb),

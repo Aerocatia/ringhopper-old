@@ -17,6 +17,7 @@ pub mod collection;
 pub mod convert;
 pub mod lightmap;
 pub mod list_engines;
+pub mod normalize_lightmaps;
 pub mod recover;
 pub mod recover_processed;
 pub mod script;

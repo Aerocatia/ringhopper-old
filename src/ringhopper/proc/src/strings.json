@@ -39,6 +39,7 @@
     "engine.h1.error_improperly_extracted_model_markers": "The model tag contains runtime markers and needs repaired for this operation.",
     "engine.h1.error_improperly_extracted_model_vertices_compressed": "The model tag is missing compressed vertices and needs repaired for this operation.",
     "engine.h1.error_improperly_extracted_model_vertices_uncompressed": "The model tag is missing uncompressed vertices and needs repaired for this operation.",
+    "engine.h1.error_improperly_extracted_bsp_vertices_uncompressed": "The BSP tag is missing uncompressed vertices and needs repaired for this operation.",
 
     "engine.h1.jms.error_could_not_parse_jms": "Could not parse JMS at {line}:{column}: {error}",
     "engine.h1.jms.error_expected_token": "Expected token. Reached EOF instead.",
@@ -306,6 +307,7 @@
     "verb.lightmap.description": "Generate lightmaps.",
     "verb.list-engines.description": "View available engine targets.",
     "verb.model.description": "Generate model tags.",
+    "verb.normalize-lightmaps.description": "Normalize lightmaps to an amount.",
     "verb.physics.description": "Generate physics tags.",
     "verb.plate.description": "Generate color plates.",
     "verb.recover.description": "Recover input data from tags.",
