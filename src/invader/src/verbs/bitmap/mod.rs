@@ -426,6 +426,8 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
                 BitmapFormat::DXT3 => if !transparent { BitmapEncoding::BC1 } else { BitmapEncoding::BC2 },
                 BitmapFormat::DXT5 => if !transparent { BitmapEncoding::BC1 } else { BitmapEncoding::BC3 },
 
+                BitmapFormat::BC7 => todo!("I lost the instruction booklet for the POKéGEAR. Come back in a while."),
+
                 BitmapFormat::_16bit => if !transparent { BitmapEncoding::R5G6B5 }
                                         else if !varying_alpha { BitmapEncoding::A1R5G5B5 }
                                         else { BitmapEncoding::A4R4G4B4 }

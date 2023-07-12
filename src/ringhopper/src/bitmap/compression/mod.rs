@@ -55,6 +55,9 @@ pub enum BitmapEncoding {
 
     /// DXT5 block compression
     BC3,
+
+    /// BC7 block compression
+    BC7,
 }
 
 impl BitmapEncoding {
@@ -77,7 +80,7 @@ impl BitmapEncoding {
             BitmapEncoding::P8HCE => 8,
 
             // Block compression
-            BitmapEncoding::BC2 | BitmapEncoding::BC3 => 8,
+            BitmapEncoding::BC2 | BitmapEncoding::BC3 | BitmapEncoding::BC7 => 8,
             BitmapEncoding::BC1 => 4
         }
     }
@@ -91,7 +94,7 @@ impl BitmapEncoding {
     /// Get the block size.
     pub const fn block_size(self) -> (usize, usize) {
         match self {
-            BitmapEncoding::BC1 | BitmapEncoding::BC2 | BitmapEncoding::BC3 => (4,4),
+            BitmapEncoding::BC1 | BitmapEncoding::BC2 | BitmapEncoding::BC3 | BitmapEncoding::BC7 => (4,4),
             _ => (1,1)
         }
     }
@@ -260,6 +263,7 @@ impl BitmapEncoding {
         }
         else {
             match self {
+                BitmapEncoding::BC7 => todo!("I lost the instruction booklet for the POKéGEAR. Come back in a while."),
                 BitmapEncoding::BC1 | BitmapEncoding::BC2 | BitmapEncoding::BC3 => {
                     let format = match self {
                         BitmapEncoding::BC1 => Format::Bc1,
@@ -427,6 +431,7 @@ impl BitmapEncoding {
         }
         else {
             match self {
+                BitmapEncoding::BC7 => todo!("I lost the instruction booklet for the POKéGEAR. Come back in a while."),
                 BitmapEncoding::BC1 | BitmapEncoding::BC2 | BitmapEncoding::BC3 => {
                     let format = match self {
                         BitmapEncoding::BC1 => Format::Bc1,

@@ -23,7 +23,8 @@
         "fields": [
             "alpha tested",
             "bump map is specular mask",
-            "true atmospheric fog"
+            "true atmospheric fog",
+            "use alternate bump attenuation"
         ],
         "width": 16
     },

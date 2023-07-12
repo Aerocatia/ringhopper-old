@@ -219,6 +219,7 @@ impl TryFrom<BitmapDataFormat> for BitmapEncoding {
             BitmapDataFormat::DXT1 => BitmapEncoding::BC1,
             BitmapDataFormat::DXT3 => BitmapEncoding::BC2,
             BitmapDataFormat::DXT5 => BitmapEncoding::BC3,
+            BitmapDataFormat::BC7 => BitmapEncoding::BC7,
 
             BitmapDataFormat::Unused1 => return Err(ErrorMessage::StaticString("unsupported")),
             BitmapDataFormat::Unused2 => return Err(ErrorMessage::StaticString("unsupported")),
@@ -250,6 +251,7 @@ impl TryFrom<BitmapEncoding> for BitmapDataFormat {
             BitmapEncoding::BC1 => BitmapDataFormat::DXT1,
             BitmapEncoding::BC2 => BitmapDataFormat::DXT3,
             BitmapEncoding::BC3 => BitmapDataFormat::DXT5,
+            BitmapEncoding::BC7 => BitmapDataFormat::BC7,
 
             BitmapEncoding::A8B8G8R8 => return Err(ErrorMessage::StaticString("unsupported"))
         };

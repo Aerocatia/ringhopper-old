@@ -387,13 +387,19 @@
                 "name": "ik points",
                 "type": "Reflexive",
                 "struct": "ModelAnimationsAnimationGraphUnitSeatikPoint",
-                "maximum": 4
+                "maximum": {
+                    "mcc-cea": 8,
+                    "default": 4
+                }
             },
             {
                 "name": "weapons",
                 "type": "Reflexive",
                 "struct": "ModelAnimationsAnimationGraphWeapon",
-                "maximum": 16
+                "maximum": {
+                    "mcc-cea": 64,
+                    "default": 16
+                }
             }
         ],
         "type": "struct",
@@ -520,7 +526,10 @@
                 "name": "suspension animations",
                 "type": "Reflexive",
                 "struct": "ModelAnimationSuspensionAnimation",
-                "maximum": 8
+                "maximum": {
+                    "mcc-cea": 32,
+                    "default": 8
+                }
             }
         ],
         "type": "struct",
@@ -593,7 +602,10 @@
                 "name": "animations",
                 "type": "Reflexive",
                 "struct": "ModelAnimationsFirstPersonWeapon",
-                "maximum": 28
+                "maximum": {
+                    "mcc-cea": 30,
+                    "default": 28
+                }
             }
         ],
         "type": "struct",
@@ -841,8 +853,9 @@
                 "type": "Reflexive",
                 "struct": "ModelAnimationsAnimationGraphUnitSeat",
                 "maximum": {
-                    "default": 32,
-                    "extended": 512
+                    "mcc-cea": 2048,
+                    "default": 256,
+                    "extended": 2048
                 }
             },
             {
@@ -880,8 +893,9 @@
                 "type": "Reflexive",
                 "struct": "ModelAnimationsAnimationGraphSoundReference",
                 "maximum": {
-                    "mcc-cea": 513,
-                    "default": 257
+                    "mcc-cea": 512,
+                    "default": 257,
+                    "extended": 2048
                 }
             },
             {
@@ -909,7 +923,7 @@
                 "struct": "ModelAnimationsAnimation",
                 "read_only": true,
                 "maximum": {
-                    "mcc-cea": 512,
+                    "mcc-cea": 2048,
                     "default": 256,
                     "extended": 2048
                 }

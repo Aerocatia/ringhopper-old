@@ -83,7 +83,7 @@
             "third person on enter",
             "first person camera slaved to gun",
             "allow vehicle communication animations",
-            "not valid without driver",
+            { "name": "not valid without driver", "exclude": true },
             "allow ai noncombatants"
         ],
         "width": 32
