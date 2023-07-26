@@ -130,7 +130,7 @@
             "detonates when dropped",
             "cannot fire at maximum age",
             "secondary trigger overrides grenades",
-            { "name": "obsolete does not depower active camo in multilplayer", "exclude": true },
+            { "name": "does not depower active camo in multiplayer", "exclude": true },
             "enables integrated night vision",
             "ais use weapon melee damage"
         ],

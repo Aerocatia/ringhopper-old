@@ -906,6 +906,13 @@
     },
     {
         "name": "WeaponHUDInterface",
+        "groups": [
+            {
+                "name": "messaging information",
+                "description": "This defines HUD information such as the pickup icon and text.",
+                "first": "messaging information sequence index"
+            }
+        ],
         "fields": [
             {
                 "name": "child hud",
@@ -1004,31 +1011,38 @@
                 "size": 132
             },
             {
-                "name": "sequence index",
+                "name": "messaging information sequence index",
+                "display_name": "sequence index",
                 "type": "Index"
             },
             {
-                "name": "width offset",
+                "name": "messaging information width offset",
+                "display_name": "width offset",
                 "type": "int16"
             },
             {
-                "name": "offset from reference corner",
+                "name": "messaging information offset from reference corner",
+                "display_name": "offset from reference corner",
                 "type": "Point2DInt"
             },
             {
-                "name": "override icon color",
+                "name": "messaging information override icon color",
+                "display_name": "override icon color",
                 "type": "ColorARGBInt"
             },
             {
-                "name": "frame rate",
+                "name": "messaging information frame rate",
+                "display_name": "frame rate",
                 "type": "int8"
             },
             {
-                "name": "more flags",
+                "name": "messaging information flags",
+                "display_name": "flags",
                 "type": "HUDInterfaceMessagingFlags"
             },
             {
-                "name": "text index",
+                "name": "messaging information text index",
+                "display_name": "text index",
                 "type": "Index"
             },
             {

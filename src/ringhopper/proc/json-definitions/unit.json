@@ -75,7 +75,7 @@
         "type": "bitfield",
         "fields": [
             "invisible",
-            "locked",
+            { "name": "locked", "exclude": true },
             "driver",
             "gunner",
             "third person camera",
