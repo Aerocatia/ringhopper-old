@@ -132,7 +132,9 @@
             "secondary trigger overrides grenades",
             { "name": "does not depower active camo in multiplayer", "exclude": true },
             "enables integrated night vision",
-            "ais use weapon melee damage"
+            "ais use weapon melee damage",
+            "prevents crouching",
+            "uses 3rd person camera"
         ],
         "width": 32
     },
