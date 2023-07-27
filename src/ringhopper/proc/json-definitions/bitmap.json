@@ -182,7 +182,8 @@
         "fields": [
             {
                 "name": "name",
-                "type": "String32"
+                "type": "String32",
+                "read_only": false
             },
             {
                 "name": "first bitmap index",
