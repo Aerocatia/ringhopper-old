@@ -283,7 +283,7 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
     };
 
     let mut color_plate = ColorPlate::read_color_plate(&image.pixels, image.width, image.height, &color_plate_options)?;
-    let color_plate_warnings = {
+    let mut color_plate_warnings = {
         let mut w = Vec::new();
         w.append(&mut color_plate.warnings);
         w
@@ -338,15 +338,11 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
         })
     }
 
-    let mut warn_monochrome = false;
     let mut bitmap_lengths = Vec::with_capacity(processed_result.bitmaps.len());
 
-    // Applies to base maps.
-    let mut contains_fully_transparent_bitmaps = false;
-    let mut contains_varying_alpha = false;
-    let mut contains_zero_alpha_color = false;
+    for bi in 0..processed_result.bitmaps.len() {
+        let b = &processed_result.bitmaps[bi];
 
-    for b in processed_result.bitmaps {
         // Check to make sure it isn't too large to be addressed.
         if b.width > U16_MAX || b.height > U16_MAX || b.depth > U16_MAX {
             return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.error_exceeded_dimensions"), max=U16_MAX, width=b.width, height=b.height, depth=b.depth)));
@@ -400,19 +396,19 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
                 }
             }
 
-            // For warning checks
+            // For warning checks (base bitmap only)
             //
             // We only want to check the base map, as anything else is not something the user is directly responsible
             // for, such as semi-transparent pixels in mipmaps on DXT1 due to interpolation.
-            if m.index == 0 {
-                if fully_transparent {
-                    contains_fully_transparent_bitmaps = true;
-                }
+            if m.index == 0 && bitmap_tag.encoding_format == BitmapFormat::DXT1 {
                 if varying_alpha {
-                    contains_varying_alpha = true;
+                    color_plate_warnings.push(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_alpha_loss"), bitmap=bi)));
                 }
                 if zero_alpha_color {
-                    contains_zero_alpha_color = true;
+                    color_plate_warnings.push(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_color_loss"), bitmap=bi)));
+                    if fully_transparent {
+                        color_plate_warnings.push(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_color_loss_entire_bitmap")));
+                    }
                 }
             }
         });
@@ -451,7 +447,7 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
 
         // Encoding to monochrome with non-monochrome input
         if !is_monochrome && bitmap_tag.encoding_format == BitmapFormat::Monochrome {
-            warn_monochrome = true;
+            color_plate_warnings.push(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.bitmap.warning_monochrome_non_monochrome"), bitmap=bi)));
         }
 
         // Okay, encode it
@@ -632,27 +628,9 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
         println!(get_compiled_string!("engine.h1.verbs.bitmap.total_size"), size=format_size(bitmap_tag.processed_pixel_data.len()));
     }
 
-    // Warn if we did something that may not be what we wanted.
-    if warn_monochrome {
-        eprintln_warn_pre!(get_compiled_string!("engine.h1.verbs.bitmap.warning_monochrome_non_monochrome"));
-        options.warnings.fetch_add(1, Ordering::Relaxed);
-    }
-    if bitmap_tag.encoding_format == BitmapFormat::DXT1 {
-        if contains_varying_alpha {
-            eprintln_warn_pre!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_alpha_loss"));
-        options.warnings.fetch_add(1, Ordering::Relaxed);
-        }
-        if contains_zero_alpha_color {
-            eprintln_warn_pre!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_color_loss"));
-            if contains_fully_transparent_bitmaps {
-                eprintln_warn!(get_compiled_string!("engine.h1.verbs.bitmap.warning_dxt1_color_loss_entire_bitmap"));
-            }
-            options.warnings.fetch_add(1, Ordering::Relaxed);
-        }
-    }
+    options.warnings.fetch_add(color_plate_warnings.len(), Ordering::Relaxed);
     for w in color_plate_warnings {
         eprintln_warn_pre!("{}", w);
-        options.warnings.fetch_add(1, Ordering::Relaxed);
     }
 
     println_success!(get_compiled_string!("engine.h1.verbs.unicode-strings.saved_file"), file=file.tag_path);
