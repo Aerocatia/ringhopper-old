@@ -145,7 +145,7 @@
     "engine.h1.verbs.bitmap.warning_dxt1_alpha_loss": "DXT1 was requested, bitmap #{bitmap}'s base map does not have 1-bit alpha and had to be crunched into 1-bit alpha.",
     "engine.h1.verbs.bitmap.warning_dxt1_color_loss": "DXT1 was requested, bitmap #{bitmap}'s base map has fully transparent pixel(s) with color which were set to black.",
     "engine.h1.verbs.bitmap.warning_dxt1_color_loss_entire_bitmap": "... and this bitmap is fully transparent, thus it is now fully black.",
-    "engine.h1.verbs.bitmap.warning_monochrome_non_monochrome": "Monochrome was requested, but bitmap data #{bitmap} contains non-monochrome pixel(s).",
+    "engine.h1.verbs.bitmap.warning_monochrome_non_monochrome": "Monochrome was requested, but input for bitmap data #{bitmap} contains non-monochrome pixel(s).",
 
     "engine.h1.verbs.convert.error_could_not_convert_tag": "Could not convert {tag}: {error}",
     "engine.h1.verbs.convert.error_no_tags_converted": "No tags were converted due to {error} error(s).",
