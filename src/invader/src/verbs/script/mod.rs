@@ -69,7 +69,7 @@ fn compile_scripts_for_tag(path: &TagFile, log_mutex: super::LogMutex, _availabl
             }
 
             // Include global_scripts unless we exclude them from the root.
-            if !options.exclude_global_scripts && n.contains(&global_scripts_name) && !script_paths.contains_key(&global_scripts_name) {
+            if !options.exclude_global_scripts && !n.contains(&global_scripts_name) && !script_paths.contains_key(&global_scripts_name) {
                 script_paths.insert(global_scripts_name.clone(), global_scripts_path.clone());
             }
         }
