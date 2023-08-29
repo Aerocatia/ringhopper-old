@@ -335,7 +335,7 @@ impl ColorPlate {
     fn fix_sequence_indices(&mut self, sequences: &mut Vec<ColorPlateSequence>) {
         if !sequences.is_empty() {
             for i in 0..sequences.len() - 1 {
-                sequences[i].end_y = sequences[i+1].start_y;
+                sequences[i].end_y = sequences[i+1].start_y - 1;
             }
             sequences.retain(|f| f.start_y + 1 < f.end_y);
         }
