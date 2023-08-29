@@ -487,9 +487,13 @@
                 "maximum": 65535
             },
             {
-                "name": "do not crash the game",
-                "type": "uint32",
+                "name": "triangle buffer type",
+                "type": "TriangleBufferType",
                 "cache_only": true
+            },
+            {
+                "type": "pad",
+                "size": 2
             },
             {
                 "name": "triangle count",
