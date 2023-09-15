@@ -68,9 +68,10 @@ BEGIN
 END
 
 IDI_ICON1 ICON DISCARDABLE \"icon/{pkg}.ico\"
+1 24 \"manifest/{pkg}.manifest\"
 ").unwrap(); // end with a newline
 
-        embed_resource::compile(windows_rc_path);
+        embed_resource::compile(windows_rc_path, embed_resource::NONE);
     }
 
     // We only need to change if Cargo.toml was modified, since that's where the version is stored

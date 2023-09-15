@@ -35,4 +35,4 @@ path = "src/main.rs"
 doc = false
 
 [build-dependencies]
-embed-resource = "1.7"
+embed-resource = "2.3"
