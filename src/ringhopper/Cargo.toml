@@ -9,7 +9,7 @@ exclude = ["proc"]
 
 [dependencies]
 encoding = "0.2"
-rat-in-a-tube = "0.2.2"
+rat-in-a-tube = "0.2.3"
 texpresso = "2.0"
 ringhopper-proc = { path = "proc", package = "ringhopper-proc", version = "0.1.3" }
 
@@ -20,7 +20,7 @@ tiff = "0.9"
 libc = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies.windows]
-version = "0.48"
+version = "0.51.1"
 features = [
     "Win32_Foundation",
     "Win32_Storage_FileSystem"

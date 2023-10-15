@@ -69,7 +69,7 @@ fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit:
                         }
                     }
                 }
-                if unsafe { !FindNextFileA(file, &mut find_data) }.as_bool() {
+                if unsafe { FindNextFileA(file, &mut find_data) }.is_err() {
                     break;
                 }
             }
@@ -77,7 +77,7 @@ fn iterate_recursively(base_directory: &Path, directory: &Path, recursion_limit:
         })();
 
         // Close the handle
-        unsafe { FindClose(file); }
+        unsafe { let _ = FindClose(file); }
 
         // If this failed, exit the function with an error.
         result?;
