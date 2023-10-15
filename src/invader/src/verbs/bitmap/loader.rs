@@ -112,34 +112,55 @@ pub fn load_png(path: &Path) -> ErrorMessageResult<Image> {
     Ok(Image { width, height, pixels })
 }
 
-#[cfg(feature = "jxl")]
 pub fn load_jxl(path: &Path) -> ErrorMessageResult<Image> {
-    use jpegxl_rs::decoder_builder;
-    use jpegxl_rs::DecodeError;
-    use jpegxl_rs::Endianness;
+    use jxl_oxide::JxlImage;
+    use jxl_oxide::PixelFormat;
+    use jxl_oxide::RenderResult;
 
     let sample = read_file(&path)?;
+    let mut image = JxlImage::from_reader(std::io::Cursor::new(sample)).map_err(|e| ErrorMessage::AllocatedString(e.to_string()))?;
+    let frame = match image.render_next_frame().map_err(|e| ErrorMessage::AllocatedString(e.to_string()))? {
+        RenderResult::Done(n) => n,
+        _ => unreachable!("did not expect render_next_frame to fail")
+    };
 
-    let (raw_pixels_vec, width, height) = (|| -> Result<(Vec<u8>, usize, usize), DecodeError> {
-        let decoder = decoder_builder().num_channels(4).align(8).endianness(Endianness::Big).build()?;
-        let img = decoder.decode_to::<u8>(&sample)?;
-        Ok((img.data.as_u8().unwrap().to_owned(), img.width as usize, img.height as usize))
-    })().map_err(|e| ErrorMessage::AllocatedString(e.to_string()))?;
+    let rendered = frame.image();
+    let width = rendered.width();
+    let height = rendered.height();
 
-    // Convert pixels to ARGB
-    let mut pixels: Vec<ColorARGBInt> = Vec::with_capacity(height * width);
-    for i in (0..raw_pixels_vec.len()).step_by(4) {
-        let pixel_bytes = &raw_pixels_vec[i..i+4];
-        pixels.push(ColorARGBInt { a: pixel_bytes[3], r: pixel_bytes[0], g: pixel_bytes[1], b: pixel_bytes[2] });
+    let pixel_bytes : Vec<u8> = rendered.buf().iter().map(|f| (f * 255.0) as u8).collect();
+    let mut pixels: Vec<ColorARGBInt> = Vec::with_capacity(width * height);
+
+    match image.pixel_format() {
+        PixelFormat::Gray => {
+            for i in pixel_bytes {
+                pixels.push(ColorARGBInt { a: 255, r: i, g: i, b: i })
+            }
+        },
+        PixelFormat::Graya => {
+            for i in pixel_bytes.chunks(2) {
+                pixels.push(ColorARGBInt { a: i[1], r: i[0], g: i[0], b: i[0] })
+            }
+        },
+        PixelFormat::Rgb => {
+            for i in pixel_bytes.chunks(3) {
+                pixels.push(ColorARGBInt { a: 255, r: i[0], g: i[1], b: i[2] })
+            }
+        },
+        PixelFormat::Rgba => {
+            for i in pixel_bytes.chunks(4) {
+                pixels.push(ColorARGBInt { a: i[3], r: i[0], g: i[1], b: i[2] })
+            }
+        },
+        _ => return Err(ErrorMessage::StaticString(get_compiled_string!("engine.h1.verbs.bitmap.error_need_rgba_grayscale")))
     }
 
-    // Done!
     Ok(Image { width, height, pixels })
 }
 
 pub const IMAGE_LOADING_FUNCTIONS: &[(&'static str, fn (&Path) -> ErrorMessageResult<Image>)] = &[
     ("tif", load_tiff),
     ("tiff", load_tiff),
+    ("jxl", load_jxl),
     ("png", load_png),
-    #[cfg(feature = "jxl")] ("jxl", load_jxl),
 ];

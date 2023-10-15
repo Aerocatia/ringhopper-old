@@ -12,9 +12,7 @@ extern crate symphonia;
 extern crate vorbis_rs;
 extern crate xbadpcm;
 extern crate libsamplerate_sys;
-
-#[cfg(feature = "jxl")]
-extern crate jpegxl_rs;
+extern crate jxl_oxide;
 
 use ringhopper_proc::*;
 
