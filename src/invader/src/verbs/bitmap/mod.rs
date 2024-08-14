@@ -314,7 +314,7 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
         bitmap_tag.bitmap_group_sequence.blocks.push(BitmapGroupSequence {
             name: String32::default(),
             first_bitmap_index: s.first_bitmap.map(|f| f as u16),
-            bitmap_count: s.bitmap_count as u16,
+            bitmap_count: if s.sprites.len() != 1 { s.bitmap_count as u16 } else { 1 },
             sprites: Reflexive { blocks: {
                 let mut v = Vec::with_capacity(s.sprites.len());
                 for s in s.sprites {
