@@ -113,25 +113,24 @@ pub fn load_png(path: &Path) -> ErrorMessageResult<Image> {
 }
 
 pub fn load_jxl(path: &Path) -> ErrorMessageResult<Image> {
-    use jxl_oxide::JxlImage;
-    use jxl_oxide::PixelFormat;
-    use jxl_oxide::RenderResult;
+    use jxl_oxide::{JxlImage, PixelFormat};
 
-    let sample = read_file(&path)?;
-    let mut image = JxlImage::from_reader(std::io::Cursor::new(sample)).map_err(|e| ErrorMessage::AllocatedString(e.to_string()))?;
-    let frame = match image.render_next_frame().map_err(|e| ErrorMessage::AllocatedString(e.to_string()))? {
-        RenderResult::Done(n) => n,
-        _ => unreachable!("did not expect render_next_frame to fail")
-    };
+    macro_rules! wrap_jxl_error {
+        ($result:expr) => {
+            ($result).map_err(|e| ErrorMessage::AllocatedString(format!("jxl-oxide read error: {e}")))
+        }
+    }
 
-    let rendered = frame.image();
-    let width = rendered.width();
-    let height = rendered.height();
-
-    let pixel_bytes : Vec<u8> = rendered.buf().iter().map(|f| (f * 255.0) as u8).collect();
+    let file = read_file(&path)?;
+    let jxl = wrap_jxl_error!(JxlImage::builder().read(Cursor::new(&file)))?;
+    let render = wrap_jxl_error!(jxl.render_frame(0))?;
+    let framebuffer = render.image_all_channels();
+    let pixel_bytes : Vec<u8> = framebuffer.buf().iter().map(|f| (f * 255.0) as u8).collect();
+    let width = framebuffer.width();
+    let height = framebuffer.height();
     let mut pixels: Vec<ColorARGBInt> = Vec::with_capacity(width * height);
 
-    match image.pixel_format() {
+    match jxl.pixel_format() {
         PixelFormat::Gray => {
             for i in pixel_bytes {
                 pixels.push(ColorARGBInt { a: 255, r: i, g: i, b: i })
