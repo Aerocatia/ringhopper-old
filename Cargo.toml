@@ -1,5 +1,6 @@
 [workspace]
 members = [ "src/ringhopper", "src/invader" ]
+resolver = "2"
 
 [profile.release]
 lto = true

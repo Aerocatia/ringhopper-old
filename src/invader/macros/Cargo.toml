@@ -5,6 +5,7 @@ version = "0.1.0"
 description = "Macros for Ringhopper"
 license = "GPL-3.0-only"
 publish = false
+edition = "2021"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"

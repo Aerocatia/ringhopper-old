@@ -4,12 +4,11 @@ use macros::terminal::*;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::path::Path;
+use std::str::FromStr;
 
 use ringhopper_proc::get_compiled_string;
 use ringhopper::engines::h1::EngineTarget;
 use ringhopper::error::*;
-
-use FromStr;
 
 #[cfg(test)]
 mod tests;

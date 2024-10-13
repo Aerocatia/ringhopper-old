@@ -6,3 +6,6 @@ Cargo.lock
 data
 shaders
 tags
+
+# macOS stuff
+.DS_Store

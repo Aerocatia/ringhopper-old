@@ -8,6 +8,7 @@ license = "GPL-3.0-only"
 build = "build.rs"
 repository = "https://git.sr.ht/~snowymouse/invader"
 publish = false
+edition = "2021"
 
 [dependencies]
 ringhopper = { path = "../ringhopper" }

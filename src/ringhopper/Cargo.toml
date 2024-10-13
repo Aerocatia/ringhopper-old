@@ -6,6 +6,7 @@ description = "Library for modding Halo: Combat Evolved"
 license = "GPL-3.0-only"
 repository = "https://git.sr.ht/~snowymouse/invader"
 exclude = ["proc"]
+edition = "2021"
 
 [dependencies]
 encoding = "0.2"
