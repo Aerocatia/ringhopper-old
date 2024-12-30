@@ -15,7 +15,7 @@ ringhopper = { path = "../ringhopper" }
 macros = { path = "macros", package = "ringhopper-macros" }
 ringhopper-proc = { path = "../ringhopper/proc", package = "ringhopper-proc" }
 symphonia = { version = "0.5.3", features = ["wav", "flac", "pcm"], default-features = false }
-jxl-oxide = "0.9.1"
+jxl-oxide = "0.11.0"
 encoding = "0.2"
 tiff = "0.9"
 png = "0.17"
