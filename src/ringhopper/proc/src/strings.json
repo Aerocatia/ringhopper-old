@@ -118,7 +118,7 @@
     "engine.h1.verbs.bitmap.arguments.format.description": "Set the output pixel format. Can be: auto OR one of dxt1, dxt3, dxt5, 16-bit, 32-bit, monochrome. Default (new tag): auto",
     "engine.h1.verbs.bitmap.arguments.gamma-corrected-mipmaps.description": "Enable gamma correction in mipmap generation. This setting does not persist.",
     "engine.h1.verbs.bitmap.arguments.invert-detail-fade.description": "Invert detail fade direction. Default (new tag): off",
-    "engine.h1.verbs.bitmap.arguments.limited-monochrome.description": "Restrict monochrome formats to those natively supported by d3d9 (A8Y8, Y8)",
+    "engine.h1.verbs.bitmap.arguments.limited-monochrome.description": "Restrict monochrome formats to those natively supported by d3d9 (A8Y8, Y8). This setting does not persist.",
     "engine.h1.verbs.bitmap.arguments.map-count.description": "Limit the maximum number of maps (base map + mipmaps), or 0 for no limit. Default (new tag): 0",
     "engine.h1.verbs.bitmap.arguments.palettization.description": "Enable palettization for height maps. Default (new tag): off",
     "engine.h1.verbs.bitmap.arguments.reg-point-from-texture.description": "Use the texture dimensions (including dummy space) to calculate registration point. If this is off, only the width of the texture is used while the height is ignored, instead using the height of the sequence. Default (new tag): off",
