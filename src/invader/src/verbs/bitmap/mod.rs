@@ -51,6 +51,7 @@ struct BitmapOptions {
 
     // These are not saved
     square_sheets: bool,
+    limited_monochrome: bool,
     regenerate: bool,
     bump_algorithm: BumpmapAlgorithm,
     gamma_corrected_mipmaps: bool
@@ -120,6 +121,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         Argument { long: "regenerate", short: 'R', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.regenerate.description"), parameter: None, multiple: false },
         Argument { long: "sobel-bumpmaps", short: 'S', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sobel-bumpmaps.description"), parameter: None, multiple: false },
         Argument { long: "square-sheets", short: 'Q', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.square-sheets.description"), parameter: None, multiple: false },
+        Argument { long: "limited-monochrome", short: 'L', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.limited-monochrome.description"), parameter: None, multiple: false },
         Argument { long: "gamma-corrected-mipmaps", short: 'G', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.gamma-corrected-mipmaps.description"), parameter: None, multiple: false },
         Argument { long: "fade-to-average", short: 'V', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.fade-to-average.description"), parameter: Some("on/off"), multiple: false },
         Argument { long: "invert-detail-fade", short: 'I', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.invert-detail-fade.description"), parameter: Some("on/off"), multiple: false },
@@ -166,6 +168,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
         bitmap_type: parsed_args.parse_enum("type")?,
 
         square_sheets: parsed_args.named.contains_key("square-sheets"),
+        limited_monochrome: parsed_args.named.contains_key("limited-monochrome"),
         regenerate: parsed_args.named.contains_key("regenerate"),
 
         bump_algorithm: match parsed_args.named.contains_key("sobel-bumpmaps") {
@@ -431,9 +434,9 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
                 BitmapFormat::_32bit => if !transparent { BitmapEncoding::X8R8G8B8 }
                                         else { BitmapEncoding::A8R8G8B8 }
 
-                BitmapFormat::Monochrome => if alpha_equals_luminosity { BitmapEncoding::AY8 }
+                BitmapFormat::Monochrome => if alpha_equals_luminosity && !options.limited_monochrome { BitmapEncoding::AY8 }
                                             else if !transparent { BitmapEncoding::Y8 }
-                                            else if white { BitmapEncoding::A8 }
+                                            else if white && !options.limited_monochrome { BitmapEncoding::A8 }
                                             else { BitmapEncoding::A8Y8 }
             }
         };
