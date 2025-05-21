@@ -23,7 +23,7 @@ flate2 = { version = "1.0", features = ["zlib"], default-features = false }
 rubato = "0.14"
 vorbis_rs = "0.3"
 xbadpcm = "0.1"
-libsamplerate-sys = "0.1.12"
+libsamplerate-sys = { version = "0.1.12", git = "https://github.com/G2-Games/libsamplerate-sys.git", rev = "5e113b50021c33cee9744961c7a6ebc8aa823470" }
 
 [[bin]]
 name = "invader"
