@@ -1,6 +1,10 @@
-# invader
+# Invader (old version)
 
-This is the Rust rewrite of Invader.
+This is the initial Rust rewrite of Invader, started in 2022.
+
+Main development has moved to [ringhopper](https://github.com/FishAndRips/ringhopper),
+however this version may still see some small fixes and additions while the remaining
+features are implemented.
 
 The original C++ project can be found on https://github.com/SnowyMouse/invader
 
