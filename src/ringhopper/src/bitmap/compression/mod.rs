@@ -1,5 +1,5 @@
 use std::convert::TryInto;
-
+use bcdec_rs::bc7;
 use crate::bitmap::iterate_base_map_and_mipmaps;
 use crate::{types::ColorARGBInt, bitmap::CurrentBitmap};
 use crate::engines::h1::P8_PALETTE;
@@ -430,7 +430,6 @@ impl BitmapEncoding {
         }
         else {
             match self {
-                BitmapEncoding::BC7 => todo!("I lost the instruction booklet for the POKéGEAR. Come back in a while."),
                 BitmapEncoding::BC1 | BitmapEncoding::BC2 | BitmapEncoding::BC3 => {
                     let format = match self {
                         BitmapEncoding::BC1 => Format::Bc1,
@@ -456,6 +455,49 @@ impl BitmapEncoding {
 
                     return Self::A8B8G8R8.decode(&byte_output, width, height, depth, faces, mipmaps);
                 },
+
+                BitmapEncoding::BC7 => {
+                    let mut byte_output: Vec<u8> = vec![0u8; BitmapEncoding::A8R8G8B8.calculate_size_of_texture(width, height, depth, faces, mipmaps)];
+                    iterate_encoded_base_map_and_mipmaps(self, width, height, depth, faces, mipmaps, |f| {
+                        let pixel_output = &mut byte_output[f.pixel_offset * UNCOMPRESSED_BPP..(f.pixel_offset + f.size) * UNCOMPRESSED_BPP];
+                        let face_count = faces * depth;
+                        let pixels_per_face = f.size / face_count;
+                        let bytes_per_face = pixels_per_face * UNCOMPRESSED_BPP;
+
+                        // BC7 has the same compressed size as BC3
+                        let bytes_per_compressed_face = Format::Bc3.compressed_size(f.width, f.height);
+
+                        let mut input_offset = f.byte_offset;
+                        for output_offset in (0..f.size * UNCOMPRESSED_BPP).step_by(bytes_per_face) {
+                            let input_bytes = &pixels[input_offset..input_offset + bytes_per_compressed_face];
+                            input_offset += bytes_per_compressed_face;
+
+                            let mut block_offset = 0;
+
+                            for y in (0..f.effective_height).step_by(4) {
+                                for x in (0..f.effective_width).step_by(4) {
+                                    let mut pixel_bytes = [0x0u8; 4*4*4];
+                                    bc7(&input_bytes[block_offset..block_offset+4*4], &mut pixel_bytes, 4*4);
+                                    block_offset += 4*4;
+                                    
+                                    for y1 in (y..f.width).take(4) {
+                                        for x1 in (x..f.width).take(4) {
+                                            for p in 0..4 {
+                                                let byte = pixel_bytes[
+                                                    4 * (x1-x + (y1-y)*4) + p
+                                                ];
+                                                pixel_output[output_offset + p + (y1 * f.width + x1) * 4] = byte;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    return Self::A8B8G8R8.decode(&byte_output, width, height, depth, faces, mipmaps);
+                }
+
                 _ => panic!("tried to block compress {encoding_type:?}", encoding_type=self)
             }
         }
