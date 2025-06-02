@@ -110,7 +110,7 @@
 
     "engine.h1.verbs.bitmap.arguments.alpha-bias.description": "Set the alpha fade factor on mipmaps between -1.0 and 1.0. Default (new tag): 0",
     "engine.h1.verbs.bitmap.arguments.blur-filter-size.description": "Blur the bitmap by the given radius. Default (new tag): 0",
-    "engine.h1.verbs.bitmap.arguments.bump-height.description": "Specify the bump height for height maps. Default (new tag): 0.026",
+    "engine.h1.verbs.bitmap.arguments.bump-height.description": "Specify the bump height for height maps. Default (height map): 0.026",
     "engine.h1.verbs.bitmap.arguments.sobel-bumpmaps.description": "Use Sobel filter for bumpmap generation. This setting does not persist.",
     "engine.h1.verbs.bitmap.arguments.passthrough-p8-bump.description": "Encode the texture directly with P8 palettization. This setting does not persist and will override --format, --palettization, and --usage.",
     "engine.h1.verbs.bitmap.arguments.detail-fade-factor.description": "Set the detail fade factor between 0.0 and 1.0. Default (new tag): 0.0",
@@ -121,7 +121,7 @@
     "engine.h1.verbs.bitmap.arguments.invert-detail-fade.description": "Invert detail fade direction. Default (new tag): off",
     "engine.h1.verbs.bitmap.arguments.limited-monochrome.description": "Restrict monochrome formats to those natively supported by d3d9 (A8Y8, Y8). This setting does not persist.",
     "engine.h1.verbs.bitmap.arguments.map-count.description": "Limit the maximum number of maps (base map + mipmaps), or 0 for no limit. Default (new tag): 0",
-    "engine.h1.verbs.bitmap.arguments.palettization.description": "Enable palettization for height maps. Default (new tag): off",
+    "engine.h1.verbs.bitmap.arguments.palettization.description": "Enable palettization for height maps. Default (new height map): off",
     "engine.h1.verbs.bitmap.arguments.reg-point-from-texture.description": "Use the texture dimensions (including dummy space) to calculate registration point. If this is off, only the width of the texture is used while the height is ignored, instead using the height of the sequence. Default (new tag): off",
     "engine.h1.verbs.bitmap.arguments.regenerate.description": "Use the bitmap tag's source data as the input. This setting does not persist.",
     "engine.h1.verbs.bitmap.arguments.sharpen-amount.description": "Sharpen the bitmap by the given amount. Default (new tag): 0",
