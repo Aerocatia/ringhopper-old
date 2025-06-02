@@ -54,6 +54,7 @@ struct BitmapOptions {
     limited_monochrome: bool,
     regenerate: bool,
     bump_algorithm: BumpmapAlgorithm,
+    passthrough_p8_bump: bool,
     gamma_corrected_mipmaps: bool
 }
 
@@ -120,6 +121,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
 
         Argument { long: "regenerate", short: 'R', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.regenerate.description"), parameter: None, multiple: false },
         Argument { long: "sobel-bumpmaps", short: 'S', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.sobel-bumpmaps.description"), parameter: None, multiple: false },
+        Argument { long: "passthrough-p8-bump", short: 'X', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.passthrough-p8-bump.description"), parameter: None, multiple: false },
         Argument { long: "square-sheets", short: 'Q', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.square-sheets.description"), parameter: None, multiple: false },
         Argument { long: "limited-monochrome", short: 'L', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.limited-monochrome.description"), parameter: None, multiple: false },
         Argument { long: "gamma-corrected-mipmaps", short: 'G', description: get_compiled_string!("engine.h1.verbs.bitmap.arguments.gamma-corrected-mipmaps.description"), parameter: None, multiple: false },
@@ -175,6 +177,7 @@ pub fn bitmap_verb(verb: &Verb, args: &[&str], executable: &str) -> ErrorMessage
             true => BumpmapAlgorithm::Sobel,
             false => BumpmapAlgorithm::Fast
         },
+        passthrough_p8_bump: parsed_args.named.contains_key("passthrough-p8-bump"),
         gamma_corrected_mipmaps: parsed_args.named.contains_key("gamma-corrected-mipmaps"),
         average_detail_fade_color: parsed_args.parse_bool_on_off("fade-to-average")?,
         invert_detail_fade: parsed_args.parse_bool_on_off("invert-detail-fade")?,
@@ -201,8 +204,6 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
     }
     else {
         let mut tag = Bitmap::default();
-        tag.bump_height = 0.026; // 🐭
-        tag.flags.disable_height_map_compression = true;
         tag.usage = BitmapUsage::Default;
         tag.encoding_format = BitmapFormat::_32bit;
         is_new_bitmap_tag = true;
@@ -249,6 +250,23 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
     };
 
     options.apply_to_bitmap_tag(&mut bitmap_tag);
+
+    // If we are doing passthrough P8-bump, set some things so it works as expected.
+    if options.passthrough_p8_bump {
+        bitmap_tag.encoding_format = BitmapFormat::_32bit;
+        bitmap_tag.usage = BitmapUsage::Default;
+        bitmap_tag.flags.disable_height_map_compression = false;
+    }
+
+    // Default this as a bump height of zero is always broken.
+    if bitmap_tag.usage == BitmapUsage::HeightMap && bitmap_tag.bump_height == 0.0 {
+        bitmap_tag.bump_height = 0.026; // 🐭
+    }
+
+    // Don't compress new height maps by default.
+    if bitmap_tag.usage == BitmapUsage::HeightMap && is_new_bitmap_tag {
+        bitmap_tag.flags.disable_height_map_compression = true;
+    }
 
     // Clear old data
     bitmap_tag.bitmap_group_sequence.blocks.clear();
@@ -416,7 +434,7 @@ fn do_single_bitmap(file: &TagFile, log_mutex: super::LogMutex, _available_threa
             }
         });
 
-        let format = if !bitmap_tag.flags.disable_height_map_compression && (bitmap_tag.usage == BitmapUsage::HeightMap || bitmap_tag.usage == BitmapUsage::VectorMap) {
+        let format = if !bitmap_tag.flags.disable_height_map_compression && (bitmap_tag.usage == BitmapUsage::HeightMap || bitmap_tag.usage == BitmapUsage::VectorMap || options.passthrough_p8_bump) {
             BitmapEncoding::P8HCE
         }
         else {

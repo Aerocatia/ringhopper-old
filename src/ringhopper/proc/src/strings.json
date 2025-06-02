@@ -112,6 +112,7 @@
     "engine.h1.verbs.bitmap.arguments.blur-filter-size.description": "Blur the bitmap by the given radius. Default (new tag): 0",
     "engine.h1.verbs.bitmap.arguments.bump-height.description": "Specify the bump height for height maps. Default (new tag): 0.026",
     "engine.h1.verbs.bitmap.arguments.sobel-bumpmaps.description": "Use Sobel filter for bumpmap generation. This setting does not persist.",
+    "engine.h1.verbs.bitmap.arguments.passthrough-p8-bump.description": "Encode the texture directly with P8 palettization. This setting does not persist and will override --format, --palettization, and --usage.",
     "engine.h1.verbs.bitmap.arguments.detail-fade-factor.description": "Set the detail fade factor between 0.0 and 1.0. Default (new tag): 0.0",
     "engine.h1.verbs.bitmap.arguments.dithering.description": "Apply dithering to 16-bit or p8 bitmaps. Default (new tag): off",
     "engine.h1.verbs.bitmap.arguments.fade-to-average.description": "Fade to the average color for detail maps instead of #7F7F7F. Default (new tag): off",
