@@ -14,7 +14,7 @@ edition = "2021"
 ringhopper = { path = "../ringhopper" }
 macros = { path = "macros", package = "ringhopper-macros" }
 ringhopper-proc = { path = "../ringhopper/proc", package = "ringhopper-proc" }
-symphonia = { version = "0.5.3", features = ["wav", "flac", "pcm"], default-features = false }
+symphonia = { version = "0.5.4", features = ["wav", "flac", "pcm"], default-features = false }
 jxl-oxide = "0.12"
 encoding = "0.2"
 tiff = "0.9"
