@@ -131,7 +131,9 @@
             { "name": "filthy sprite bug fix", "description": "Ignore sequence borders when calculating registration point." },
             { "name": "half hud scale", "description": "Draw the HUD at half the width and height.", "engines": ["mcc-cea"] },
             { "name": "invert detail fade", "engines": ["mcc-cea"] },
-            { "name": "use average color for detail fade", "description": "Instead of fading to gray, use the average color of the bitmap.", "engines": ["mcc-cea"] }
+            { "name": "use average color for detail fade", "description": "Instead of fading to gray, use the average color of the bitmap.", "engines": ["mcc-cea"] },
+            { "name": "force hud use highres scale", "description": "HUD will always scale as if the 'use highres scale' flag is set. This also applies to fields that do not normally have this flag and stacks with 'half hud scale'" }
+
         ],
         "width": 16
     },
