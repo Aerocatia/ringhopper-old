@@ -205,7 +205,7 @@ pub fn recover_processed_bitmaps(tag_data: &[u8], tag_file: &TagFile, data_dir: 
                 let x2 = ((spr.right as f64 * b.width as f64).round() as usize).saturating_sub(spacing);
                 let y2 = ((spr.bottom as f64 * b.height as f64).round() as usize).saturating_sub(spacing);
 
-                if x1 >= x2 || y1 >= y2 || x2 > b.width as usize || y2 > b.width as usize {
+                if x1 >= x2 || y1 >= y2 || x2 > b.width as usize || y2 > b.height as usize {
                     return Err(ErrorMessage::AllocatedString(format!(get_compiled_string!("engine.h1.verbs.recover-processed.error_bitmap_corrupted_invalid_sprite_dimensions"), sequence=s)));
                 }
 

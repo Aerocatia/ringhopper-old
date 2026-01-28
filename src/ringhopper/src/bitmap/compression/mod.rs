@@ -479,8 +479,8 @@ impl BitmapEncoding {
                                     let mut pixel_bytes = [0x0u8; 4*4*4];
                                     bc7(&input_bytes[block_offset..block_offset+4*4], &mut pixel_bytes, 4*4);
                                     block_offset += 4*4;
-                                    
-                                    for y1 in (y..f.width).take(4) {
+
+                                    for y1 in (y..f.height).take(4) {
                                         for x1 in (x..f.width).take(4) {
                                             for p in 0..4 {
                                                 let byte = pixel_bytes[
